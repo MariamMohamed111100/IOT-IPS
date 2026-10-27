@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SmartSecure Event",
+  "type": "object",
+  "required": ["id", "ts", "source", "type", "zone", "severity_hint", "data"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"type": "string", "minLength": 8},
+    "ts": {"type": "string", "format": "date-time"},
+    "source": {"type": "string", "minLength": 1},
+    "type": {"type": "string", "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$"},
+    "zone": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+    "severity_hint": {"enum": ["info", "low", "medium", "high", "critical"]},
+    "data": {"type": "object"}
+  }
+}

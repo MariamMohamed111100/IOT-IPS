@@ -1,0 +1,10 @@
+CRITICAL IoT SECURITY ALERT
+
+Device: CAM-001
+Problem: Network denial-of-service (SYN flood) from 203.0.113.45
+Risk: 86/100 (Critical)
+MITRE ATT&CK: T1498 Network Denial of Service
+Action: Block decided (dry-run); Isolation decided (dry-run); Administrator notified
+Status: Open
+Respond within: 15 minutes
+Incident: INC-00005

@@ -1,0 +1,166 @@
+# risk_weights.yaml - IoT-IPS Risk Engine configuration
+#
+# Every number the risk engine uses lives here, not in risk.py.
+# risk.py validates this file strictly when it loads it and REFUSES to run
+# on a bad file (unknown keys, duplicate keys, weights that do not sum to 1,
+# values outside 0-100, a public IP range listed as "internal", ...).
+#
+# Edit with care: this file decides what gets blocked. Treat it like code
+# (review changes, keep it out of reach of the camera network).
+
+version: 1
+
+# Which weight set is used by default. The sets are compared in
+# docs/risk-weights.md; see that note for why this one was chosen.
+active_weight_set: balanced
+
+# ---------------------------------------------------------------------------
+# Weight sets. Each set has exactly these 7 weights and they must sum to 1.
+# The 5 core factors must be > 0. The two optional factors may be 0.
+# If an optional factor cannot be computed for an event (no expected_ports in
+# the device profile, no dst_port in the event) it is skipped and the other
+# weights are re-scaled, so the score is still 0-100.
+# ---------------------------------------------------------------------------
+weight_sets:
+  balanced:
+    confidence: 0.20
+    attack_severity: 0.25
+    device_criticality: 0.20
+    persistence: 0.15
+    source_trust: 0.10
+    behavioral_deviation: 0.05
+    potential_impact: 0.05
+
+  device_centric:           # "what is being attacked matters most"
+    confidence: 0.15
+    attack_severity: 0.20
+    device_criticality: 0.30
+    persistence: 0.15
+    source_trust: 0.10
+    behavioral_deviation: 0.05
+    potential_impact: 0.05
+
+  severity_centric:         # "what kind of attack it is matters most"
+    confidence: 0.25
+    attack_severity: 0.35
+    device_criticality: 0.10
+    persistence: 0.15
+    source_trust: 0.05
+    behavioral_deviation: 0.05
+    potential_impact: 0.05
+
+# Safety limits on the weights themselves (enforced when the file loads).
+limits:
+  max_single_weight: 0.40        # no single factor may dominate the score
+  max_source_trust_weight: 0.15  # source IPs can be spoofed, so trust may only nudge the score
+
+# ---------------------------------------------------------------------------
+# Score -> level.  0..(medium-1) Low, medium..(high-1) Medium,
+# high..(critical-1) High, critical..100 Critical.
+# ---------------------------------------------------------------------------
+levels:
+  medium: 30
+  high: 60
+  critical: 80
+
+# ---------------------------------------------------------------------------
+# Backend scale: the lowest score of each level in the backend's own risk scale
+# (backend config/risk_scores.yaml: 0 / 31 / 61 / 91). It is used only by
+# risk.to_backend_score() to translate a score before it is published; the decisions of
+# this system (levels above, policy.yaml min_score) keep using the internal scale.
+# Without the translation an internal 81 (Critical) would read as High in the backend.
+# ---------------------------------------------------------------------------
+backend_scale:
+  medium: 31
+  high: 61
+  critical: 91
+
+# ---------------------------------------------------------------------------
+# Attack tables (0-100). Both tables must list the same attack types.
+# attack_severity: how bad this kind of attack is in general.
+# attack_impact:   what it could do to the device (access / disrupt / steal / take control).
+# ---------------------------------------------------------------------------
+attack_severity:
+  port_scan: 25
+  reconnaissance: 25
+  unexpected_protocol: 35
+  spoofing: 55
+  brute_force: 70
+  web_based: 70
+  dos: 75
+  ddos: 85
+  mirai: 95
+  device_takeover: 100
+
+attack_impact:
+  port_scan: 15
+  reconnaissance: 15
+  unexpected_protocol: 35
+  spoofing: 60
+  brute_force: 75
+  web_based: 75
+  dos: 70
+  ddos: 80
+  mirai: 95
+  device_takeover: 100
+
+# Other spellings of the same attack (matched after lower-casing and replacing
+# every non-alphanumeric run with "_"). A name that starts with a known name
+# plus "_" also matches, e.g. "DDoS-ICMP_Flood" -> ddos, "Recon-PortScan" -> reconnaissance.
+# Add the exact attack_type strings the detector produces here.
+attack_aliases:
+  portscan: port_scan
+  scan: port_scan
+  recon: reconnaissance
+  bruteforce: brute_force
+  dictionarybruteforce: brute_force
+  dictionary_bruteforce: brute_force
+  web: web_based
+  webbased: web_based
+  unexpected_port: unexpected_protocol
+  takeover: device_takeover
+  arp_spoofing: spoofing
+  dns_spoofing: spoofing
+  mitm: spoofing
+
+# How critical is the protected device (from device_profile["criticality"]).
+# Must not decrease from low to critical.
+device_criticality:
+  low: 25
+  medium: 50
+  high: 75
+  critical: 100
+
+# Used when information is missing or invalid. Defaults are deliberately on the
+# cautious side (a missing device profile is treated like an important device)
+# and every use of a default is reported in the "warnings" of the result.
+defaults:
+  confidence: 0.5
+  attack_severity: 60
+  attack_impact: 60
+  device_criticality: 75
+
+# Persistence: how many attempts were seen (max of failed_attempts and
+# connection_attempts). Log scale: score = 100 * ln(1+n) / ln(1+cap), capped at 100.
+# 1 attempt ~ 12, 10 ~ 42, 100 ~ 81, >= cap = 100.
+persistence:
+  cap: 300
+
+# Source trust (0-100, higher = less trusted = riskier).
+# NOTE: a source IP can be spoofed, so a "trusted" IP only lowers the score a
+# little (see limits.max_source_trust_weight). It never cancels an attack.
+source_trust:
+  trusted: 20            # IP is in trusted_ips
+  internal_unknown: 60   # inside internal_networks but not a known device
+  external: 90           # anything else, including a missing or invalid IP
+  # Internal networks must be private ranges (10/8, 172.16/12, 192.168/16, fc00::/7).
+  internal_networks:
+    - 192.168.0.0/16
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+  # Known devices / admin machines. Must lie inside internal_networks.
+  # Keep this in sync with config/devices.json and the allow-list in policy.yaml.
+  trusted_ips:
+    - 192.168.1.10
+    - 192.168.1.20
+    - 192.168.1.30

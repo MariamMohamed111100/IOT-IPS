@@ -1,0 +1,8 @@
+name: kitchen_fire
+description: Gas leak, rapid heating, then smoke. A fire is the classic Critical incident.
+expect: engine reaches Critical (smoke 100) and sounds siren_main; doors must NOT lock
+emits: [gas.detected, temperature.abnormal, smoke.detected]
+steps:
+  - {delay: 0, device: gas_kitchen, event: detect, data: {ppm: 450}, comment: "LPG leak"}
+  - {delay: 2, device: temp_kitchen, event: set, data: {value_c: 68.5}, comment: "Temperature surges"}
+  - {delay: 2, device: smoke_kitchen, event: detect, comment: "Smoke detector triggers"}

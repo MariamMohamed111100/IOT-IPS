@@ -1,0 +1,71 @@
+# policy.yaml - IoT-IPS response policy
+#
+# Decides what the system does for each risk level. Rules are checked top to
+# bottom and the FIRST rule that matches wins. policy.py validates this file
+# strictly on load and refuses to run if it is unsafe, for example:
+#   * a Low or Medium level that blocks something,
+#   * block_source / isolate_device without confidence >= limits.harsh_min_confidence
+#     and a known attack type (one the risk engine recognises),
+#   * temporary_block without confidence >= limits.block_min_confidence,
+#   * a level that no rule covers, an unknown action name, duplicate keys.
+# The policy can only ever choose actions that are written in this file.
+#
+# This version only SIMULATES actions (dry_run must stay true). Nothing here
+# touches a real firewall. Treat this file like code: review every change.
+
+version: 1
+dry_run: true
+
+limits:
+  block_min_confidence: 0.60     # temporary_block needs at least this confidence
+  harsh_min_confidence: 0.90     # block_source and isolate_device need at least this
+  temporary_block_seconds: 600   # how long a temporary block lasts
+  max_active_blocks: 256         # blocks + isolations kept at once (stops block floods)
+  max_log_bytes: 10485760        # action log is rotated at 10 MB
+
+# Addresses that are NEVER blocked or isolated, whatever the risk is.
+# Keep this in sync with config/devices.json and trusted_ips in risk_weights.yaml.
+# Networks shorter than /8 (IPv4) or /32 (IPv6) are rejected.
+allow_list:
+  - 192.168.1.1     # router / gateway
+  - 192.168.1.2     # the Raspberry Pi itself
+  - 192.168.1.10    # admin PC
+  - 192.168.1.20
+  - 192.168.1.30
+
+# when: level (required) plus optional min_score, min_confidence, attack_known.
+# then: actions, each one from the catalog in actions.py.
+rules:
+  - id: critical_certain
+    when: {level: [Critical], min_score: 80, min_confidence: 0.90, attack_known: true}
+    then: [block_source, isolate_device, create_incident, notify_admin]
+
+  - id: critical_probable
+    when: {level: [Critical], min_confidence: 0.60}
+    then: [temporary_block, create_incident, notify_admin]
+
+  - id: critical_other
+    when: {level: [Critical]}
+    then: [create_incident, notify_admin]
+
+  - id: high_probable
+    when: {level: [High], min_confidence: 0.60}
+    then: [temporary_block, create_incident, notify_admin]
+
+  - id: high_other
+    when: {level: [High]}
+    then: [create_incident, notify_admin]
+
+  - id: medium
+    when: {level: [Medium]}
+    then: [log, create_incident, notify_admin]
+
+  - id: low
+    when: {level: [Low]}
+    then: [log, create_incident, monitor]
+
+# Used when the risk message is unusable (missing or invalid level).
+# Never blocks anything: it asks a person to look.
+fallback:
+  id: unusable_risk
+  then: [log, create_incident, notify_admin]

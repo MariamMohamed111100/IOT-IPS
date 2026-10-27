@@ -1,0 +1,496 @@
+[
+ {
+  "name": "port_scan",
+  "event": {
+   "timestamp": "2026-10-21T09:03:00Z",
+   "src_ip": "192.168.1.66",
+   "dst_ip": "192.168.1.50",
+   "dst_port": 8080,
+   "protocol": "TCP",
+   "direction": "inbound",
+   "failed_attempts": 0,
+   "connection_attempts": 1000,
+   "unique_dst_ports": 1000,
+   "unique_dst_ips": 1,
+   "Rate": 151.47141247508162
+  },
+  "incident": {
+   "id": "INC-00031",
+   "timestamp": "2026-10-21T09:03:00Z",
+   "device_id": "CAM-001",
+   "attack_type": "Port Scan",
+   "confidence": 0.97,
+   "score": 67,
+   "level": "High",
+   "actions": [
+    "temporary_block",
+    "create_incident",
+    "notify_admin"
+   ],
+   "skipped": [],
+   "rule_id": "high_probable",
+   "reason": "rule high_probable matched: level High, score 67, confidence 0.97, attack known",
+   "status": "Simulated containment",
+   "mitre_technique": "T1046",
+   "src_ip": "192.168.1.66",
+   "dst_ip": "192.168.1.50",
+   "dst_port": 8080,
+   "protocol": "TCP",
+   "commands": [
+    "iptables -I FORWARD -s 192.168.1.66 -m comment --comment iot-ips-temp -j DROP"
+   ]
+  },
+  "report": {
+   "technical": "# Security Incident Report: INC-00031\n\n**Classification:** HIGH (67/100) | **Status:** Simulated containment | **Source system:** IoT Intrusion Prevention System\n\n| Field | Detail |\n|---|---|\n| Incident ID | INC-00031 |\n| Detected (UTC) | 2026-10-21T09:03:00Z |\n| Affected asset | CAM-001 (surveillance_camera), criticality high |\n| Incident owner | IoT Security Lead (to be assigned) |\n| Response target | 1 hour (proposed internal target) |\n| Escalation | Escalate to the IoT Security Lead; the System Owner is informed. |\n\n## 1. Executive summary\nThe IoT-IPS detected **network service discovery (port scan)** against **CAM-001** from **192.168.1.66** with 97% confidence. The event is rated **High** (67/100). Response taken: temporary block decided (dry-run, not executed); notification sent to the administrator. Current status: **simulated containment**.\n\n## 2. Technical indicators\n| Indicator | Value |\n|---|---|\n| Source IP | 192.168.1.66 (unknown internal host) |\n| Destination | 192.168.1.50:8080 / TCP |\n| Attempts or events observed | 1000 |\n| Duration | - |\n| Detection method | Rule-based detector (ML model planned) |\n\n## 3. Threat analysis (MITRE ATT&CK)\n| Item | Value |\n|---|---|\n| Tactic | Discovery (TA0007) |\n| Technique | T1046 Network Service Discovery |\n| Reference | https://attack.mitre.org/techniques/T1046/ |\n| Security property at risk | Confidentiality (exposure of data) |\n\n**Analyst assessment:** The source probed multiple ports on the device to learn which services are exposed. This is typically the reconnaissance step before an intrusion attempt.\n\n## 4. Risk assessment\n| Risk factor | Value | Weight | Contribution |\n|---|---|---|---|\n| Confidence | 97/100 | 0.20 | 19.4 |\n| Attack Severity | 25/100 | 0.25 | 6.2 |\n| Device Criticality | 75/100 | 0.20 | 15.0 |\n| Persistence | 100/100 | 0.15 | 15.0 |\n| Source Trust | 60/100 | 0.10 | 6.0 |\n| Behavioral Deviation | 100/100 | 0.05 | 5.0 |\n| Potential Impact | 15/100 | 0.05 | 0.8 |\n\n- **Likelihood:** High (detection confidence and persistence of the activity).\n- **Impact:** High (criticality of the affected device).\n- **Overall rating:** High (67/100), calculated by the risk engine from the weighted factors above (weight set: balanced).\n- **Risk statement:** there is a high likelihood that this incident (network service discovery (port scan) against CAM-001) results in exposure of data, with a high impact on the organisation.\n\n## 5. Response and containment\n**Action taken:** Temporary block decided (dry-run, not executed); Notification sent to the administrator.\n\nDry-run commands (not executed):\n```\niptables -I FORWARD -s 192.168.1.66 -m comment --comment iot-ips-temp -j DROP\n```\n\n**Policy decision:** rule high_probable matched: level High, score 67, confidence 0.97, attack known.\n\n| NIST SP 800-61 phase | State |\n|---|---|\n| Detection and analysis | Completed by the IPS (detection, risk scoring) |\n| Containment | Simulated (dry-run, nothing executed) |\n| Eradication and recovery | Pending analyst verification |\n| Post-incident review | Required for High and Critical incidents |\n\n## 6. Recommended actions\n**Immediate (analyst, within the response target)**\n1. Confirm whether the source is an authorised scanner or asset.\n2. Keep the source under monitoring and review its other connections.\n\n**Short term (corrective)**\n1. Disable every service the device does not need.\n2. Restrict management ports to the admin network only.\n\n**Long term (preventive)**\n1. Segment IoT devices into their own VLAN.\n2. Review firewall rules at least quarterly.\n\n## 7. Governance, risk and compliance\n| Framework | Reference | Relevance |\n|---|---|---|\n| NIST CSF 2.0 | DE.CM | Continuous monitoring |\n| NIST CSF 2.0 | DE.AE | Adverse event analysis |\n| ISO/IEC 27001:2022 | A.8.16 | Monitoring activities |\n| ISO/IEC 27001:2022 | A.8.20 | Networks security |\n\n- **Risk register:** record as *RISK-INC-00031*: Network service discovery (port scan) on CAM-001; inherent rating High; treatment *mitigate* (actions in section 6); owner IoT Security Lead; review after closure.\n- **Reporting:** notify the system owner per the escalation line above; keep the incident record for the retention period set in the organisation's policy.\n- **Lessons learned:** feed the result into the detection rules and device baseline (ISO/IEC 27001 A.5.27).\n\n## 8. Evidence and integrity\nIncident record SHA-256: `f3111de1265d6d7ee4015a19401fe6adbd9fb22d305f1a26287afc87be170792`\n\n## 9. Assumptions and limitations\nDetection uses threshold rules and does not see encrypted payloads. Confidence and risk values are model outputs and need analyst validation before any decision beyond the simulated (dry-run) response. Compliance references are indicative mappings, not a certification statement.\n\n*Generated automatically by the IoT-IPS reporting module.*\n",
+   "executive": "# Security Incident Summary: INC-00031\n\n## Status: HIGH: ATTENTION REQUIRED\n\n**Device:** CAM-001 (surveillance camera)\n**Risk rating:** High (67 out of 100)\n**Time detected:** 2026-10-21T09:03:00Z\n\n### What happened?\nSomeone checked which doors (network services) the device has open. This is usually the first step before an attack. The system noticed this on 2026-10-21T09:03:00Z and rated it with 97% confidence.\n\n### What did the system do?\nTemporary block decided (dry-run). Administrator notified.\n\n### Is the device safe?\nThe system decided how to contain the threat, but this is a simulation: nothing was actually blocked or isolated. The device is under close monitoring and still needs a person to check it.\n\n### What could it have meant for the business?\nLoss of video coverage or exposure of live footage; physical security is weakened while the camera is affected.\n\n### What is needed from management?\n- Review the report and confirm the follow-up actions with the security team.\n\n### Governance note\nThis incident was recorded, rated and escalated according to the security response procedure. Escalate to the IoT Security Lead; the System Owner is informed. The full technical report and evidence are available to the security team.\n"
+  },
+  "profile": {
+   "device_id": "CAM-001",
+   "device_type": "surveillance_camera",
+   "ip": "192.168.1.50",
+   "criticality": "high",
+   "expected_protocols": [
+    "TCP",
+    "UDP"
+   ],
+   "expected_ports": [
+    554,
+    443
+   ],
+   "expected_outbound_ports": [
+    53,
+    123,
+    443,
+    8883
+   ],
+   "zone": "entrance",
+   "backend_id": "cam_001",
+   "backend_type": "camera"
+  }
+ },
+ {
+  "name": "unexpected_protocol_port",
+  "event": {
+   "timestamp": "2026-10-21T09:03:45Z",
+   "src_ip": "192.168.1.66",
+   "dst_ip": "192.168.1.50",
+   "dst_port": 8080,
+   "protocol": "TCP",
+   "direction": "inbound",
+   "failed_attempts": 0,
+   "connection_attempts": 15,
+   "unique_dst_ports": 15,
+   "unique_dst_ips": 1,
+   "Rate": 58.70675344670726
+  },
+  "incident": {
+   "id": "INC-00032",
+   "timestamp": "2026-10-21T09:03:45Z",
+   "device_id": "CAM-001",
+   "attack_type": "Unexpected Protocol/Port",
+   "confidence": 0.6,
+   "score": 56,
+   "level": "Medium",
+   "actions": [
+    "log",
+    "create_incident",
+    "notify_admin"
+   ],
+   "skipped": [],
+   "rule_id": "medium",
+   "reason": "rule medium matched: level Medium, score 56, confidence 0.6, attack known",
+   "status": "Monitoring",
+   "mitre_technique": "T1571",
+   "src_ip": "192.168.1.66",
+   "dst_ip": "192.168.1.50",
+   "dst_port": 8080,
+   "protocol": "TCP",
+   "commands": []
+  },
+  "report": {
+   "technical": "# Security Incident Report: INC-00032\n\n**Classification:** MEDIUM (56/100) | **Status:** Monitoring | **Source system:** IoT Intrusion Prevention System\n\n| Field | Detail |\n|---|---|\n| Incident ID | INC-00032 |\n| Detected (UTC) | 2026-10-21T09:03:45Z |\n| Affected asset | CAM-001 (surveillance_camera), criticality high |\n| Incident owner | IoT Security Lead (to be assigned) |\n| Response target | 4 hours (proposed internal target) |\n| Escalation | Handled by the security analyst on duty; the System Owner is informed. |\n\n## 1. Executive summary\nThe IoT-IPS detected **traffic on an unexpected port or protocol** against **CAM-001** from **192.168.1.66** with 60% confidence. The event is rated **Medium** (56/100). Response taken: notification sent to the administrator. Current status: **monitoring**.\n\n## 2. Technical indicators\n| Indicator | Value |\n|---|---|\n| Source IP | 192.168.1.66 (unknown internal host) |\n| Destination | 192.168.1.50:8080 / TCP |\n| Attempts or events observed | 15 |\n| Duration | - |\n| Detection method | Rule-based detector (ML model planned) |\n\n## 3. Threat analysis (MITRE ATT&CK)\n| Item | Value |\n|---|---|\n| Tactic | Command and Control (TA0011) |\n| Technique | T1571 Non-Standard Port |\n| Reference | https://attack.mitre.org/techniques/T1571/ |\n| Security property at risk | Integrity (unauthorised change or control) |\n\n**Analyst assessment:** Traffic reached or left the device on a port or protocol outside its approved profile. This can indicate unauthorised access or command-and-control activity from a compromised device.\n\n## 4. Risk assessment\n| Risk factor | Value | Weight | Contribution |\n|---|---|---|---|\n| Confidence | 60/100 | 0.20 | 12.0 |\n| Attack Severity | 35/100 | 0.25 | 8.8 |\n| Device Criticality | 75/100 | 0.20 | 15.0 |\n| Persistence | 49/100 | 0.15 | 7.3 |\n| Source Trust | 60/100 | 0.10 | 6.0 |\n| Behavioral Deviation | 100/100 | 0.05 | 5.0 |\n| Potential Impact | 35/100 | 0.05 | 1.8 |\n\n- **Likelihood:** Medium (detection confidence and persistence of the activity).\n- **Impact:** High (criticality of the affected device).\n- **Overall rating:** Medium (56/100), calculated by the risk engine from the weighted factors above (weight set: balanced).\n- **Risk statement:** there is a medium likelihood that this incident (traffic on an unexpected port or protocol against CAM-001) results in unauthorised change or control, with a high impact on the organisation.\n\n## 5. Response and containment\n**Action taken:** Notification sent to the administrator.\n\n**Policy decision:** rule medium matched: level Medium, score 56, confidence 0.6, attack known.\n\n| NIST SP 800-61 phase | State |\n|---|---|\n| Detection and analysis | Completed by the IPS (detection, risk scoring) |\n| Containment | Monitoring only |\n| Eradication and recovery | Not required at this level |\n| Post-incident review | Required for High and Critical incidents |\n\n## 6. Recommended actions\n**Immediate (analyst, within the response target)**\n1. Verify whether the destination belongs to the vendor or a known service.\n2. Review the device for signs of compromise (unknown processes, changed settings).\n\n**Short term (corrective)**\n1. Allow outbound traffic only to approved destinations.\n2. Reset the device to a known-good firmware if compromise is suspected.\n\n**Long term (preventive)**\n1. Maintain an approved-communications profile for every device type.\n2. Subscribe to vendor security advisories.\n\n## 7. Governance, risk and compliance\n| Framework | Reference | Relevance |\n|---|---|---|\n| NIST CSF 2.0 | DE.AE | Adverse event analysis |\n| NIST CSF 2.0 | RS.AN | Incident analysis |\n| ISO/IEC 27001:2022 | A.8.16 | Monitoring activities |\n| ISO/IEC 27001:2022 | A.8.22 | Segregation of networks |\n\n- **Risk register:** record as *RISK-INC-00032*: Traffic on an unexpected port or protocol on CAM-001; inherent rating Medium; treatment *mitigate* (actions in section 6); owner IoT Security Lead; review after closure.\n- **Reporting:** notify the system owner per the escalation line above; keep the incident record for the retention period set in the organisation's policy.\n- **Lessons learned:** feed the result into the detection rules and device baseline (ISO/IEC 27001 A.5.27).\n\n## 8. Evidence and integrity\nIncident record SHA-256: `5253f704b9ab1aa4fbd8f3642f6d89da82c18447149b5b13ad6f766481e20200`\n\n## 9. Assumptions and limitations\nDetection uses threshold rules and does not see encrypted payloads. Confidence and risk values are model outputs and need analyst validation before any decision beyond the simulated (dry-run) response. Compliance references are indicative mappings, not a certification statement.\n\n*Generated automatically by the IoT-IPS reporting module.*\n",
+   "executive": "# Security Incident Summary: INC-00032\n\n## Status: MEDIUM: REVIEW SOON\n\n**Device:** CAM-001 (surveillance camera)\n**Risk rating:** Medium (56 out of 100)\n**Time detected:** 2026-10-21T09:03:45Z\n\n### What happened?\nThe device sent or received traffic in a way it normally never does. The system noticed this on 2026-10-21T09:03:45Z and rated it with 60% confidence.\n\n### What did the system do?\nAdministrator notified.\n\n### Is the device safe?\nNo harm has been detected. The activity is being watched.\n\n### What could it have meant for the business?\nLoss of video coverage or exposure of live footage; physical security is weakened while the camera is affected.\n\n### What is needed from management?\n- No decision is needed now; the security team will report if the situation changes.\n\n### Governance note\nThis incident was recorded, rated and escalated according to the security response procedure. Handled by the security analyst on duty; the System Owner is informed. The full technical report and evidence are available to the security team.\n"
+  },
+  "profile": {
+   "device_id": "CAM-001",
+   "device_type": "surveillance_camera",
+   "ip": "192.168.1.50",
+   "criticality": "high",
+   "expected_protocols": [
+    "TCP",
+    "UDP"
+   ],
+   "expected_ports": [
+    554,
+    443
+   ],
+   "expected_outbound_ports": [
+    53,
+    123,
+    443,
+    8883
+   ],
+   "zone": "entrance",
+   "backend_id": "cam_001",
+   "backend_type": "camera"
+  }
+ },
+ {
+  "name": "brute_force",
+  "event": {
+   "timestamp": "2026-10-21T09:05:15Z",
+   "src_ip": "203.0.113.45",
+   "dst_ip": "192.168.1.50",
+   "dst_port": 22,
+   "protocol": "TCP",
+   "direction": "inbound",
+   "failed_attempts": 300,
+   "connection_attempts": 300,
+   "unique_dst_ports": 1,
+   "unique_dst_ips": 1,
+   "Rate": 150.86176323541576
+  },
+  "incident": {
+   "id": "INC-00033",
+   "timestamp": "2026-10-21T09:05:15Z",
+   "device_id": "CAM-001",
+   "attack_type": "Brute Force",
+   "confidence": 0.98,
+   "score": 85,
+   "level": "Critical",
+   "actions": [
+    "block_source",
+    "isolate_device",
+    "create_incident",
+    "notify_admin"
+   ],
+   "skipped": [],
+   "rule_id": "critical_certain",
+   "reason": "rule critical_certain matched: level Critical, score 85, confidence 0.98, attack known",
+   "status": "Simulated containment",
+   "mitre_technique": "T1110",
+   "src_ip": "203.0.113.45",
+   "dst_ip": "192.168.1.50",
+   "dst_port": 22,
+   "protocol": "TCP",
+   "commands": [
+    "iptables -I FORWARD -s 203.0.113.45 -m comment --comment iot-ips -j DROP",
+    "iptables -I FORWARD -s 192.168.1.50 -m comment --comment iot-ips -j DROP",
+    "iptables -I FORWARD -d 192.168.1.50 -m comment --comment iot-ips -j DROP"
+   ]
+  },
+  "report": {
+   "technical": "# Security Incident Report: INC-00033\n\n**Classification:** CRITICAL (85/100) | **Status:** Simulated containment | **Source system:** IoT Intrusion Prevention System\n\n| Field | Detail |\n|---|---|\n| Incident ID | INC-00033 |\n| Detected (UTC) | 2026-10-21T09:05:15Z |\n| Affected asset | CAM-001 (surveillance_camera), criticality high |\n| Incident owner | IoT Security Lead (to be assigned) |\n| Response target | 15 minutes (proposed internal target) |\n| Escalation | Immediate escalation to the IoT Security Lead and the System Owner; management informed. |\n\n## 1. Executive summary\nThe IoT-IPS detected **credential brute-force attempt** against **CAM-001** from **203.0.113.45** with 98% confidence. The event is rated **Critical** (85/100). Response taken: block decided (dry-run, not executed); isolation decided (dry-run, not executed); notification sent to the administrator. Current status: **simulated containment**.\n\n## 2. Technical indicators\n| Indicator | Value |\n|---|---|\n| Source IP | 203.0.113.45 (external host) |\n| Destination | 192.168.1.50:22 / TCP |\n| Attempts or events observed | 300 |\n| Duration | - |\n| Detection method | Rule-based detector (ML model planned) |\n\n## 3. Threat analysis (MITRE ATT&CK)\n| Item | Value |\n|---|---|\n| Tactic | Credential Access (TA0006) |\n| Technique | T1110 Brute Force |\n| Reference | https://attack.mitre.org/techniques/T1110/ |\n| Security property at risk | Confidentiality (exposure of data) |\n\n**Analyst assessment:** The source made a large number of failed authentication attempts against a device service (for example SSH, Telnet or RTSP) to guess valid credentials.\n\n## 4. Risk assessment\n| Risk factor | Value | Weight | Contribution |\n|---|---|---|---|\n| Confidence | 98/100 | 0.20 | 19.6 |\n| Attack Severity | 70/100 | 0.25 | 17.5 |\n| Device Criticality | 75/100 | 0.20 | 15.0 |\n| Persistence | 100/100 | 0.15 | 15.0 |\n| Source Trust | 90/100 | 0.10 | 9.0 |\n| Behavioral Deviation | 100/100 | 0.05 | 5.0 |\n| Potential Impact | 75/100 | 0.05 | 3.8 |\n\n- **Likelihood:** High (detection confidence and persistence of the activity).\n- **Impact:** High (criticality of the affected device).\n- **Overall rating:** Critical (85/100), calculated by the risk engine from the weighted factors above (weight set: balanced).\n- **Risk statement:** there is a high likelihood that this incident (credential brute-force attempt against CAM-001) results in exposure of data, with a high impact on the organisation.\n\n## 5. Response and containment\n**Action taken:** Block decided (dry-run, not executed); Isolation decided (dry-run, not executed); Notification sent to the administrator.\n\nDry-run commands (not executed):\n```\niptables -I FORWARD -s 203.0.113.45 -m comment --comment iot-ips -j DROP\niptables -I FORWARD -s 192.168.1.50 -m comment --comment iot-ips -j DROP\niptables -I FORWARD -d 192.168.1.50 -m comment --comment iot-ips -j DROP\n```\n\n**Policy decision:** rule critical_certain matched: level Critical, score 85, confidence 0.98, attack known.\n\n| NIST SP 800-61 phase | State |\n|---|---|\n| Detection and analysis | Completed by the IPS (detection, risk scoring) |\n| Containment | Simulated (dry-run, nothing executed) |\n| Eradication and recovery | Pending analyst verification |\n| Post-incident review | Required for High and Critical incidents |\n\n## 6. Recommended actions\n**Immediate (analyst, within the response target)**\n1. Block the source (the system only simulated the block) and verify that no login succeeded.\n2. Check the device for new accounts or configuration changes.\n3. Change the device credentials if there is any doubt.\n\n**Short term (corrective)**\n1. Replace default credentials with unique strong ones.\n2. Disable Telnet and any remote access that is not needed.\n3. Add lockout or rate limiting for failed logins.\n\n**Long term (preventive)**\n1. Use certificate or key based access where the device supports it.\n2. Include credential hygiene in the IoT onboarding checklist.\n\n## 7. Governance, risk and compliance\n| Framework | Reference | Relevance |\n|---|---|---|\n| NIST CSF 2.0 | DE.AE | Adverse event analysis |\n| NIST CSF 2.0 | RS.MI | Incident mitigation |\n| ISO/IEC 27001:2022 | A.8.5 | Secure authentication |\n| ISO/IEC 27001:2022 | A.5.26 | Response to information security incidents |\n\n- **Risk register:** record as *RISK-INC-00033*: Credential brute-force attempt on CAM-001; inherent rating Critical; treatment *mitigate* (actions in section 6); owner IoT Security Lead; review after closure.\n- **Reporting:** notify the system owner per the escalation line above; keep the incident record for the retention period set in the organisation's policy.\n- **Lessons learned:** feed the result into the detection rules and device baseline (ISO/IEC 27001 A.5.27).\n\n## 8. Evidence and integrity\nIncident record SHA-256: `2ac40f1d03133c4cf9766e64ac973b207b3e4ac413844422f371141700ade196`\n\n## 9. Assumptions and limitations\nDetection uses threshold rules and does not see encrypted payloads. Confidence and risk values are model outputs and need analyst validation before any decision beyond the simulated (dry-run) response. Compliance references are indicative mappings, not a certification statement.\n\n*Generated automatically by the IoT-IPS reporting module.*\n",
+   "executive": "# Security Incident Summary: INC-00033\n\n## Status: CRITICAL: IMMEDIATE ATTENTION\n\n**Device:** CAM-001 (surveillance camera)\n**Risk rating:** Critical (85 out of 100)\n**Time detected:** 2026-10-21T09:05:15Z\n\n### What happened?\nSomeone tried to guess the device's password many times in a row. The system noticed this on 2026-10-21T09:05:15Z and rated it with 98% confidence.\n\n### What did the system do?\nBlock decided (dry-run). Isolation decided (dry-run). Administrator notified.\n\n### Is the device safe?\nThe system decided how to contain the threat, but this is a simulation: nothing was actually blocked or isolated. The device is under close monitoring and still needs a person to check it.\n\n### What could it have meant for the business?\nLoss of video coverage or exposure of live footage; physical security is weakened while the camera is affected.\n\n### What is needed from management?\n- Confirm that the device should be isolated until the security team verifies it (the system only simulated the isolation).\n- Approve the corrective actions listed by the security team (for example new credentials).\n\n### Governance note\nThis incident was recorded, rated and escalated according to the security response procedure. Immediate escalation to the IoT Security Lead and the System Owner; management informed. The full technical report and evidence are available to the security team.\n"
+  },
+  "profile": {
+   "device_id": "CAM-001",
+   "device_type": "surveillance_camera",
+   "ip": "192.168.1.50",
+   "criticality": "high",
+   "expected_protocols": [
+    "TCP",
+    "UDP"
+   ],
+   "expected_ports": [
+    554,
+    443
+   ],
+   "expected_outbound_ports": [
+    53,
+    123,
+    443,
+    8883
+   ],
+   "zone": "entrance",
+   "backend_id": "cam_001",
+   "backend_type": "camera"
+  }
+ },
+ {
+  "name": "unexpected_protocol_port_2",
+  "event": {
+   "timestamp": "2026-10-21T09:06:00Z",
+   "src_ip": "203.0.113.45",
+   "dst_ip": "192.168.1.50",
+   "dst_port": 22,
+   "protocol": "TCP",
+   "direction": "inbound",
+   "failed_attempts": 6,
+   "connection_attempts": 6,
+   "unique_dst_ports": 1,
+   "unique_dst_ips": 1,
+   "Rate": 42.41619262877397
+  },
+  "incident": {
+   "id": "INC-00034",
+   "timestamp": "2026-10-21T09:06:00Z",
+   "device_id": "CAM-001",
+   "attack_type": "Unexpected Protocol/Port",
+   "confidence": 0.6,
+   "score": 57,
+   "level": "Medium",
+   "actions": [
+    "log",
+    "create_incident",
+    "notify_admin"
+   ],
+   "skipped": [],
+   "rule_id": "medium",
+   "reason": "rule medium matched: level Medium, score 57, confidence 0.6, attack known",
+   "status": "Monitoring",
+   "mitre_technique": "T1571",
+   "src_ip": "203.0.113.45",
+   "dst_ip": "192.168.1.50",
+   "dst_port": 22,
+   "protocol": "TCP",
+   "commands": []
+  },
+  "report": {
+   "technical": "# Security Incident Report: INC-00034\n\n**Classification:** MEDIUM (57/100) | **Status:** Monitoring | **Source system:** IoT Intrusion Prevention System\n\n| Field | Detail |\n|---|---|\n| Incident ID | INC-00034 |\n| Detected (UTC) | 2026-10-21T09:06:00Z |\n| Affected asset | CAM-001 (surveillance_camera), criticality high |\n| Incident owner | IoT Security Lead (to be assigned) |\n| Response target | 4 hours (proposed internal target) |\n| Escalation | Handled by the security analyst on duty; the System Owner is informed. |\n\n## 1. Executive summary\nThe IoT-IPS detected **traffic on an unexpected port or protocol** against **CAM-001** from **203.0.113.45** with 60% confidence. The event is rated **Medium** (57/100). Response taken: notification sent to the administrator. Current status: **monitoring**.\n\n## 2. Technical indicators\n| Indicator | Value |\n|---|---|\n| Source IP | 203.0.113.45 (external host) |\n| Destination | 192.168.1.50:22 / TCP |\n| Attempts or events observed | 6 |\n| Duration | - |\n| Detection method | Rule-based detector (ML model planned) |\n\n## 3. Threat analysis (MITRE ATT&CK)\n| Item | Value |\n|---|---|\n| Tactic | Command and Control (TA0011) |\n| Technique | T1571 Non-Standard Port |\n| Reference | https://attack.mitre.org/techniques/T1571/ |\n| Security property at risk | Integrity (unauthorised change or control) |\n\n**Analyst assessment:** Traffic reached or left the device on a port or protocol outside its approved profile. This can indicate unauthorised access or command-and-control activity from a compromised device.\n\n## 4. Risk assessment\n| Risk factor | Value | Weight | Contribution |\n|---|---|---|---|\n| Confidence | 60/100 | 0.20 | 12.0 |\n| Attack Severity | 35/100 | 0.25 | 8.8 |\n| Device Criticality | 75/100 | 0.20 | 15.0 |\n| Persistence | 34/100 | 0.15 | 5.1 |\n| Source Trust | 90/100 | 0.10 | 9.0 |\n| Behavioral Deviation | 100/100 | 0.05 | 5.0 |\n| Potential Impact | 35/100 | 0.05 | 1.8 |\n\n- **Likelihood:** Medium (detection confidence and persistence of the activity).\n- **Impact:** High (criticality of the affected device).\n- **Overall rating:** Medium (57/100), calculated by the risk engine from the weighted factors above (weight set: balanced).\n- **Risk statement:** there is a medium likelihood that this incident (traffic on an unexpected port or protocol against CAM-001) results in unauthorised change or control, with a high impact on the organisation.\n\n## 5. Response and containment\n**Action taken:** Notification sent to the administrator.\n\n**Policy decision:** rule medium matched: level Medium, score 57, confidence 0.6, attack known.\n\n| NIST SP 800-61 phase | State |\n|---|---|\n| Detection and analysis | Completed by the IPS (detection, risk scoring) |\n| Containment | Monitoring only |\n| Eradication and recovery | Not required at this level |\n| Post-incident review | Required for High and Critical incidents |\n\n## 6. Recommended actions\n**Immediate (analyst, within the response target)**\n1. Verify whether the destination belongs to the vendor or a known service.\n2. Review the device for signs of compromise (unknown processes, changed settings).\n\n**Short term (corrective)**\n1. Allow outbound traffic only to approved destinations.\n2. Reset the device to a known-good firmware if compromise is suspected.\n\n**Long term (preventive)**\n1. Maintain an approved-communications profile for every device type.\n2. Subscribe to vendor security advisories.\n\n## 7. Governance, risk and compliance\n| Framework | Reference | Relevance |\n|---|---|---|\n| NIST CSF 2.0 | DE.AE | Adverse event analysis |\n| NIST CSF 2.0 | RS.AN | Incident analysis |\n| ISO/IEC 27001:2022 | A.8.16 | Monitoring activities |\n| ISO/IEC 27001:2022 | A.8.22 | Segregation of networks |\n\n- **Risk register:** record as *RISK-INC-00034*: Traffic on an unexpected port or protocol on CAM-001; inherent rating Medium; treatment *mitigate* (actions in section 6); owner IoT Security Lead; review after closure.\n- **Reporting:** notify the system owner per the escalation line above; keep the incident record for the retention period set in the organisation's policy.\n- **Lessons learned:** feed the result into the detection rules and device baseline (ISO/IEC 27001 A.5.27).\n\n## 8. Evidence and integrity\nIncident record SHA-256: `8cd72b0884d69aec4aadf6cbf3da1c43e880bded904ef5882575fdc726d40909`\n\n## 9. Assumptions and limitations\nDetection uses threshold rules and does not see encrypted payloads. Confidence and risk values are model outputs and need analyst validation before any decision beyond the simulated (dry-run) response. Compliance references are indicative mappings, not a certification statement.\n\n*Generated automatically by the IoT-IPS reporting module.*\n",
+   "executive": "# Security Incident Summary: INC-00034\n\n## Status: MEDIUM: REVIEW SOON\n\n**Device:** CAM-001 (surveillance camera)\n**Risk rating:** Medium (57 out of 100)\n**Time detected:** 2026-10-21T09:06:00Z\n\n### What happened?\nThe device sent or received traffic in a way it normally never does. The system noticed this on 2026-10-21T09:06:00Z and rated it with 60% confidence.\n\n### What did the system do?\nAdministrator notified.\n\n### Is the device safe?\nNo harm has been detected. The activity is being watched.\n\n### What could it have meant for the business?\nLoss of video coverage or exposure of live footage; physical security is weakened while the camera is affected.\n\n### What is needed from management?\n- No decision is needed now; the security team will report if the situation changes.\n\n### Governance note\nThis incident was recorded, rated and escalated according to the security response procedure. Handled by the security analyst on duty; the System Owner is informed. The full technical report and evidence are available to the security team.\n"
+  },
+  "profile": {
+   "device_id": "CAM-001",
+   "device_type": "surveillance_camera",
+   "ip": "192.168.1.50",
+   "criticality": "high",
+   "expected_protocols": [
+    "TCP",
+    "UDP"
+   ],
+   "expected_ports": [
+    554,
+    443
+   ],
+   "expected_outbound_ports": [
+    53,
+    123,
+    443,
+    8883
+   ],
+   "zone": "entrance",
+   "backend_id": "cam_001",
+   "backend_type": "camera"
+  }
+ },
+ {
+  "name": "dos",
+  "event": {
+   "timestamp": "2026-10-21T09:06:45Z",
+   "src_ip": "203.0.113.45",
+   "dst_ip": "192.168.1.50",
+   "dst_port": 554,
+   "protocol": "TCP",
+   "direction": "inbound",
+   "failed_attempts": 0,
+   "connection_attempts": 25000,
+   "unique_dst_ports": 1,
+   "unique_dst_ips": 1,
+   "Rate": 37229.75323983668
+  },
+  "incident": {
+   "id": "INC-00035",
+   "timestamp": "2026-10-21T09:06:45Z",
+   "device_id": "CAM-001",
+   "attack_type": "DoS",
+   "confidence": 0.99,
+   "score": 81,
+   "level": "Critical",
+   "actions": [
+    "block_source",
+    "isolate_device",
+    "create_incident",
+    "notify_admin"
+   ],
+   "skipped": [],
+   "rule_id": "critical_certain",
+   "reason": "rule critical_certain matched: level Critical, score 81, confidence 0.99, attack known",
+   "status": "Simulated containment",
+   "mitre_technique": "T1498",
+   "src_ip": "203.0.113.45",
+   "dst_ip": "192.168.1.50",
+   "dst_port": 554,
+   "protocol": "TCP",
+   "commands": [
+    "iptables -I FORWARD -s 203.0.113.45 -m comment --comment iot-ips -j DROP",
+    "iptables -I FORWARD -s 192.168.1.50 -m comment --comment iot-ips -j DROP",
+    "iptables -I FORWARD -d 192.168.1.50 -m comment --comment iot-ips -j DROP"
+   ]
+  },
+  "report": {
+   "technical": "# Security Incident Report: INC-00035\n\n**Classification:** CRITICAL (81/100) | **Status:** Simulated containment | **Source system:** IoT Intrusion Prevention System\n\n| Field | Detail |\n|---|---|\n| Incident ID | INC-00035 |\n| Detected (UTC) | 2026-10-21T09:06:45Z |\n| Affected asset | CAM-001 (surveillance_camera), criticality high |\n| Incident owner | IoT Security Lead (to be assigned) |\n| Response target | 15 minutes (proposed internal target) |\n| Escalation | Immediate escalation to the IoT Security Lead and the System Owner; management informed. |\n\n## 1. Executive summary\nThe IoT-IPS detected **network denial-of-service (syn flood)** against **CAM-001** from **203.0.113.45** with 99% confidence. The event is rated **Critical** (81/100). Response taken: block decided (dry-run, not executed); isolation decided (dry-run, not executed); notification sent to the administrator. Current status: **simulated containment**.\n\n## 2. Technical indicators\n| Indicator | Value |\n|---|---|\n| Source IP | 203.0.113.45 (external host) |\n| Destination | 192.168.1.50:554 / TCP |\n| Attempts or events observed | 25000 |\n| Duration | - |\n| Detection method | Rule-based detector (ML model planned) |\n\n## 3. Threat analysis (MITRE ATT&CK)\n| Item | Value |\n|---|---|\n| Tactic | Impact (TA0040) |\n| Technique | T1498 Network Denial of Service |\n| Reference | https://attack.mitre.org/techniques/T1498/ |\n| Security property at risk | Availability (loss of service) |\n\n**Analyst assessment:** The source sent traffic at a rate far above the device's baseline, aiming to exhaust its network or processing capacity and make it unavailable.\n\n## 4. Risk assessment\n| Risk factor | Value | Weight | Contribution |\n|---|---|---|---|\n| Confidence | 99/100 | 0.20 | 19.8 |\n| Attack Severity | 75/100 | 0.25 | 18.8 |\n| Device Criticality | 75/100 | 0.20 | 15.0 |\n| Persistence | 100/100 | 0.15 | 15.0 |\n| Source Trust | 90/100 | 0.10 | 9.0 |\n| Behavioral Deviation | 0/100 | 0.05 | 0.0 |\n| Potential Impact | 70/100 | 0.05 | 3.5 |\n\n- **Likelihood:** High (detection confidence and persistence of the activity).\n- **Impact:** High (criticality of the affected device).\n- **Overall rating:** Critical (81/100), calculated by the risk engine from the weighted factors above (weight set: balanced).\n- **Risk statement:** there is a high likelihood that this incident (network denial-of-service (syn flood) against CAM-001) results in loss of service, with a high impact on the organisation.\n\n## 5. Response and containment\n**Action taken:** Block decided (dry-run, not executed); Isolation decided (dry-run, not executed); Notification sent to the administrator.\n\nDry-run commands (not executed):\n```\niptables -I FORWARD -s 203.0.113.45 -m comment --comment iot-ips -j DROP\niptables -I FORWARD -s 192.168.1.50 -m comment --comment iot-ips -j DROP\niptables -I FORWARD -d 192.168.1.50 -m comment --comment iot-ips -j DROP\n```\n\n**Policy decision:** rule critical_certain matched: level Critical, score 81, confidence 0.99, attack known.\n\n| NIST SP 800-61 phase | State |\n|---|---|\n| Detection and analysis | Completed by the IPS (detection, risk scoring) |\n| Containment | Simulated (dry-run, nothing executed) |\n| Eradication and recovery | Pending analyst verification |\n| Post-incident review | Required for High and Critical incidents |\n\n## 6. Recommended actions\n**Immediate (analyst, within the response target)**\n1. Block the source (the system only simulated the block) and confirm that the device responds normally.\n2. Check upstream links for congestion.\n\n**Short term (corrective)**\n1. Apply rate limits for the device at the gateway.\n2. Confirm the device firmware is current.\n\n**Long term (preventive)**\n1. Define a traffic baseline per device and alert on deviations.\n2. Plan capacity and failover for critical devices.\n\n## 7. Governance, risk and compliance\n| Framework | Reference | Relevance |\n|---|---|---|\n| NIST CSF 2.0 | DE.CM | Continuous monitoring |\n| NIST CSF 2.0 | RS.MI | Incident mitigation |\n| ISO/IEC 27001:2022 | A.8.20 | Networks security |\n| ISO/IEC 27001:2022 | A.5.26 | Response to information security incidents |\n\n- **Risk register:** record as *RISK-INC-00035*: Network denial-of-service (SYN flood) on CAM-001; inherent rating Critical; treatment *mitigate* (actions in section 6); owner IoT Security Lead; review after closure.\n- **Reporting:** notify the system owner per the escalation line above; keep the incident record for the retention period set in the organisation's policy.\n- **Lessons learned:** feed the result into the detection rules and device baseline (ISO/IEC 27001 A.5.27).\n\n## 8. Evidence and integrity\nIncident record SHA-256: `cea3a488b330615fc6a80d8955e8715ac9a9099e615752fdc99a470cb7145ce4`\n\n## 9. Assumptions and limitations\nDetection uses threshold rules and does not see encrypted payloads. Confidence and risk values are model outputs and need analyst validation before any decision beyond the simulated (dry-run) response. Compliance references are indicative mappings, not a certification statement.\n\n*Generated automatically by the IoT-IPS reporting module.*\n",
+   "executive": "# Security Incident Summary: INC-00035\n\n## Status: CRITICAL: IMMEDIATE ATTENTION\n\n**Device:** CAM-001 (surveillance camera)\n**Risk rating:** Critical (81 out of 100)\n**Time detected:** 2026-10-21T09:06:45Z\n\n### What happened?\nSomeone flooded the device with traffic to make it stop working. The system noticed this on 2026-10-21T09:06:45Z and rated it with 99% confidence.\n\n### What did the system do?\nBlock decided (dry-run). Isolation decided (dry-run). Administrator notified.\n\n### Is the device safe?\nThe system decided how to contain the threat, but this is a simulation: nothing was actually blocked or isolated. The device is under close monitoring and still needs a person to check it.\n\n### What could it have meant for the business?\nLoss of video coverage or exposure of live footage; physical security is weakened while the camera is affected.\n\n### What is needed from management?\n- Confirm that the device should be isolated until the security team verifies it (the system only simulated the isolation).\n- Approve the corrective actions listed by the security team (for example new credentials).\n\n### Governance note\nThis incident was recorded, rated and escalated according to the security response procedure. Immediate escalation to the IoT Security Lead and the System Owner; management informed. The full technical report and evidence are available to the security team.\n"
+  },
+  "profile": {
+   "device_id": "CAM-001",
+   "device_type": "surveillance_camera",
+   "ip": "192.168.1.50",
+   "criticality": "high",
+   "expected_protocols": [
+    "TCP",
+    "UDP"
+   ],
+   "expected_ports": [
+    554,
+    443
+   ],
+   "expected_outbound_ports": [
+    53,
+    123,
+    443,
+    8883
+   ],
+   "zone": "entrance",
+   "backend_id": "cam_001",
+   "backend_type": "camera"
+  }
+ },
+ {
+  "name": "dos_2",
+  "event": {
+   "timestamp": "2026-10-21T09:07:30Z",
+   "src_ip": "203.0.113.45",
+   "dst_ip": "192.168.1.50",
+   "dst_port": 5000,
+   "protocol": "UDP",
+   "direction": "inbound",
+   "failed_attempts": 0,
+   "connection_attempts": 18000,
+   "unique_dst_ports": 1,
+   "unique_dst_ips": 1,
+   "Rate": 12632.68477802542
+  },
+  "incident": {
+   "id": "INC-00036",
+   "timestamp": "2026-10-21T09:07:30Z",
+   "device_id": "CAM-001",
+   "attack_type": "DoS",
+   "confidence": 0.99,
+   "score": 86,
+   "level": "Critical",
+   "actions": [
+    "block_source",
+    "isolate_device",
+    "create_incident",
+    "notify_admin"
+   ],
+   "skipped": [],
+   "rule_id": "critical_certain",
+   "reason": "rule critical_certain matched: level Critical, score 86, confidence 0.99, attack known",
+   "status": "Simulated containment",
+   "mitre_technique": "T1498",
+   "src_ip": "203.0.113.45",
+   "dst_ip": "192.168.1.50",
+   "dst_port": 5000,
+   "protocol": "UDP",
+   "commands": [
+    "iptables -I FORWARD -s 203.0.113.45 -m comment --comment iot-ips -j DROP",
+    "iptables -I FORWARD -s 192.168.1.50 -m comment --comment iot-ips -j DROP",
+    "iptables -I FORWARD -d 192.168.1.50 -m comment --comment iot-ips -j DROP"
+   ]
+  },
+  "report": {
+   "technical": "# Security Incident Report: INC-00036\n\n**Classification:** CRITICAL (86/100) | **Status:** Simulated containment | **Source system:** IoT Intrusion Prevention System\n\n| Field | Detail |\n|---|---|\n| Incident ID | INC-00036 |\n| Detected (UTC) | 2026-10-21T09:07:30Z |\n| Affected asset | CAM-001 (surveillance_camera), criticality high |\n| Incident owner | IoT Security Lead (to be assigned) |\n| Response target | 15 minutes (proposed internal target) |\n| Escalation | Immediate escalation to the IoT Security Lead and the System Owner; management informed. |\n\n## 1. Executive summary\nThe IoT-IPS detected **network denial-of-service (syn flood)** against **CAM-001** from **203.0.113.45** with 99% confidence. The event is rated **Critical** (86/100). Response taken: block decided (dry-run, not executed); isolation decided (dry-run, not executed); notification sent to the administrator. Current status: **simulated containment**.\n\n## 2. Technical indicators\n| Indicator | Value |\n|---|---|\n| Source IP | 203.0.113.45 (external host) |\n| Destination | 192.168.1.50:5000 / UDP |\n| Attempts or events observed | 18000 |\n| Duration | - |\n| Detection method | Rule-based detector (ML model planned) |\n\n## 3. Threat analysis (MITRE ATT&CK)\n| Item | Value |\n|---|---|\n| Tactic | Impact (TA0040) |\n| Technique | T1498 Network Denial of Service |\n| Reference | https://attack.mitre.org/techniques/T1498/ |\n| Security property at risk | Availability (loss of service) |\n\n**Analyst assessment:** The source sent traffic at a rate far above the device's baseline, aiming to exhaust its network or processing capacity and make it unavailable.\n\n## 4. Risk assessment\n| Risk factor | Value | Weight | Contribution |\n|---|---|---|---|\n| Confidence | 99/100 | 0.20 | 19.8 |\n| Attack Severity | 75/100 | 0.25 | 18.8 |\n| Device Criticality | 75/100 | 0.20 | 15.0 |\n| Persistence | 100/100 | 0.15 | 15.0 |\n| Source Trust | 90/100 | 0.10 | 9.0 |\n| Behavioral Deviation | 100/100 | 0.05 | 5.0 |\n| Potential Impact | 70/100 | 0.05 | 3.5 |\n\n- **Likelihood:** High (detection confidence and persistence of the activity).\n- **Impact:** High (criticality of the affected device).\n- **Overall rating:** Critical (86/100), calculated by the risk engine from the weighted factors above (weight set: balanced).\n- **Risk statement:** there is a high likelihood that this incident (network denial-of-service (syn flood) against CAM-001) results in loss of service, with a high impact on the organisation.\n\n## 5. Response and containment\n**Action taken:** Block decided (dry-run, not executed); Isolation decided (dry-run, not executed); Notification sent to the administrator.\n\nDry-run commands (not executed):\n```\niptables -I FORWARD -s 203.0.113.45 -m comment --comment iot-ips -j DROP\niptables -I FORWARD -s 192.168.1.50 -m comment --comment iot-ips -j DROP\niptables -I FORWARD -d 192.168.1.50 -m comment --comment iot-ips -j DROP\n```\n\n**Policy decision:** rule critical_certain matched: level Critical, score 86, confidence 0.99, attack known.\n\n| NIST SP 800-61 phase | State |\n|---|---|\n| Detection and analysis | Completed by the IPS (detection, risk scoring) |\n| Containment | Simulated (dry-run, nothing executed) |\n| Eradication and recovery | Pending analyst verification |\n| Post-incident review | Required for High and Critical incidents |\n\n## 6. Recommended actions\n**Immediate (analyst, within the response target)**\n1. Block the source (the system only simulated the block) and confirm that the device responds normally.\n2. Check upstream links for congestion.\n\n**Short term (corrective)**\n1. Apply rate limits for the device at the gateway.\n2. Confirm the device firmware is current.\n\n**Long term (preventive)**\n1. Define a traffic baseline per device and alert on deviations.\n2. Plan capacity and failover for critical devices.\n\n## 7. Governance, risk and compliance\n| Framework | Reference | Relevance |\n|---|---|---|\n| NIST CSF 2.0 | DE.CM | Continuous monitoring |\n| NIST CSF 2.0 | RS.MI | Incident mitigation |\n| ISO/IEC 27001:2022 | A.8.20 | Networks security |\n| ISO/IEC 27001:2022 | A.5.26 | Response to information security incidents |\n\n- **Risk register:** record as *RISK-INC-00036*: Network denial-of-service (SYN flood) on CAM-001; inherent rating Critical; treatment *mitigate* (actions in section 6); owner IoT Security Lead; review after closure.\n- **Reporting:** notify the system owner per the escalation line above; keep the incident record for the retention period set in the organisation's policy.\n- **Lessons learned:** feed the result into the detection rules and device baseline (ISO/IEC 27001 A.5.27).\n\n## 8. Evidence and integrity\nIncident record SHA-256: `1fed670e213ad0add1b0d6c943fc4c50a4d8ba2fd7a91d0cc3b0d292e2f5f586`\n\n## 9. Assumptions and limitations\nDetection uses threshold rules and does not see encrypted payloads. Confidence and risk values are model outputs and need analyst validation before any decision beyond the simulated (dry-run) response. Compliance references are indicative mappings, not a certification statement.\n\n*Generated automatically by the IoT-IPS reporting module.*\n",
+   "executive": "# Security Incident Summary: INC-00036\n\n## Status: CRITICAL: IMMEDIATE ATTENTION\n\n**Device:** CAM-001 (surveillance camera)\n**Risk rating:** Critical (86 out of 100)\n**Time detected:** 2026-10-21T09:07:30Z\n\n### What happened?\nSomeone flooded the device with traffic to make it stop working. The system noticed this on 2026-10-21T09:07:30Z and rated it with 99% confidence.\n\n### What did the system do?\nBlock decided (dry-run). Isolation decided (dry-run). Administrator notified.\n\n### Is the device safe?\nThe system decided how to contain the threat, but this is a simulation: nothing was actually blocked or isolated. The device is under close monitoring and still needs a person to check it.\n\n### What could it have meant for the business?\nLoss of video coverage or exposure of live footage; physical security is weakened while the camera is affected.\n\n### What is needed from management?\n- Confirm that the device should be isolated until the security team verifies it (the system only simulated the isolation).\n- Approve the corrective actions listed by the security team (for example new credentials).\n\n### Governance note\nThis incident was recorded, rated and escalated according to the security response procedure. Immediate escalation to the IoT Security Lead and the System Owner; management informed. The full technical report and evidence are available to the security team.\n"
+  },
+  "profile": {
+   "device_id": "CAM-001",
+   "device_type": "surveillance_camera",
+   "ip": "192.168.1.50",
+   "criticality": "high",
+   "expected_protocols": [
+    "TCP",
+    "UDP"
+   ],
+   "expected_ports": [
+    554,
+    443
+   ],
+   "expected_outbound_ports": [
+    53,
+    123,
+    443,
+    8883
+   ],
+   "zone": "entrance",
+   "backend_id": "cam_001",
+   "backend_type": "camera"
+  }
+ },
+ {
+  "name": "dos_3",
+  "event": {
+   "timestamp": "2026-10-21T09:09:45Z",
+   "src_ip": "192.168.1.50",
+   "dst_ip": "198.51.100.23",
+   "dst_port": 0,
+   "protocol": "GRE",
+   "direction": "outbound",
+   "failed_attempts": 0,
+   "connection_attempts": 9000,
+   "unique_dst_ports": 1,
+   "unique_dst_ips": 1,
+   "Rate": 2559.843759536161
+  },
+  "incident": {
+   "id": "INC-00037",
+   "timestamp": "2026-10-21T09:09:45Z",
+   "device_id": "CAM-001",
+   "attack_type": "DoS",
+   "confidence": 0.95,
+   "score": 82,
+   "level": "Critical",
+   "actions": [
+    "isolate_device",
+    "create_incident",
+    "notify_admin"
+   ],
+   "skipped": [
+    {
+     "action": "block_source",
+     "why": "source_is_device"
+    }
+   ],
+   "rule_id": "critical_certain",
+   "reason": "rule critical_certain matched: level Critical, score 82, confidence 0.95, attack known",
+   "status": "Simulated containment",
+   "mitre_technique": "T1498",
+   "src_ip": "192.168.1.50",
+   "dst_ip": "198.51.100.23",
+   "dst_port": 0,
+   "protocol": "GRE",
+   "commands": [
+    "iptables -I FORWARD -s 192.168.1.50 -m comment --comment iot-ips -j DROP",
+    "iptables -I FORWARD -d 192.168.1.50 -m comment --comment iot-ips -j DROP"
+   ]
+  },
+  "report": {
+   "technical": "# Security Incident Report: INC-00037\n\n**Classification:** CRITICAL (82/100) | **Status:** Simulated containment | **Source system:** IoT Intrusion Prevention System\n\n| Field | Detail |\n|---|---|\n| Incident ID | INC-00037 |\n| Detected (UTC) | 2026-10-21T09:09:45Z |\n| Affected asset | CAM-001 (surveillance_camera), criticality high |\n| Incident owner | IoT Security Lead (to be assigned) |\n| Response target | 15 minutes (proposed internal target) |\n| Escalation | Immediate escalation to the IoT Security Lead and the System Owner; management informed. |\n\n## 1. Executive summary\nThe IoT-IPS detected **network denial-of-service (syn flood)** against **CAM-001** from **192.168.1.50** with 95% confidence. The event is rated **Critical** (82/100). Response taken: isolation decided (dry-run, not executed); notification sent to the administrator. Current status: **simulated containment**.\n\n## 2. Technical indicators\n| Indicator | Value |\n|---|---|\n| Source IP | 192.168.1.50 (unknown internal host) |\n| Destination | 198.51.100.23:0 / GRE |\n| Attempts or events observed | 9000 |\n| Duration | - |\n| Detection method | Rule-based detector (ML model planned) |\n\n## 3. Threat analysis (MITRE ATT&CK)\n| Item | Value |\n|---|---|\n| Tactic | Impact (TA0040) |\n| Technique | T1498 Network Denial of Service |\n| Reference | https://attack.mitre.org/techniques/T1498/ |\n| Security property at risk | Availability (loss of service) |\n\n**Analyst assessment:** The source sent traffic at a rate far above the device's baseline, aiming to exhaust its network or processing capacity and make it unavailable.\n\n## 4. Risk assessment\n| Risk factor | Value | Weight | Contribution |\n|---|---|---|---|\n| Confidence | 95/100 | 0.20 | 19.0 |\n| Attack Severity | 75/100 | 0.25 | 18.8 |\n| Device Criticality | 75/100 | 0.20 | 15.0 |\n| Persistence | 100/100 | 0.15 | 15.0 |\n| Source Trust | 60/100 | 0.10 | 6.0 |\n| Behavioral Deviation | 100/100 | 0.05 | 5.0 |\n| Potential Impact | 70/100 | 0.05 | 3.5 |\n\n- **Likelihood:** High (detection confidence and persistence of the activity).\n- **Impact:** High (criticality of the affected device).\n- **Overall rating:** Critical (82/100), calculated by the risk engine from the weighted factors above (weight set: balanced).\n- **Risk statement:** there is a high likelihood that this incident (network denial-of-service (syn flood) against CAM-001) results in loss of service, with a high impact on the organisation.\n\n## 5. Response and containment\n**Action taken:** Isolation decided (dry-run, not executed); Notification sent to the administrator.\n\nDry-run commands (not executed):\n```\niptables -I FORWARD -s 192.168.1.50 -m comment --comment iot-ips -j DROP\niptables -I FORWARD -d 192.168.1.50 -m comment --comment iot-ips -j DROP\n```\n\n**Policy decision:** rule critical_certain matched: level Critical, score 82, confidence 0.95, attack known.\n\n**Not executed:** block_source (source_is_device) (the reason is in brackets). An analyst should review this manually.\n\n| NIST SP 800-61 phase | State |\n|---|---|\n| Detection and analysis | Completed by the IPS (detection, risk scoring) |\n| Containment | Simulated (dry-run, nothing executed) |\n| Eradication and recovery | Pending analyst verification |\n| Post-incident review | Required for High and Critical incidents |\n\n## 6. Recommended actions\n**Immediate (analyst, within the response target)**\n1. Block the source (the system only simulated the block) and confirm that the device responds normally.\n2. Check upstream links for congestion.\n\n**Short term (corrective)**\n1. Apply rate limits for the device at the gateway.\n2. Confirm the device firmware is current.\n\n**Long term (preventive)**\n1. Define a traffic baseline per device and alert on deviations.\n2. Plan capacity and failover for critical devices.\n\n## 7. Governance, risk and compliance\n| Framework | Reference | Relevance |\n|---|---|---|\n| NIST CSF 2.0 | DE.CM | Continuous monitoring |\n| NIST CSF 2.0 | RS.MI | Incident mitigation |\n| ISO/IEC 27001:2022 | A.8.20 | Networks security |\n| ISO/IEC 27001:2022 | A.5.26 | Response to information security incidents |\n\n- **Risk register:** record as *RISK-INC-00037*: Network denial-of-service (SYN flood) on CAM-001; inherent rating Critical; treatment *mitigate* (actions in section 6); owner IoT Security Lead; review after closure.\n- **Reporting:** notify the system owner per the escalation line above; keep the incident record for the retention period set in the organisation's policy.\n- **Lessons learned:** feed the result into the detection rules and device baseline (ISO/IEC 27001 A.5.27).\n\n## 8. Evidence and integrity\nIncident record SHA-256: `fb4bcd4eecf088763bbb5a7fc40787fa6a101d25a477237503d7d6ff980bb58a`\n\n## 9. Assumptions and limitations\nDetection uses threshold rules and does not see encrypted payloads. Confidence and risk values are model outputs and need analyst validation before any decision beyond the simulated (dry-run) response. Compliance references are indicative mappings, not a certification statement.\n\n*Generated automatically by the IoT-IPS reporting module.*\n",
+   "executive": "# Security Incident Summary: INC-00037\n\n## Status: CRITICAL: IMMEDIATE ATTENTION\n\n**Device:** CAM-001 (surveillance camera)\n**Risk rating:** Critical (82 out of 100)\n**Time detected:** 2026-10-21T09:09:45Z\n\n### What happened?\nSomeone flooded the device with traffic to make it stop working. The system noticed this on 2026-10-21T09:09:45Z and rated it with 95% confidence.\n\n### What did the system do?\nIsolation decided (dry-run). Administrator notified.\n\n### Is the device safe?\nThe system decided how to contain the threat, but this is a simulation: nothing was actually blocked or isolated. The device is under close monitoring and still needs a person to check it.\n\n### What could it have meant for the business?\nLoss of video coverage or exposure of live footage; physical security is weakened while the camera is affected.\n\n### What is needed from management?\n- Confirm that the device should be isolated until the security team verifies it (the system only simulated the isolation).\n- Approve the corrective actions listed by the security team (for example new credentials).\n\n### Governance note\nThis incident was recorded, rated and escalated according to the security response procedure. Immediate escalation to the IoT Security Lead and the System Owner; management informed. The full technical report and evidence are available to the security team.\n"
+  },
+  "profile": {
+   "device_id": "CAM-001",
+   "device_type": "surveillance_camera",
+   "ip": "192.168.1.50",
+   "criticality": "high",
+   "expected_protocols": [
+    "TCP",
+    "UDP"
+   ],
+   "expected_ports": [
+    554,
+    443
+   ],
+   "expected_outbound_ports": [
+    53,
+    123,
+    443,
+    8883
+   ],
+   "zone": "entrance",
+   "backend_id": "cam_001",
+   "backend_type": "camera"
+  }
+ }
+]

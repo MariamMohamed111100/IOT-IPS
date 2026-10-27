@@ -1,0 +1,50 @@
+# detector_rules.yaml - all thresholds for the rule-based detector (Task 3).
+# Change numbers here, not in detector.py.
+# detector.py VALIDATES this file when it loads it and raises DetectorConfigError on a missing,
+# misspelled or unknown key or an out-of-range value: a typo can no longer disable a rule silently.
+# Confidence grows linearly from base_confidence (value == threshold)
+# to max_confidence (value >= 3 x threshold).
+
+settings:
+  benign_confidence: 0.90      # confidence reported when no rule fires
+
+# Rules are listed from most to least severe. If two rules give the
+# same confidence, the earlier one wins.
+rules:
+  dos:
+    enabled: true
+    attack_type: "DoS"
+    mitre_technique: "T1498"          # Network Denial of Service
+    min_rate: 2000                    # features: Rate (packets/s). 1000 flagged a normal camera clip upload (1040 pkt/s)
+    min_syn_count: 100                # features: syn_count
+    min_connection_attempts: 500      # context: connection_attempts. A DoS needs a high rate AND many connections;
+                                      # a fast upload has a high rate but only a few connections. 100 was too low on
+                                      # flow-engine events: 150 normal viewing sessions of the owner's phone (one SYN
+                                      # each) counted as a DoS (see services/ips_cyber/README.md)
+    base_confidence: 0.80
+    max_confidence: 0.99
+
+  brute_force:
+    enabled: true
+    attack_type: "Brute Force"
+    mitre_technique: "T1110"          # Brute Force
+    target_ports: [22, 23, 554]       # SSH, Telnet, RTSP
+    min_failed_attempts: 50           # context: failed_attempts (plain connections do NOT count: live viewing opens many)
+    base_confidence: 0.80
+    max_confidence: 0.98
+
+  port_scan:
+    enabled: true
+    attack_type: "Port Scan"
+    mitre_technique: "T1046"          # Network Service Discovery
+    min_unique_ports: 20              # context: unique_dst_ports
+    min_unique_destinations: 10       # context: unique_dst_ips
+    base_confidence: 0.75
+    max_confidence: 0.97
+
+  unexpected_traffic:                 # applies to INBOUND traffic only (event["direction"])
+    enabled: true
+    attack_type: "Unexpected Protocol/Port"
+    mitre_technique: "T1571"          # Non-Standard Port
+    confidence_one_violation: 0.60    # only port OR protocol is wrong
+    confidence_both_violations: 0.75  # port AND protocol are wrong

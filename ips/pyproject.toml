@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iot-ips"
+version = "0.1.0"
+description = "A simulated intrusion prevention system for IoT devices: detector, risk engine, policy, incident database and reports."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["pyyaml>=6.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+data = ["pandas", "numpy"]
+
+[project.scripts]
+iot-ips = "iot_ips.pipeline:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

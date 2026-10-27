@@ -1,0 +1,10 @@
+HIGH-RISK IoT SECURITY ALERT
+
+Device: CAM-001
+Problem: Network service discovery (port scan) from 192.168.1.66
+Risk: 67/100 (High)
+MITRE ATT&CK: T1046 Network Service Discovery
+Action: Temporary block decided (dry-run); Administrator notified
+Status: Open
+Respond within: 1 hour
+Incident: INC-00001

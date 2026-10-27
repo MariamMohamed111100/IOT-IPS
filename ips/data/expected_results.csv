@@ -1,0 +1,15 @@
+event_id,ground_truth,expected_outcome,expected_level,expected_incident,scenario
+EVT-001,BENIGN,BENIGN,none,no,Owner's phone watches the camera stream
+EVT-002,BENIGN,BENIGN,none,no,Camera uploads a clip to its cloud service
+EVT-003,BENIGN,BENIGN,none,no,Thermostat DNS lookup
+EVT-004,BENIGN,BENIGN,none,no,Owner mistypes the plug password once
+EVT-005,ATTACK,DETECTED,Medium or High,yes,"Port scan of 1,000 ports on the camera from an unknown laptop"
+EVT-006,ATTACK,DETECTED (as unexpected port),Medium,yes,Slow scan of 15 ports on the camera
+EVT-007,ATTACK,MISSED,none,no,Vulnerability scan of the plug web page
+EVT-008,ATTACK,DETECTED,Critical,yes,300 failed SSH logins on the camera from an external address
+EVT-009,ATTACK,DETECTED (as unexpected port),Medium,yes,"Low-rate SSH brute force, 6 guesses"
+EVT-010,ATTACK,DETECTED,High or Critical,yes,SYN flood on the camera video port
+EVT-011,ATTACK,DETECTED,High or Critical,yes,UDP flood on the camera
+EVT-012,ATTACK,MISSED,none,no,ARP spoofing: a rogue device poses as the router
+EVT-013,ATTACK,MISSED,none,no,Command injection on the plug web form
+EVT-014,ATTACK,DETECTED,Critical,yes,Infected camera floods an outside server (Mirai-style)

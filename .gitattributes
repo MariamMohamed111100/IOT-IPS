@@ -1,0 +1,10 @@
+# Force LF on checkout for everyone (Windows teammates included): shell
+# scripts and MSYS `set -a; . ./.env` break on CRLF.
+* text=auto eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.conf text eol=lf

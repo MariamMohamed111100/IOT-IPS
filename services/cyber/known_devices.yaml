@@ -1,0 +1,11 @@
+# Allowlist for rogue-device detection (cyber.rogue_device).
+# Any MAC address that asks for a DHCP lease (or, with ROGUE_ARP=true, appears in the ARP table)
+# and is NOT listed here is reported as a rogue device. An EMPTY list switches detection OFF, so a
+# fresh install does not flood the risk engine. Edit and save: the service re-reads this file.
+#
+# On a real network list every phone, laptop, camera, lock and hub you own.
+devices:
+  - mac: "aa:bb:cc:00:00:01"
+    name: "smart lock (example)"
+  - mac: "aa:bb:cc:00:00:02"
+    name: "ip camera (example)"

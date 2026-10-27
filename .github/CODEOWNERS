@@ -1,0 +1,10 @@
+# Replace with real GitHub handles. Reviews are requested automatically.
+*                         @person1
+/services/api/            @person2
+/services/simulators/     @person3
+/services/vision/         @person4
+/services/cyber/          @person5
+/services/engine/         @person6
+/config/                  @person6
+/services/frontend/       @person7
+/infra/ /docker/ /contract/ /.github/ /scripts/ @person1

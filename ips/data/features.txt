@@ -1,0 +1,65 @@
+Selected features: 18 of the 39 CICIoT2023 feature columns
+(column names exactly as in the dataset; most values are averages over a window of packets)
+
+How they were chosen (on the training part only, never the test part):
+  1. drop near-constant columns (one value in >= 99.5% of rows)
+  2. rank the rest by Random Forest importance + mutual information (average rank)
+  3. go down the ranking, skipping a column that is a near-copy of one already
+     chosen (Spearman correlation > 0.95), until 18 are chosen
+
+Check: Random Forest on the 40,000 test rows, normal vs attack:
+  18 chosen features: F1 0.8837, false positives 6.31%, missed attacks 15.84%
+  all 39 features:    F1 0.8852, false positives 6.13%, missed attacks 15.72%
+
+--------------------------------------------------------------------------------------------------
+#  feature           RF imp.     MI  meaning / why it helps
+--------------------------------------------------------------------------------------------------
+1  Max                 0.082  0.284  largest packet size in the window
+                                   why: floods and scans send small, uniform packets; normal video/uploads reach full size
+2  Variance            0.057  0.191  how much packet sizes vary
+                                   why: normal traffic mixes sizes; generated attack traffic is very uniform
+3  AVG                 0.052  0.222  average packet size
+                                   why: mean size separates bulk normal traffic from floods made of minimal packets
+4  HTTPS               0.086  0.176  share of packets that are HTTPS (port 443)
+                                   why: normal IoT cloud traffic is mostly HTTPS
+5  Tot sum             0.050  0.230  total bytes of all packets in the window
+                                   why: bytes per window: floods move many small packets, video moves few large ones
+6  Number              0.052  0.188  number of packets in the window
+                                   why: packets per window: very high for DoS/DDoS/Mirai floods
+7  Time_To_Live        0.056  0.179  average IP time-to-live (how many hops the packets can still travel)
+                                   why: attack tools and distant attackers use TTLs unlike the local devices
+8  IAT                 0.072  0.142  time between packets (inter-arrival time)
+                                   why: packet timing: floods have near-zero gaps; also stands in for Rate (near-copy)
+9  ack_flag_number     0.043  0.193  share of TCP packets with the ACK flag
+                                   why: ACK patterns differ between real conversations and floods/scans
+10 Header_Length       0.049  0.189  length of the packet headers
+                                   why: unusual header lengths appear in fragmentation and crafted-packet attacks
+11 Min                 0.032  0.093  smallest packet size in the window
+                                   why: lower bound of packet size; tiny minimums are typical of SYN floods and probes
+12 psh_flag_number     0.020  0.086  share of TCP packets with the PSH flag
+                                   why: PSH marks real data transfer; floods and scans rarely carry data
+13 TCP                 0.015  0.124  share of packets that are TCP
+                                   why: protocol mix; Mirai GRE floods have neither TCP nor UDP
+14 UDP                 0.011  0.100  share of packets that are UDP
+                                   why: UDP floods are ~100% UDP, normal devices mostly TCP
+15 DNS                 0.016  0.042  share of packets that are DNS
+                                   why: normal devices make DNS lookups; DNS spoofing manipulates them
+16 syn_flag_number     0.008  0.059  share of TCP packets with the SYN flag (connection requests)
+                                   why: many SYNs without data = port scan or SYN flood
+17 HTTP                0.015  0.025  share of packets that are HTTP (port 80)
+                                   why: web attacks and vulnerability scans hit the plain-HTTP web page
+18 SSH                 0.018  0.013  share of packets that are SSH (port 22)
+                                   why: SSH share separates password-guessing (brute force) from other traffic
+
+Dropped as near-copies (redundant):
+  Tot size         ~ AVG (|Spearman| > 0.95)
+  Std              ~ Variance (|Spearman| > 0.95)
+  Rate             ~ IAT (|Spearman| > 0.95)
+  ack_count        ~ ack_flag_number (|Spearman| > 0.95)
+  syn_count        ~ syn_flag_number (|Spearman| > 0.95)
+
+Dropped as near-constant (almost always the same value):
+  IGMP, IRC, SMTP, Telnet, cwr_flag_number, ece_flag_number
+
+Kept out because they ranked lower (still in sample_events.csv):
+  Protocol Type, fin_flag_number, rst_flag_number, fin_count, rst_count, DHCP, ARP, ICMP, IPv, LLC

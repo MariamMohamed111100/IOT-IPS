@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Warden — Active IoT IPS Security Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f1c;
+    --bg-elevated:#0f1729;
+    --surface:#131d33;
+    --surface-hover:#182444;
+    --border:#22304e;
+    --border-soft:#1a2540;
+    --text-primary:#e7ecf5;
+    --text-secondary:#93a1bd;
+    --text-tertiary:#57638a;
+    --cyan:#2dd4bf;
+    --cyan-dim:rgba(45,212,191,0.12);
+    --violet:#a78bfa;
+    --violet-dim:rgba(167,139,250,0.12);
+    --warn:#f2a93b;
+    --warn-dim:rgba(242,169,59,0.12);
+    --danger:#f4436a;
+    --danger-dim:rgba(244,67,106,0.14);
+    --font-sans:'IBM Plex Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;
+    --font-mono:'IBM Plex Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:var(--font-sans);
+    font-size:14px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--cyan-dim); color:var(--cyan);}
+  a{color:inherit;}
+  button{font-family:inherit; cursor:pointer;}
+
+  .app{
+    display:grid;
+    grid-template-columns:230px 1fr;
+    height:100vh;
+    min-height:640px;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    background:var(--bg-elevated);
+    border-right:1px solid var(--border-soft);
+    display:flex;
+    flex-direction:column;
+    padding:20px 14px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:6px 8px 22px 8px;
+  }
+  .brand-mark{
+    width:30px; height:30px; flex:none;
+  }
+  .brand-name{
+    font-weight:700;
+    font-size:15.5px;
+    letter-spacing:0.02em;
+  }
+  .brand-name span{color:var(--cyan);}
+  .brand-sub{
+    font-size:10.5px;
+    color:var(--text-tertiary);
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    margin-top:1px;
+  }
+
+  .nav{list-style:none; display:flex; flex-direction:column; gap:2px; margin-top:6px;}
+  .nav-item{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 10px;
+    border-radius:8px;
+    color:var(--text-secondary);
+    font-size:13.5px;
+    font-weight:500;
+    cursor:pointer;
+    border:1px solid transparent;
+    transition:background .15s, color .15s;
+  }
+  .nav-item svg{width:16px; height:16px; flex:none; opacity:.85;}
+  .nav-item:hover{background:var(--surface-hover); color:var(--text-primary);}
+  .nav-item.active{
+    background:var(--cyan-dim);
+    color:var(--cyan);
+    border-color:rgba(45,212,191,0.25);
+  }
+  .nav-item.active svg{opacity:1;}
+  .nav-item .soon{
+    margin-left:auto;
+    font-size:9.5px;
+    letter-spacing:.04em;
+    color:var(--text-tertiary);
+    background:var(--bg);
+    border:1px solid var(--border);
+    padding:2px 5px;
+    border-radius:4px;
+  }
+
+  .sidebar-footer{
+    margin-top:auto;
+    padding:12px 10px;
+    border-top:1px solid var(--border-soft);
+    display:flex; align-items:center; gap:9px;
+  }
+  .pulse-dot{
+    width:7px; height:7px; border-radius:50%;
+    background:var(--cyan);
+    box-shadow:0 0 0 0 rgba(45,212,191,.6);
+    animation:pulse 2s infinite;
+    flex:none;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(45,212,191,.5);}
+    70%{box-shadow:0 0 0 6px rgba(45,212,191,0);}
+    100%{box-shadow:0 0 0 0 rgba(45,212,191,0);}
+  }
+  .sidebar-footer-text{display:flex; flex-direction:column;}
+  .sidebar-footer-text b{font-size:12px; font-weight:600;}
+  .sidebar-footer-text span{font-size:11px; color:var(--text-tertiary);}
+
+  /* ---------- Main ---------- */
+  .main{display:flex; flex-direction:column; min-width:0;}
+  .topbar{
+    height:58px; flex:none;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px;
+    border-bottom:1px solid var(--border-soft);
+    background:var(--bg-elevated);
+  }
+  .view-title{font-size:15px; font-weight:600;}
+  .view-subtitle{font-size:11.5px; color:var(--text-tertiary); margin-top:1px;}
+  .topbar-right{display:flex; align-items:center; gap:14px;}
+  .search-box{
+    display:flex; align-items:center; gap:7px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:7px;
+    padding:6px 10px;
+    color:var(--text-tertiary);
+    font-size:12.5px;
+    width:210px;
+  }
+  .search-box svg{width:13px; height:13px; flex:none;}
+  .avatar{
+    width:30px; height:30px; border-radius:50%;
+    background:linear-gradient(135deg, var(--cyan), var(--violet));
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color:#0a0f1c;
+  }
+
+  .view-container{flex:1; overflow-y:auto; padding:24px 28px 48px;}
+  .view{display:none; animation:fadeIn .25s ease;}
+  .view.active{display:block;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  /* ---------- Stat cards ---------- */
+  .stat-row{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px;}
+  .stat-card{
+    background:var(--surface);
+    border:1px solid var(--border-soft);
+    border-radius:12px;
+    padding:16px 18px;
+  }
+  .stat-label{font-size:11.5px; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:.05em;}
+  .stat-value{font-family:var(--font-mono); font-size:26px; font-weight:600; margin-top:6px;}
+  .stat-trend{font-size:11.5px; margin-top:5px; color:var(--text-secondary);}
+  .stat-trend.up-bad{color:var(--danger);}
+  .stat-trend.up-good{color:var(--cyan);}
+
+  /* ---------- Panels / layout ---------- */
+  .grid-2{display:grid; grid-template-columns:1.55fr 1fr; gap:16px; align-items:start;}
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--border-soft);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .panel-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px 12px;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .panel-header h3{font-size:13px; font-weight:600;}
+  .panel-header .hint{font-size:11px; color:var(--text-tertiary);}
+  .panel-body{padding:14px 16px;}
+
+  /* topology */
+  .topology-legend{display:flex; gap:14px; font-size:11px; color:var(--text-secondary);}
+  .topology-legend .dot{width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:5px;}
+  #topologySvg{width:100%; height:300px; display:block;}
+  .node-label{font-family:var(--font-mono); font-size:8.5px; fill:var(--text-tertiary);}
+
+  /* event feed */
+  .feed{display:flex; flex-direction:column; max-height:300px; overflow-y:auto;}
+  .feed-item{
+    display:flex; gap:10px; padding:9px 0;
+    border-bottom:1px solid var(--border-soft);
+    font-size:12px;
+  }
+  .feed-item:last-child{border-bottom:none;}
+  .feed-dot{width:7px; height:7px; border-radius:50%; margin-top:5px; flex:none;}
+  .feed-text{color:var(--text-secondary);}
+  .feed-text b{color:var(--text-primary); font-weight:600;}
+  .feed-time{font-family:var(--font-mono); font-size:10.5px; color:var(--text-tertiary); margin-left:auto; white-space:nowrap; padding-left:8px;}
+
+  .sev-critical{background:var(--danger);}
+  .sev-warning{background:var(--warn);}
+  .sev-info{background:var(--cyan);}
+
+  /* badges */
+  .badge{
+    display:inline-flex; align-items:center; gap:5px;
+    padding:3px 9px; border-radius:20px;
+    font-size:11px; font-weight:600;
+    border:1px solid transparent;
+  }
+  .badge-critical{background:var(--danger-dim); color:var(--danger); border-color:rgba(244,67,106,.3);}
+  .badge-warning{background:var(--warn-dim); color:var(--warn); border-color:rgba(242,169,59,.3);}
+  .badge-resolved{background:var(--cyan-dim); color:var(--cyan); border-color:rgba(45,212,191,.3);}
+  .badge-neutral{background:var(--surface-hover); color:var(--text-secondary); border-color:var(--border);}
+  .badge-dot{width:6px; height:6px; border-radius:50%; background:currentColor;}
+
+  /* ---------- Devices table ---------- */
+  .table-toolbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  thead th{
+    text-align:left; font-weight:600; color:var(--text-tertiary);
+    text-transform:uppercase; font-size:10.5px; letter-spacing:.05em;
+    padding:0 14px 10px; border-bottom:1px solid var(--border-soft);
+  }
+  tbody td{padding:12px 14px; border-bottom:1px solid var(--border-soft); vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--surface-hover);}
+  .dev-name{font-weight:600;}
+  .dev-ip{font-family:var(--font-mono); color:var(--text-secondary); font-size:11.5px;}
+  .proto-chip{
+    font-family:var(--font-mono); font-size:10.5px;
+    background:var(--bg); border:1px solid var(--border);
+    padding:2px 7px; border-radius:5px; color:var(--text-secondary);
+  }
+  .trust-cell{display:flex; align-items:center; gap:8px; min-width:120px;}
+  .trust-bar{flex:1; height:5px; border-radius:4px; background:var(--border-soft); overflow:hidden;}
+  .trust-fill{height:100%; border-radius:4px;}
+  .trust-num{font-family:var(--font-mono); font-size:11.5px; width:26px; text-align:right;}
+
+  /* ---------- Incidents ---------- */
+  .incident-list{display:flex; flex-direction:column; gap:10px;}
+  .incident-card{
+    background:var(--surface);
+    border:1px solid var(--border-soft);
+    border-left:3px solid var(--border-soft);
+    border-radius:10px;
+    padding:14px 16px;
+    display:flex; align-items:center; gap:16px;
+    cursor:pointer;
+    transition:background .15s, border-color .15s, transform .1s;
+  }
+  .incident-card:hover{background:var(--surface-hover); transform:translateX(2px);}
+  .incident-card.critical{border-left-color:var(--danger);}
+  .incident-card.warning{border-left-color:var(--warn);}
+  .incident-card.resolved{border-left-color:var(--cyan);}
+  .incident-id{font-family:var(--font-mono); font-size:11px; color:var(--text-tertiary); width:88px; flex:none;}
+  .incident-main{flex:1; min-width:0;}
+  .incident-title{font-weight:600; font-size:13.5px;}
+  .incident-meta{font-size:11.5px; color:var(--text-tertiary); margin-top:3px;}
+  .incident-time{font-family:var(--font-mono); font-size:11px; color:var(--text-tertiary); width:80px; flex:none; text-align:right;}
+  .chev{color:var(--text-tertiary); flex:none;}
+
+  /* ---------- Incident detail ---------- */
+  .detail-header{display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px;}
+  .back-link{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; color:var(--text-secondary);
+    cursor:pointer; margin-bottom:14px;
+  }
+  .back-link:hover{color:var(--cyan);}
+  .detail-title{font-size:19px; font-weight:700;}
+  .detail-sub{font-size:12px; color:var(--text-tertiary); margin-top:4px; font-family:var(--font-mono);}
+  .action-btn{
+    background:var(--surface-hover); border:1px solid var(--border);
+    color:var(--text-primary); padding:8px 14px; border-radius:7px;
+    font-size:12.5px; font-weight:500;
+  }
+  .action-btn:hover{border-color:var(--cyan); color:var(--cyan);}
+
+  .feature-row{margin-bottom:13px;}
+  .feature-top{display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;}
+  .feature-top b{font-weight:600;}
+  .feature-top span{font-family:var(--font-mono); color:var(--text-tertiary); font-size:11px;}
+  .feature-track{height:6px; background:var(--border-soft); border-radius:4px; overflow:hidden;}
+  .feature-fill{height:100%; background:linear-gradient(90deg, var(--violet), #7c6ae8); border-radius:4px;}
+
+  .checklist{list-style:none; display:flex; flex-direction:column; gap:10px;}
+  .checklist li{display:flex; align-items:center; gap:10px; font-size:12.5px;}
+  .check-box{
+    width:16px; height:16px; border-radius:4px; flex:none;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px;
+  }
+  .check-box.done{background:var(--cyan-dim); color:var(--cyan); border:1px solid rgba(45,212,191,.4);}
+  .check-box.pending{border:1px solid var(--border); color:transparent;}
+  .check-label-done{color:var(--text-primary);}
+  .check-label-pending{color:var(--text-tertiary);}
+  .check-note{margin-left:auto; font-size:10.5px; color:var(--text-tertiary);}
+
+  .log-block{
+    font-family:var(--font-mono); font-size:11.5px; line-height:1.9;
+    background:var(--bg); border:1px solid var(--border-soft);
+    border-radius:8px; padding:12px 14px; color:var(--text-secondary);
+    overflow-x:auto;
+  }
+  .log-block .t{color:var(--text-tertiary);}
+  .log-block .hi{color:var(--danger);}
+
+  .timeline{display:flex; flex-direction:column; gap:0;}
+  .timeline-item{display:flex; gap:12px; padding-bottom:16px; position:relative;}
+  .timeline-item:not(:last-child)::before{
+    content:''; position:absolute; left:5px; top:14px; bottom:0; width:1px; background:var(--border);
+  }
+  .timeline-dot{width:11px; height:11px; border-radius:50%; background:var(--violet); flex:none; margin-top:2px; box-shadow:0 0 0 3px var(--violet-dim);}
+  .timeline-time{font-family:var(--font-mono); font-size:10.5px; color:var(--text-tertiary);}
+  .timeline-text{font-size:12.5px; margin-top:2px;}
+
+  /* ---------- Copilot ---------- */
+  .copilot-wrap{display:flex; flex-direction:column; height:calc(100vh - 58px - 48px); max-height:640px; background:var(--surface); border:1px solid var(--border-soft); border-radius:12px; overflow:hidden;}
+  .copilot-header{display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--border-soft); background:var(--bg-elevated);}
+  .copilot-avatar{width:28px; height:28px; border-radius:8px; background:var(--violet-dim); border:1px solid rgba(167,139,250,.35); display:flex; align-items:center; justify-content:center; color:var(--violet);}
+  .copilot-messages{flex:1; overflow-y:auto; padding:20px 22px; display:flex; flex-direction:column; gap:16px;}
+  .msg{max-width:72%; font-size:13px; line-height:1.55; animation:fadeIn .2s ease;}
+  .msg-ai{align-self:flex-start; display:flex; gap:10px;}
+  .msg-ai .bubble{background:var(--bg); border:1px solid var(--border-soft); border-radius:3px 12px 12px 12px; padding:11px 14px; color:var(--text-primary);}
+  .msg-user{align-self:flex-end;}
+  .msg-user .bubble{background:var(--cyan-dim); border:1px solid rgba(45,212,191,.3); border-radius:12px 3px 12px 12px; padding:11px 14px; color:var(--text-primary);}
+  .msg-avatar{width:26px; height:26px; border-radius:7px; background:var(--violet-dim); color:var(--violet); display:flex; align-items:center; justify-content:center; flex:none; font-size:12px;}
+  .chips{display:flex; gap:8px; flex-wrap:wrap; padding:0 22px 14px;}
+  .chip{
+    background:var(--bg); border:1px solid var(--border); color:var(--text-secondary);
+    font-size:11.5px; padding:6px 12px; border-radius:20px; cursor:pointer;
+  }
+  .chip:hover{border-color:var(--violet); color:var(--violet);}
+  .copilot-input{display:flex; gap:10px; padding:14px 18px; border-top:1px solid var(--border-soft); background:var(--bg-elevated);}
+  .copilot-input input{
+    flex:1; background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:10px 14px; color:var(--text-primary); font-size:13px; font-family:inherit;
+  }
+  .copilot-input input:focus{outline:none; border-color:var(--violet);}
+  .send-btn{
+    background:var(--violet); color:#100b20; border:none; border-radius:8px;
+    padding:0 16px; font-weight:600; font-size:12.5px;
+  }
+  .send-btn:hover{background:#b7a4fb;}
+
+
+  /* ---------- Security pipeline / live state ---------- */
+  .pipeline-panel{margin:16px 0;}
+  .pipeline{display:grid;grid-template-columns:repeat(8,minmax(100px,1fr));gap:8px;align-items:stretch;}
+  .pipeline-step{position:relative;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:11px 9px;min-height:72px;}
+  .pipeline-step:not(:last-child)::after{content:'→';position:absolute;right:-12px;top:24px;color:var(--text-tertiary);z-index:2;font-family:var(--font-mono);}
+  .pipeline-step .num{font-family:var(--font-mono);font-size:9px;color:var(--text-tertiary);}
+  .pipeline-step .name{font-size:11.5px;font-weight:600;margin-top:5px;}
+  .pipeline-step .state{font-size:9.5px;color:var(--cyan);margin-top:3px;}
+  .pipeline-step.active{border-color:rgba(45,212,191,.4);box-shadow:0 0 0 1px rgba(45,212,191,.08) inset;}
+  .pipeline-step.prevent{border-color:rgba(244,67,106,.45);background:var(--danger-dim);}
+  .pipeline-step.prevent .state{color:var(--danger);}
+  .event-lab{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:16px 0;}
+  .event-lab-copy h3{font-size:13px;font-weight:600;}
+  .event-lab-copy p{font-size:11.5px;color:var(--text-tertiary);margin-top:3px;}
+  .simulate-btn{background:var(--cyan);color:#071018;border:0;border-radius:7px;padding:9px 13px;font-size:12px;font-weight:700;white-space:nowrap;}
+  .simulate-btn:hover{filter:brightness(1.08);}
+  .risk-card{display:grid;grid-template-columns:170px 1fr;gap:20px;align-items:center;}
+  .risk-score{width:142px;height:142px;border-radius:50%;border:8px solid var(--danger-dim);box-shadow:inset 0 0 0 1px rgba(244,67,106,.2);display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto;}
+  .risk-score strong{font-family:var(--font-mono);font-size:34px;color:var(--danger);line-height:1;}
+  .risk-score span{font-size:10px;color:var(--text-tertiary);margin-top:5px;text-transform:uppercase;letter-spacing:.08em;}
+  .factor-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px 16px;}
+  .factor{font-size:10.5px;color:var(--text-secondary);}
+  .factor-top{display:flex;justify-content:space-between;margin-bottom:4px;}
+  .factor-top b{font-weight:500;color:var(--text-primary);}
+  .factor-bar{height:5px;background:var(--border-soft);border-radius:4px;overflow:hidden;}
+  .factor-bar i{display:block;height:100%;background:var(--violet);border-radius:4px;}
+  .decision-strip{margin-top:14px;padding:10px 12px;border-radius:8px;background:var(--danger-dim);border:1px solid rgba(244,67,106,.25);font-size:11.5px;}
+  .decision-strip b{color:var(--danger);}
+  .demo-note{font-family:var(--font-mono);font-size:9.5px;color:var(--text-tertiary);margin-top:9px;}
+  @media(max-width:1100px){.pipeline{grid-template-columns:repeat(4,1fr)}.pipeline-step:not(:last-child)::after{display:none}}
+  @media(max-width:650px){.risk-card{grid-template-columns:1fr}.factor-grid{grid-template-columns:1fr}.event-lab{align-items:flex-start;flex-direction:column}.pipeline{grid-template-columns:repeat(2,1fr)}}
+
+  /* ---------- Empty / not-built state ---------- */
+  .empty-state{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:90px 20px; max-width:420px; margin:0 auto;
+  }
+  .empty-icon{width:56px; height:56px; color:var(--text-tertiary); margin-bottom:22px;}
+  .empty-title{font-size:16px; font-weight:700; margin-bottom:8px;}
+  .empty-body{font-size:13px; color:var(--text-secondary); line-height:1.6; margin-bottom:22px;}
+  .empty-tag{
+    font-family:var(--font-mono); font-size:10.5px; color:var(--text-tertiary);
+    background:var(--surface); border:1px solid var(--border); padding:4px 10px; border-radius:20px;
+    margin-bottom:18px; display:inline-block;
+  }
+
+  ::-webkit-scrollbar{width:8px; height:8px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--text-tertiary);}
+
+  @media (max-width:900px){
+    .app{grid-template-columns:64px 1fr;}
+    .brand-name,.brand-sub,.nav-item span,.sidebar-footer-text{display:none;}
+    .nav-item{justify-content:center;}
+    .stat-row{grid-template-columns:repeat(2,1fr);}
+    .grid-2{grid-template-columns:1fr;}
+    .search-box{width:130px;}
+  }
+
+  /* ===== WARDEN ACTIVE DIGITAL TWIN / SOC EXTENSION ===== */
+  .active-section{margin-top:16px}
+  .eyebrow{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:5px}
+  .section-title{font-size:18px;font-weight:700}.section-copy{font-size:12px;color:var(--text-secondary);margin-top:4px}
+  .view-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .toolbar-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .live-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(45,212,191,.28);background:var(--cyan-dim);color:var(--cyan);border-radius:999px;padding:5px 9px;font:10px var(--font-mono)}
+  .live-pill i{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 0 4px rgba(45,212,191,.08);animation:pulse 1.7s infinite}
+  .ghost-btn{background:var(--surface);border:1px solid var(--border);color:var(--text-secondary);padding:7px 10px;border-radius:7px;font-size:11px}.ghost-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+
+  .twin-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,.7fr);gap:16px}
+  .floor-wrap{position:relative;background:#0b1220;border:1px solid var(--border-soft);border-radius:10px;overflow:hidden;min-height:520px}
+  #floorPlan{width:100%;height:520px;display:block;background:radial-gradient(circle at 50% 45%,rgba(45,212,191,.035),transparent 50%)}
+  .floor-grid{stroke:#1b2943;stroke-width:1}.room{fill:#101a2c;stroke:#30405e;stroke-width:1.5}.room-label{fill:#5f6f8e;font:600 10px var(--font-mono);letter-spacing:.08em}.room-sub{fill:#465573;font:9px var(--font-mono)}
+  .door{stroke:#a78bfa;stroke-width:5;stroke-linecap:round}.door.closed{stroke:#5e6a82}.door.alert{stroke:var(--danger)}
+  .device-node{cursor:pointer}.device-node circle{stroke:#0a0f1c;stroke-width:3}.device-node text{fill:#cbd5e1;font:9px var(--font-mono)}.device-node .node-ring{fill:none;stroke-width:2;opacity:.25}.device-node:hover .node-ring{opacity:.8}
+  .zone-badge{fill:#0a0f1c;stroke:#2b3955;rx:5}.zone-badge-text{fill:#8fa0bd;font:9px var(--font-mono)}
+  .twin-side{display:flex;flex-direction:column;gap:16px}
+  .state-list{display:flex;flex-direction:column;gap:8px}.state-row{display:flex;align-items:center;gap:9px;padding:9px;border:1px solid var(--border-soft);background:var(--bg);border-radius:8px}.state-icon{width:25px;height:25px;border-radius:7px;display:grid;place-items:center;background:var(--surface-hover);font-size:12px}.state-row .meta{margin-left:auto;text-align:right}.state-row b{font-size:12px}.state-row small{display:block;color:var(--text-tertiary);font-size:9.5px;margin-top:2px}.state-dot{width:7px;height:7px;border-radius:50%}.state-dot.ok{background:var(--cyan)}.state-dot.warn{background:var(--warn)}.state-dot.bad{background:var(--danger)}
+  .camera-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.camera-tile{height:105px;border:1px solid var(--border-soft);border-radius:8px;overflow:hidden;position:relative;background:linear-gradient(135deg,#0c1423,#17233a)}.camera-tile:before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(255,255,255,.025) 6px),linear-gradient(120deg,transparent 20%,rgba(45,212,191,.08),transparent 60%)}.camera-top{position:absolute;left:8px;right:8px;top:7px;display:flex;justify-content:space-between;font:9px var(--font-mono);z-index:1}.camera-bottom{position:absolute;left:8px;right:8px;bottom:7px;display:flex;justify-content:space-between;font:9px var(--font-mono);z-index:1}.camera-rec{color:var(--danger)}.camera-online{color:var(--cyan)}.camera-alert{color:var(--warn)}
+
+  .risk-layout{display:grid;grid-template-columns:230px 1fr;gap:20px;align-items:center}.gauge{position:relative;width:210px;height:210px;margin:auto}.gauge svg{width:100%;height:100%;transform:rotate(-90deg)}.gauge-track{fill:none;stroke:#202d48;stroke-width:16}.gauge-value{fill:none;stroke:var(--danger);stroke-width:16;stroke-linecap:round;transition:stroke-dashoffset .7s}.gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}.gauge-center strong{font:600 42px var(--font-mono)}.gauge-center span{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--danger)}.gauge-meta{text-align:center;color:var(--text-tertiary);font-size:10px;margin-top:-12px}
+  .factor-grid-live{display:grid;grid-template-columns:1fr 1fr;gap:10px}.live-factor{padding:10px;border:1px solid var(--border-soft);border-radius:8px;background:var(--bg)}.live-factor-head{display:flex;justify-content:space-between;font-size:11px}.live-factor-head span{font:11px var(--font-mono);color:var(--text-secondary)}.mini-track{height:5px;background:#1d2941;border-radius:5px;margin-top:7px;overflow:hidden}.mini-track i{display:block;height:100%;background:linear-gradient(90deg,var(--violet),var(--danger));border-radius:5px}
+
+  .alert-stream{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto}.alert-item{display:grid;grid-template-columns:7px 1fr auto;gap:10px;padding:10px;border:1px solid var(--border-soft);background:var(--bg);border-radius:8px}.alert-item .a-dot{width:7px;height:7px;border-radius:50%;margin-top:5px}.alert-item b{font-size:11.5px}.alert-item p{font-size:10.5px;color:var(--text-tertiary);margin-top:2px}.alert-item time{font:9.5px var(--font-mono);color:var(--text-tertiary)}
+  .timeline-page{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.65fr);gap:16px}.timeline-large{position:relative;padding:10px 10px 10px 24px}.timeline-large:before{content:'';position:absolute;left:10px;top:16px;bottom:16px;width:2px;background:linear-gradient(var(--cyan),var(--violet),var(--danger))}.tl-event{position:relative;padding:0 0 22px 20px}.tl-event:last-child{padding-bottom:5px}.tl-dot{position:absolute;left:-20px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 4px var(--cyan-dim)}.tl-dot.warning{background:var(--warn);box-shadow:0 0 0 4px var(--warn-dim)}.tl-dot.critical{background:var(--danger);box-shadow:0 0 0 4px var(--danger-dim)}.tl-time{font:10px var(--font-mono);color:var(--text-tertiary)}.tl-title{font-size:12.5px;font-weight:600;margin-top:3px}.tl-detail{font-size:11px;color:var(--text-secondary);margin-top:3px}.tl-tags{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}.tl-tag{font:9px var(--font-mono);padding:3px 6px;border:1px solid var(--border);border-radius:4px;color:var(--text-tertiary)}
+  .api-card code{font:10px var(--font-mono);color:var(--cyan)}.api-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-soft)}.api-row:last-child{border-bottom:none}.api-method{width:46px;font:9px var(--font-mono);color:var(--violet)}.api-path{flex:1;font:10px var(--font-mono);color:var(--text-secondary)}.api-status{font:9px var(--font-mono);color:var(--cyan)}
+  .ws-console{font:10px var(--font-mono);background:#070c15;border:1px solid var(--border-soft);border-radius:8px;padding:10px;max-height:170px;overflow:auto;color:#8796b2}.ws-console .in{color:var(--cyan)}.ws-console .out{color:var(--violet)}.ws-console .sys{color:var(--warn)}
+  .architecture-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.arch-node{padding:9px 5px;text-align:center;border:1px solid var(--border-soft);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--text-secondary);position:relative}.arch-node:not(:last-child):after{content:'›';position:absolute;right:-8px;top:9px;color:var(--text-tertiary);z-index:2}.arch-node b{display:block;color:var(--text-primary);font-size:10px;margin-bottom:2px}.arch-node.current{border-color:rgba(45,212,191,.35);box-shadow:inset 0 0 20px rgba(45,212,191,.035)}
+  @media(max-width:1050px){.twin-layout,.timeline-page{grid-template-columns:1fr}.risk-layout{grid-template-columns:1fr}.architecture-strip{grid-template-columns:repeat(4,1fr)}.arch-node:nth-child(4):after{display:none}}
+  @media(max-width:700px){.architecture-strip{grid-template-columns:repeat(2,1fr)}.arch-node:after{display:none!important}.camera-grid{grid-template-columns:1fr 1fr}.factor-grid-live{grid-template-columns:1fr}}
+
+
+  .device-node,.topology-node,.room-hit{cursor:pointer;outline:none}.device-node:hover .node-ring,.device-node:focus .node-ring{stroke:#fff;stroke-width:3}.topology-node{cursor:pointer}.topology-node:hover circle,.topology-node:focus circle{stroke:#fff;stroke-width:4}.room{cursor:pointer;transition:fill .2s,stroke .2s}.room:hover{fill:rgba(45,212,191,.09);stroke:var(--cyan);stroke-width:2.5}
+  .entity-overlay{display:none;position:fixed;inset:0;z-index:1000}.entity-overlay.open{display:block}.entity-backdrop{position:absolute;inset:0;background:rgba(3,7,18,.82);backdrop-filter:blur(7px)}.entity-panel{position:absolute;inset:3vh 3vw 3vh auto;width:min(900px,94vw);overflow:auto;padding:24px;background:var(--bg);border:1px solid var(--border);border-radius:18px;box-shadow:0 30px 100px #0009;animation:entityIn .22s ease-out}.entity-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:28px}.entity-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px}.entity-heading h2{font-size:clamp(22px,3vw,32px);letter-spacing:-.03em;margin:5px 0}.entity-heading p,.entity-note{color:var(--text-secondary);font-size:13px}.entity-status{border:1px solid var(--border);border-radius:99px;padding:6px 11px;color:var(--cyan);font:11px var(--font-mono);white-space:nowrap}.entity-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.entity-metric{padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--bg-elevated)}.entity-metric small{display:block;color:var(--text-secondary);font-size:11px}.entity-metric b{display:block;font-size:24px;margin-top:5px}.entity-content-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.entity-kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:12px}.entity-kv span{color:var(--text-secondary)}.entity-kv b{text-align:right;overflow-wrap:anywhere}.entity-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.entity-action-result{margin-top:12px;padding:10px;border-radius:8px;background:var(--surface);font:11px var(--font-mono);color:var(--text-secondary)}.entity-activity-row{padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:12px}.entity-activity-row b{display:block}.entity-activity-row small{color:var(--text-secondary)}@keyframes entityIn{from{opacity:.5;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
+  @media(max-width:700px){.entity-panel{inset:0;width:100%;border-radius:0;padding:16px}.entity-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.entity-content-grid{grid-template-columns:1fr}.entity-heading{flex-direction:column}}
+
+.room{transition:stroke .3s}.room.flash{animation:roomFlash 1.6s ease-out}@keyframes roomFlash{0%{fill:#3a1220;stroke:#f4436a}100%{fill:#101a2c}}
+  .device-node .dev-label{fill:#cbd5e1;font:9px var(--font-mono)}.device-node:hover .dev-label{fill:#fff}.device-node rect.dev-shape{stroke:#0a0f1c;stroke-width:3}
+  .floor-wrap svg{width:100%;height:auto;display:block}
+.report-text{font-size:12.5px;line-height:1.55;max-height:460px;overflow:auto}.report-text h4{margin:12px 0 4px}.report-text p{margin:4px 0}.report-text .li{margin:2px 0 2px 6px}
+  .report-text table{border-collapse:collapse;width:100%;margin:6px 0}.report-text td{border:1px solid rgba(148,163,184,.25);padding:3px 8px;font-size:12px;vertical-align:top;word-break:break-word}
+  .report-text code,.report-text .mono{font-family:var(--font-mono);background:rgba(148,163,184,.12);padding:0 3px;border-radius:3px;word-break:break-all;white-space:pre-wrap}
+  #incTabs .action-btn.active{border-color:var(--cyan);color:var(--cyan)}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" fill="none">
+        <path d="M16 2 L28 7 V15 C28 22.5 22.8 27.8 16 30 C9.2 27.8 4 22.5 4 15 V7 Z" fill="none" stroke="#2dd4bf" stroke-width="2"/>
+        <circle cx="16" cy="15" r="3.2" fill="#2dd4bf"/>
+        <circle cx="10.5" cy="11" r="1.6" fill="#a78bfa"/>
+        <circle cx="21.5" cy="11" r="1.6" fill="#a78bfa"/>
+        <circle cx="16" cy="21.5" r="1.6" fill="#a78bfa"/>
+        <line x1="16" y1="15" x2="10.5" y2="11" stroke="#a78bfa" stroke-width="1"/>
+        <line x1="16" y1="15" x2="21.5" y2="11" stroke="#a78bfa" stroke-width="1"/>
+        <line x1="16" y1="15" x2="16" y2="21.5" stroke="#a78bfa" stroke-width="1"/>
+      </svg>
+      <div>
+        <div class="brand-name">WARDEN<span>·IoT</span></div>
+        <div class="brand-sub">AI Security Platform</div>
+      </div>
+    </div>
+
+    <ul class="nav">
+      <li class="nav-item active" data-view="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span>Overview</span>
+      </li>
+      <li class="nav-item" data-view="devices">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2.2"/><circle cx="4" cy="5" r="1.6"/><circle cx="20" cy="5" r="1.6"/><circle cx="4" cy="19" r="1.6"/><circle cx="20" cy="19" r="1.6"/><line x1="10.4" y1="10.4" x2="5.2" y2="6.2"/><line x1="13.6" y1="10.4" x2="18.8" y2="6.2"/><line x1="10.4" y1="13.6" x2="5.2" y2="17.8"/><line x1="13.6" y1="13.6" x2="18.8" y2="17.8"/></svg>
+        <span>Devices</span>
+      </li>
+      <li class="nav-item" data-view="incidents">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 2.7 17.5a1.6 1.6 0 0 0 1.4 2.4h15.8a1.6 1.6 0 0 0 1.4-2.4L13.7 3.9a1.6 1.6 0 0 0-2.8 0Z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><circle cx="12" cy="16.3" r="0.9" fill="currentColor" stroke="none"/></svg>
+        <span>Incidents</span>
+      </li>
+      <li class="nav-item" data-view="copilot">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="13" rx="3"/><line x1="8" y1="10" x2="8" y2="10.01"/><line x1="16" y1="10" x2="16" y2="10.01"/><path d="M8 14c1 1 2 1.4 4 1.4s3-.4 4-1.4"/><line x1="12" y1="2" x2="12" y2="5"/></svg>
+        <span>Copilot</span>
+      </li>
+      <li class="nav-item" data-view="digital-twin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6.5 12 3l9 3.5v11L12 21l-9-3.5z"/><path d="M12 3v18M3 6.5l9 3.7 9-3.7"/></svg>
+        <span>Digital Twin</span>
+      </li>
+      <li class="nav-item" data-view="network">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="m7.4 11 9.2-4M7.4 13l9.2 4"/></svg>
+        <span>Network</span>
+      </li>
+      <li class="nav-item" data-view="timeline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4v16M5 7h12l-3 4 3 4H5"/></svg>
+        <span>Timeline</span>
+      </li>
+      <li class="nav-item" data-view="alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+        <span>Live Alerts</span>
+      </li>
+      <li class="nav-item" data-view="api">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 9 5 12l3 3M16 9l3 3-3 3M14 5l-4 14"/></svg>
+        <span>API Bridge</span>
+      </li>
+      <li class="nav-item" data-view="reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path d="M15 2v5h5"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+        <span>Reports</span>
+        <span class="soon">SOON</span>
+      </li>
+    </ul>
+
+    <div class="sidebar-footer">
+      <div class="pulse-dot"></div>
+      <div class="sidebar-footer-text">
+        <b>Detection Engine</b>
+        <span>Online · 96.4% confidence</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <div class="view-title" id="topTitle">Network Overview</div>
+        <div class="view-subtitle" id="topSubtitle">Real-time posture across all monitored IoT segments</div>
+      </div>
+      <div class="topbar-right">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
+          <span>Search devices, IPs, IDs…</span>
+        </div>
+        <div class="avatar">AM</div>
+      </div>
+    </header>
+
+    <div class="view-container">
+
+      <!-- ===== OVERVIEW ===== -->
+      <section class="view active" id="view-overview">
+        <div style="margin-bottom:18px;padding:16px 18px;border:1px solid rgba(45,212,191,.28);background:linear-gradient(90deg,rgba(45,212,191,.08),rgba(167,139,250,.06));border-radius:12px;">
+          <div style="display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:16px;font-weight:700;">Warden IPS Control Plane</div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Telemetry → ML Detection → Risk → Policy → Prevention → Incident → AI Explanation</div>
+            </div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--cyan);border:1px solid rgba(45,212,191,.3);padding:7px 10px;border-radius:7px;">MODE: SIMULATION / SAFE</div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-label">Devices Monitored</div>
+            <div class="stat-value">128</div>
+            <div class="stat-trend">across 5 protocols</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active Threats</div>
+            <div class="stat-value" style="color:var(--danger)">2</div>
+            <div class="stat-trend up-bad">↑ 1 since last hour</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Blocked · 24h</div>
+            <div class="stat-value" style="color:var(--cyan)">37</div>
+            <div class="stat-trend up-good">auto-contained</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Detection Confidence</div>
+            <div class="stat-value">96.4<span style="font-size:15px;color:var(--text-tertiary)">%</span></div>
+            <div class="stat-trend">model stable</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Network Topology</h3>
+              <div class="topology-legend">
+                <span><i class="dot" style="background:var(--cyan)"></i>Trusted</span>
+                <span><i class="dot" style="background:var(--warn)"></i>Suspicious</span>
+                <span><i class="dot" style="background:var(--danger)"></i>Isolated</span>
+              </div>
+            </div>
+            <div class="panel-body">
+              <svg id="topologySvg" viewBox="0 0 560 300"></svg>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Live Detection Feed</h3>
+              <span class="hint">streaming</span>
+            </div>
+            <div class="panel-body">
+              <div class="feed" id="feedList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel pipeline-panel">
+          <div class="panel-header"><h3>Live Security Pipeline</h3><span class="hint" id="pipelineState">monitoring</span></div>
+          <div class="panel-body">
+            <div class="pipeline" id="securityPipeline">
+              <div class="pipeline-step active"><div class="num">01</div><div class="name">IoT Devices</div><div class="state">telemetry</div></div>
+              <div class="pipeline-step active"><div class="num">02</div><div class="name">Network Telemetry</div><div class="state">flow data</div></div>
+              <div class="pipeline-step active"><div class="num">03</div><div class="name">Feature Engine</div><div class="state">features ready</div></div>
+              <div class="pipeline-step active"><div class="num">04</div><div class="name">ML Detector</div><div class="state">96.4% stable</div></div>
+              <div class="pipeline-step active"><div class="num">05</div><div class="name">Risk Engine</div><div class="state">scoring</div></div>
+              <div class="pipeline-step active"><div class="num">06</div><div class="name">Policy Engine</div><div class="state">evaluating</div></div>
+              <div class="pipeline-step prevent"><div class="num">07</div><div class="name">Prevent / Block</div><div class="state">ready</div></div>
+              <div class="pipeline-step active"><div class="num">08</div><div class="name">Incident + AI</div><div class="state">record / explain</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel event-lab">
+          <div class="panel-body event-lab-copy">
+            <h3>Prototype Event Lab</h3>
+            <p>Run one controlled event through the same frontend pipeline before connecting the real API.</p>
+            <div class="demo-note">SIMULATION ONLY · NO REAL FIREWALL ACTION</div>
+          </div>
+          <div style="padding:0 16px 0 0;"><button class="simulate-btn" id="simulateEvent">Simulate Critical Attack</button></div>
+        </div>
+
+        <div class="panel" id="riskPanel">
+          <div class="panel-header"><h3>Current Risk Assessment</h3><span class="hint" id="riskStatus">demo baseline</span></div>
+          <div class="panel-body">
+            <div class="risk-card">
+              <div class="risk-score"><strong id="riskScore">87</strong><span id="riskLevel">Critical</span></div>
+              <div>
+                <div class="factor-grid" id="riskFactors"></div>
+                <div class="decision-strip" id="policyDecision"><b>Policy decision:</b> Critical risk + high confidence → simulated <strong>BLOCK_SOURCE</strong> and create incident.</div>
+              </div>
+            </div>
+            <div class="demo-note">Prototype weighting is illustrative only. The roadmap requires the final weights to be experimentally evaluated and documented.</div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:16px;">
+          <div class="panel">
+            <div class="panel-header"><h3>Prevention Status</h3><span class="hint">policy-controlled</span></div>
+            <div class="panel-body">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:12px;height:12px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px rgba(45,212,191,.5);"></div>
+                <div><b id="preventionStatus">Ready — no real firewall action</b><div style="font-size:11px;color:var(--text-tertiary);margin-top:3px;">The frontend is prepared to receive the backend policy result.</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><h3>AI Agent Role</h3><span class="hint">explain, don't enforce</span></div>
+            <div class="panel-body" style="font-size:12px;color:var(--text-secondary);">
+              Warden's AI agent receives the incident, risk factors, policy result and device context, then produces a human-readable explanation/report.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== DEVICES ===== -->
+      <section class="view" id="view-devices">
+        <div class="table-toolbar">
+          <span class="hint" style="color:var(--text-tertiary); font-size:12px;">128 devices · showing 10</span>
+          <button class="action-btn">+ Add device</button>
+        </div>
+        <div class="panel">
+          <table>
+            <thead>
+              <tr><th>Device</th><th>IP address</th><th>Protocol</th><th>Trust score</th><th>Status</th><th>Last seen</th></tr>
+            </thead>
+            <tbody id="devicesTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== INCIDENTS LIST ===== -->
+      <section class="view" id="view-incidents">
+        <div class="incident-list" id="incidentList"></div>
+      </section>
+
+      <!-- ===== INCIDENT DETAIL ===== -->
+      <section class="view" id="view-incident-detail">
+        <div class="back-link" data-view="incidents">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back to incidents
+        </div>
+        <div class="detail-header">
+          <div>
+            <div class="detail-title" id="incTitle">Select an incident</div>
+            <div class="detail-sub" id="incSub"></div>
+          </div>
+          <div style="display:flex; gap:8px;"><button class="action-btn" id="incCopy" hidden>Copy notification</button></div>
+        </div>
+        <div class="grid-2">
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="panel"><div class="panel-header"><h3>MITRE ATT&amp;CK</h3><span class="hint" id="incScore"></span></div><div class="panel-body" id="incMitre"></div></div>
+            <div class="panel"><div class="panel-header"><h3>Risk factors</h3><span class="hint">from the risk engine</span></div><div class="panel-body" id="incFactors"></div></div>
+            <div class="panel"><div class="panel-header"><h3>Report</h3><span id="incTabs" style="display:flex; gap:6px;"></span></div><div class="panel-body"><div id="incReport" class="report-text"></div></div></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="panel"><div class="panel-header"><h3>Response actions</h3></div><div class="panel-body"><ul class="checklist" id="incActions"></ul></div></div>
+            <div class="panel"><div class="panel-header"><h3>Event timeline</h3></div><div class="panel-body"><div class="timeline" id="incTimeline"></div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== COPILOT ===== -->
+      <section class="view" id="view-copilot">
+        <div class="copilot-wrap">
+          <div class="copilot-header">
+            <div class="copilot-avatar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="13" rx="3"/><line x1="8" y1="10" x2="8" y2="10.01"/><line x1="16" y1="10" x2="16" y2="10.01"/><path d="M8 14c1 1 2 1.4 4 1.4s3-.4 4-1.4"/></svg>
+            </div>
+            <div>
+              <div style="font-weight:600; font-size:13px;">Security Copilot</div>
+              <div style="font-size:11px; color:var(--text-tertiary);">Explains detections in plain language</div>
+            </div>
+          </div>
+          <div class="copilot-messages" id="copilotMessages"></div>
+          <div class="chips">
+            <div class="chip" data-prompt="Why was the Smart TV isolated?">Why was the Smart TV isolated?</div>
+            <div class="chip" data-prompt="Which devices are most at risk?">Which devices are most at risk?</div>
+            <div class="chip" data-prompt="Summarize the last 24 hours">Summarize the last 24 hours</div>
+          </div>
+          <div class="copilot-input">
+            <input type="text" id="copilotInput" placeholder="Ask about a device, incident ID, or trend…">
+            <button class="send-btn" id="copilotSend">Send</button>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ===== DIGITAL TWIN ===== -->
+      <section class="view" id="view-digital-twin">
+        <div class="view-toolbar">
+          <div><div class="eyebrow">PHYSICAL SECURITY MODEL</div><div class="section-title">Home / Lab Digital Twin</div><div class="section-copy">Mock state is driven by JSON now and is ready to be replaced by <code>/api/devices</code> + WebSocket events.</div></div>
+          <div class="toolbar-actions"><span class="live-pill"><i></i> LIVE STATE</span><button class="ghost-btn" id="twinReset">Reset mock state</button></div>
+        </div>
+        <div class="twin-layout">
+          <div class="panel floor-wrap"><svg id="floorPlan" viewBox="0 0 900 520" aria-label="Interactive IoT digital twin floor plan"></svg></div>
+          <div class="twin-side">
+            <div class="panel"><div class="panel-header"><h3>Zone State</h3><span class="hint" id="zoneSummary">5 zones</span></div><div class="panel-body"><div class="state-list" id="zoneStateList"></div></div></div>
+            <div class="panel"><div class="panel-header"><h3>Door / Lock State</h3><span class="hint">access control</span></div><div class="panel-body"><div class="state-list" id="doorStateList"></div></div></div>
+            <div class="panel"><div class="panel-header"><h3>Camera Tiles</h3><span class="hint">RTSP / mock</span></div><div class="panel-body"><div class="camera-grid" id="cameraGrid"></div></div></div>
+          </div>
+        </div>
+        <div class="panel active-section"><div class="panel-header"><h3>Digital Twin Event Contract</h3><span class="hint">frontend-ready</span></div><div class="panel-body"><div class="architecture-strip"><div class="arch-node current"><b>Devices</b>state</div><div class="arch-node"><b>Telemetry</b>events</div><div class="arch-node"><b>Detection</b>ML result</div><div class="arch-node"><b>Risk</b>0–100</div><div class="arch-node"><b>Policy</b>action</div><div class="arch-node"><b>Incident</b>timeline</div><div class="arch-node"><b>UI</b>WebSocket</div></div></div></div>
+      </section>
+
+      <!-- ===== NETWORK ===== -->
+      <section class="view" id="view-network">
+        <div class="view-toolbar"><div><div class="eyebrow">NETWORK GRAPH</div><div class="section-title">Trust-Aware Topology</div><div class="section-copy">SVG renderer for the prototype; the node/edge data is separated so D3 or Cytoscape can replace the renderer later.</div></div><div class="toolbar-actions"><span class="live-pill"><i></i> MOCK STREAM</span><button class="ghost-btn" id="networkPulse">Inject suspicious traffic</button></div></div>
+        <div class="grid-2">
+          <div class="panel"><div class="panel-header"><h3>Network Relationship Graph</h3><span class="hint">gateway-centric</span></div><div class="panel-body"><svg id="networkGraphLarge" viewBox="0 0 900 570" style="width:100%;height:auto;aspect-ratio:900/570;display:block"></svg></div></div>
+          <div style="display:flex;flex-direction:column;gap:16px"><div class="panel"><div class="panel-header"><h3>Traffic Path</h3><span class="hint">latest suspicious flow</span></div><div class="panel-body"><div class="architecture-strip" style="grid-template-columns:repeat(5,1fr)"><div class="arch-node"><b>192.168.1.100</b>source</div><div class="arch-node"><b>Gateway</b>inspect</div><div class="arch-node"><b>Feature</b>extract</div><div class="arch-node"><b>Risk 87</b>critical</div><div class="arch-node"><b>BLOCK</b>policy</div></div></div></div><div class="panel"><div class="panel-header"><h3>Network Metrics</h3></div><div class="panel-body"><div class="state-list"><div class="state-row"><div class="state-icon">↕</div><div><b>Flows / sec</b><small>current network rate</small></div><div class="meta"><b id="flowsMetric">2,840</b><small>+14%</small></div></div><div class="state-row"><div class="state-icon">◉</div><div><b>Unknown sources</b><small>not in device registry</small></div><div class="meta"><b id="unknownMetric">7</b><small>flagged</small></div></div><div class="state-row"><div class="state-icon">⛨</div><div><b>Blocked sources</b><small>policy actions</small></div><div class="meta"><b>37</b><small>24h</small></div></div></div></div></div></div>
+        </div>
+      </section>
+
+      <!-- ===== TIMELINE ===== -->
+      <section class="view" id="view-timeline">
+        <div class="view-toolbar"><div><div class="eyebrow">INCIDENT RESPONSE</div><div class="section-title">Detection → Risk → Policy → Containment</div><div class="section-copy">Every stage becomes an auditable event. The same structure can be populated from the backend later.</div></div><span class="live-pill"><i></i> EVENT BUS CONNECTED</span></div>
+        <div class="timeline-page"><div class="panel"><div class="panel-header"><h3>Incident Timeline</h3><span class="hint" id="timelineCount">7 events</span></div><div class="panel-body"><div class="timeline-large" id="largeTimeline"></div></div></div><div style="display:flex;flex-direction:column;gap:16px"><div class="panel"><div class="panel-header"><h3>Live Risk Gauge</h3><span class="hint">current network posture</span></div><div class="panel-body"><div class="gauge"><svg viewBox="0 0 210 210"><circle class="gauge-track" cx="105" cy="105" r="78"/><circle class="gauge-value" id="gaugeValue" cx="105" cy="105" r="78" stroke-dasharray="490" stroke-dashoffset="72"/></svg><div class="gauge-center"><strong id="gaugeNumber">87</strong><span id="gaugeLabel">Critical</span></div></div><div class="gauge-meta">weighted posture across active signals</div></div></div><div class="panel"><div class="panel-header"><h3>Response Policy</h3></div><div class="panel-body"><div class="log-block"><span class="t">IF</span> risk &gt;= 80<br><span class="t">AND</span> confidence &gt;= 0.90<br><span class="t">AND</span> attack_type != unknown<br><span class="hi">THEN BLOCK_SOURCE</span><br><span class="t">+ create_incident + notify</span></div></div></div></div></div>
+      </section>
+
+      <!-- ===== ALERTS ===== -->
+      <section class="view" id="view-alerts">
+        <div class="view-toolbar"><div><div class="eyebrow">REAL-TIME EVENT STREAM</div><div class="section-title">Live Security Alerts</div><div class="section-copy">The browser consumes Person 2 event envelopes over the authenticated WebSocket; the event source remains the backend.</div></div><div class="toolbar-actions"><span class="live-pill" id="wsStatus"><i></i> WS MOCK CONNECTED</span><button class="ghost-btn" id="toggleMockStream">Pause stream</button></div></div>
+        <div class="grid-2"><div class="panel"><div class="panel-header"><h3>Alert Stream</h3><span class="hint" id="alertCount">0 received</span></div><div class="panel-body"><div class="alert-stream" id="alertStream"></div></div></div><div class="panel"><div class="panel-header"><h3>WebSocket Console</h3><span class="hint">normalized messages</span></div><div class="panel-body"><div class="ws-console" id="wsConsole"></div></div></div></div>
+      </section>
+
+      <!-- ===== API BRIDGE ===== -->
+      <section class="view" id="view-api">
+        <div class="view-toolbar"><div><div class="eyebrow">INTEGRATION LAYER</div><div class="section-title">Frontend API Bridge</div><div class="section-copy">Connected to Person 2's actual API contract: JWT login, REST snapshots, device commands, and authenticated WebSocket events.</div></div><span class="live-pill" id="apiModePill"><i></i> API LOGIN REQUIRED</span></div>
+        <div class="grid-2"><div class="panel api-card"><div class="panel-header"><h3>Person 2 API Contract</h3><span class="hint">v1</span></div><div class="panel-body"><div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/devices</span><span class="api-status">READY</span></div><div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/incidents</span><span class="api-status">READY</span></div><div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/risk</span><span class="api-status">READY</span></div><div class="api-row"><span class="api-method">POST</span><span class="api-path">/api/devices/{id}/command</span><span class="api-status">READY</span></div><div class="api-row"><span class="api-method">WS</span><span class="api-path">/ws/events?token=JWT</span><span class="api-status">READY</span></div><div style="margin-top:14px;font-size:11px;color:var(--text-secondary)">REST calls use the same-origin /api proxy; the browser never connects to MQTT directly.</div></div></div><div class="panel"><div class="panel-header"><h3>Integration Diagnostics</h3><span class="hint">frontend adapter</span></div><div class="panel-body"><div style="display:grid;gap:8px;margin-bottom:16px"><label class="hint" for="apiUsername">Backend username</label><input id="apiUsername" autocomplete="username" placeholder="username" style="background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:10px"><label class="hint" for="apiPassword">Backend password</label><input id="apiPassword" type="password" autocomplete="current-password" placeholder="password" style="background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:10px"><button class="primary-btn" id="apiLoginBtn">Connect to backend</button><small id="apiLoginMessage" class="hint">Token is kept in memory only.</small></div><div class="state-list"><div class="state-row"><div class="state-icon">↔</div><div><b>REST transport</b><small id="restState">Mock repository</small></div><div class="meta"><span class="badge badge-resolved">READY</span></div></div><div class="state-row"><div class="state-icon">⚡</div><div><b>WebSocket</b><small id="socketState">Local event bus</small></div><div class="meta"><span class="badge badge-resolved">READY</span></div></div><div class="state-row"><div class="state-icon">◇</div><div><b>Event schema</b><small>security.alert.v1</small></div><div class="meta"><span class="badge badge-neutral">v1</span></div></div></div></div></div></div>
+      </section>
+
+      <!-- ===== INTERACTIVE ENTITY DETAIL PANEL ===== -->
+      <div class="entity-overlay" id="entityOverlay" aria-hidden="true">
+        <div class="entity-backdrop" data-close-entity></div>
+        <section class="entity-panel" role="dialog" aria-modal="true" aria-labelledby="entityTitle">
+          <div class="entity-top"><button class="ghost-btn" id="entityBack">← Back to map</button><span class="live-pill"><i></i> ENTITY INSPECTOR</span></div>
+          <div class="entity-heading"><div><div class="eyebrow" id="entityKind">DEVICE DETAILS</div><h2 id="entityTitle">CAM-002 · Garage Camera</h2><p id="entitySubtitle">Garage / camera / telemetry overview</p></div><span id="entityStatus" class="entity-status">ISOLATED</span></div>
+          <div class="entity-metrics" id="entityMetrics"></div>
+          <div class="entity-content-grid"><div class="panel"><div class="panel-header"><h3>Live state & telemetry</h3><span class="hint">mock / API-ready</span></div><div class="panel-body" id="entityTelemetry"></div></div><div class="panel"><div class="panel-header"><h3>Security actions</h3><span class="hint">simulation only</span></div><div class="panel-body"><p class="entity-note">Actions are represented in the UI only until the backend policy/action endpoint is connected. The frontend must never claim a real device was blocked unless the backend confirms it.</p><div class="entity-actions"><button class="primary-btn" id="entityInspectAction">Refresh details</button><button class="ghost-btn" id="entitySimulateAction">Simulate response</button></div><div class="entity-actions" id="realCommandRow" style="display:none;margin-top:10px"><select id="deviceCommand" aria-label="Device command" style="flex:1;min-width:0;background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:9px"><option value="on">Turn on</option><option value="off">Turn off</option><option value="lock">Lock</option><option value="unlock">Unlock</option><option value="open">Open</option><option value="close">Close</option></select><button class="primary-btn" id="sendDeviceCommand">Send real command</button></div><div id="entityActionResult" class="entity-action-result">No action requested.</div></div></div></div>
+          <div class="panel"><div class="panel-header"><h3>Related activity</h3><span class="hint">recent events</span></div><div class="panel-body" id="entityActivity"></div></div>
+        </section>
+      </div>
+
+      <!-- ===== REPORTS (not built) ===== -->
+      <section class="view" id="view-reports">
+        <div class="empty-state">
+          <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path d="M15 2v5h5"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+          <div class="empty-tag">not in this prototype</div>
+          <div class="empty-title">Reports aren't built yet</div>
+          <div class="empty-body">This view will generate exportable PDF and CSV summaries of incidents, device trust history, and model performance for a chosen date range. It isn't part of this prototype.</div>
+          <button class="action-btn" data-view="overview">Back to overview</button>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------- Nav switching ----------
+  const views = document.querySelectorAll('.view');
+  const navItems = document.querySelectorAll('.nav-item');
+  const titles = {
+    overview: ['Network Overview', 'Live posture and security pipeline across monitored IoT segments'],
+    devices: ['Device Inventory', 'Trust score and protocol breakdown per connected device'],
+    incidents: ['Incidents', 'Detected threats across the network, most recent first'],
+    'incident-detail': ['Incident Detail', 'Explainable AI reasoning and response actions'],
+    copilot: ['Security Copilot', 'Ask questions about any device, incident, or trend'],
+    reports: ['Reports', 'Exportable summaries — coming soon'],
+    'digital-twin': ['Digital Twin', 'Live floor plan, zones, doors, sensors and camera state'],
+    network: ['Network Topology', 'Device relationships, traffic paths and trust state'],
+    timeline: ['Incident Timeline', 'Chronological security events from detection to containment'],
+    alerts: ['Live Alerts', 'WebSocket-ready stream of normalized security events'],
+    api: ['API Bridge', 'Mock transport today — FastAPI/WebSocket integration tomorrow']
+  };
+
+  function showView(id){
+    views.forEach(v => v.classList.toggle('active', v.id === 'view-' + id));
+    navItems.forEach(n => n.classList.toggle('active', n.dataset.view === id));
+    const t = titles[id];
+    if(t){
+      document.getElementById('topTitle').textContent = t[0];
+      document.getElementById('topSubtitle').textContent = t[1];
+    }
+  }
+
+  document.querySelectorAll('[data-view]').forEach(el=>{
+    el.addEventListener('click', ()=> showView(el.dataset.view));
+  });
+
+  // ---------- Prototype security pipeline ----------
+  const prototypeRisk = {
+    confidence: 94,
+    attackSeverity: 90,
+    deviceCriticality: 90,
+    behavioralDeviation: 87,
+    persistence: 82,
+    sourceRisk: 88,
+    potentialImpact: 90
+  };
+
+  const riskFactorLabels = {
+    confidence:'Detection confidence', attackSeverity:'Attack severity', deviceCriticality:'Device criticality',
+    behavioralDeviation:'Behavioral deviation', persistence:'Persistence', sourceRisk:'Source risk', potentialImpact:'Potential impact'
+  };
+
+  function renderRisk(factors, score, level){
+    document.getElementById('riskScore').textContent = score;
+    document.getElementById('riskLevel').textContent = level;
+    document.getElementById('riskStatus').textContent = 'updated just now';
+    document.getElementById('riskFactors').innerHTML = Object.entries(factors).map(([key,value]) => `
+      <div class="factor"><div class="factor-top"><b>${riskFactorLabels[key]}</b><span>${value}</span></div><div class="factor-bar"><i style="width:${value}%"></i></div></div>
+    `).join('');
+  }
+
+  renderRisk(prototypeRisk, 87, 'Critical');
+
+  document.getElementById('simulateEvent').addEventListener('click', ()=>{
+    const btn = document.getElementById('simulateEvent');
+    const state = document.getElementById('pipelineState');
+    btn.disabled = true;
+    btn.textContent = 'Processing…';
+    state.textContent = 'event flowing through pipeline';
+    const steps = [...document.querySelectorAll('#securityPipeline .pipeline-step')];
+    steps.forEach((step,i)=>{
+      step.classList.remove('active');
+      step.style.opacity = '.45';
+      setTimeout(()=>{
+        step.style.opacity = '1';
+        step.classList.add('active');
+        if(i===6) step.classList.add('prevent');
+      }, i*350);
+    });
+    setTimeout(()=>{
+      document.getElementById('riskStatus').textContent = 'simulated event';
+      document.getElementById('policyDecision').innerHTML = '<b>Policy decision:</b> Risk 87/100 + confidence 94% → <strong>BLOCK_SOURCE</strong> → incident created → AI explanation ready.';
+    if(preventionStatus) preventionStatus.textContent = 'Simulation result — BLOCK_SOURCE would be executed by the backend policy engine';
+      state.textContent = 'critical event contained (simulation)';
+      btn.disabled = false;
+      btn.textContent = 'Simulate Critical Attack';
+      addMsg('ai', 'Simulation complete: a critical event reached the ML detector, scored 87/100 in the risk engine, satisfied the prototype response policy, and produced a simulated BLOCK_SOURCE action. No real network control was executed.');
+    }, steps.length*350 + 250);
+  });
+
+  // ---------- Devices data ----------
+  const devices = [
+    {name:'Smart Camera — Living Room', ip:'192.168.1.14', proto:'MQTT', trust:92, status:'Normal', seen:'12s ago'},
+    {name:'Smart Lock — Front Door', ip:'192.168.1.22', proto:'Zigbee', trust:88, status:'Normal', seen:'1m ago'},
+    {name:'Thermostat — Hallway', ip:'192.168.1.9', proto:'CoAP', trust:95, status:'Normal', seen:'4s ago'},
+    {name:'Baby Monitor', ip:'192.168.1.31', proto:'MQTT', trust:41, status:'Suspicious', seen:'now'},
+    {name:'Smart Plug — Kitchen', ip:'192.168.1.18', proto:'BLE', trust:97, status:'Normal', seen:'22s ago'},
+    {name:'Industrial Sensor Node 3', ip:'10.0.4.12', proto:'LoRaWAN', trust:90, status:'Normal', seen:'3m ago'},
+    {name:'Smart TV', ip:'192.168.1.45', proto:'MQTT', trust:12, status:'Isolated', seen:'2m ago'},
+    {name:'Door Sensor — Garage', ip:'192.168.1.27', proto:'Zigbee', trust:99, status:'Normal', seen:'8s ago'},
+    {name:'Smart Speaker', ip:'192.168.1.33', proto:'MQTT', trust:76, status:'Normal', seen:'40s ago'},
+    {name:'Health Monitor — Ward 3', ip:'10.0.4.55', proto:'CoAP', trust:34, status:'Suspicious', seen:'now'}
+  ];
+
+  function trustColor(t){ return t < 50 ? 'var(--danger)' : t < 70 ? 'var(--warn)' : 'var(--cyan)'; }
+  function statusBadge(s){
+    if(s==='Normal') return '<span class="badge badge-resolved"><i class="badge-dot"></i>Normal</span>';
+    if(s==='Suspicious') return '<span class="badge badge-warning"><i class="badge-dot"></i>Suspicious</span>';
+    return '<span class="badge badge-critical"><i class="badge-dot"></i>Isolated</span>';
+  }
+
+  document.getElementById('devicesTbody').innerHTML = devices.map(d => `
+    <tr>
+      <td class="dev-name">${d.name}</td>
+      <td class="dev-ip">${d.ip}</td>
+      <td><span class="proto-chip">${d.proto}</span></td>
+      <td><div class="trust-cell"><div class="trust-bar"><div class="trust-fill" style="width:${d.trust}%; background:${trustColor(d.trust)}"></div></div><span class="trust-num">${d.trust}</span></div></td>
+      <td>${statusBadge(d.status)}</td>
+      <td class="dev-ip">${d.seen}</td>
+    </tr>
+  `).join('');
+
+  // ---------- Incidents data ----------
+  const incidents = [];            // filled by loadBackendState() from /api/incidents
+  const RAW_EVENTS = [];            // raw backend events (newest first), used by the incident and device panels
+  let currentIncidentId = null, incTab = 'technical';
+  const levelSev = l => (l === 'critical' || l === 'high') ? 'critical' : (l === 'medium' ? 'warning' : 'resolved');
+  function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; }
+  function fmtTime(ts){ const d = new Date(ts); return isNaN(d) ? String(ts || '') : d.toLocaleString([], {hour12:false}); }
+  function inlineMd(parent, text){   // **bold** and `code`; everything else stays plain text (never HTML)
+    String(text).split(/(\*\*[^*]+\*\*|`[^`]+`)/).forEach(p => {
+      if(/^\*\*[^*]+\*\*$/.test(p)) parent.appendChild(el('b', null, p.slice(2, -2)));
+      else if(/^`[^`]+`$/.test(p)) parent.appendChild(el('code', null, p.slice(1, -1)));
+      else if(p) parent.appendChild(document.createTextNode(p));
+    });
+  }
+  function renderMarkdown(box, text){  // tiny safe renderer: headings, tables, lists, paragraphs. Uses textContent only.
+    box.textContent = '';
+    let table = null, code = false;
+    String(text || '').split('\n').forEach(line => {
+      if(/^```/.test(line)){ code = !code; table = null; return; }
+      if(code){ box.appendChild(el('div', 'mono', line)); return; }
+      if(/^\s*\|/.test(line)){
+        if(/^\s*\|[\s:|-]+\|\s*$/.test(line)) return;
+        if(!table){ table = el('table'); box.appendChild(table); }
+        const tr = el('tr'); line.trim().replace(/^\||\|$/g, '').split('|').forEach(c => { const td = el('td'); inlineMd(td, c.trim()); tr.appendChild(td); });
+        table.appendChild(tr); return;
+      }
+      table = null;
+      const h = line.match(/^(#{1,4})\s+(.*)$/);
+      if(h){ const n = el('h4'); inlineMd(n, h[2]); box.appendChild(n); return; }
+      if(/^\s*([-*]|\d+\.)\s+/.test(line)){ const n = el('div', 'li'); inlineMd(n, line.replace(/^\s*([-*]|\d+\.)\s+/, '• ')); box.appendChild(n); return; }
+      if(line.trim()){ const n = el('p'); inlineMd(n, line); box.appendChild(n); }
+    });
+  }
+  function renderIncidentList(){
+    const box = document.getElementById('incidentList'); if(!box) return;
+    box.textContent = '';
+    if(!incidents.length){ box.appendChild(el('div', 'incident-meta', 'No incidents yet.')); return; }
+    incidents.forEach(i => {
+      const sev = levelSev(i.level), card = el('div', 'incident-card ' + sev);
+      card.tabIndex = 0; card.setAttribute('role', 'button'); card.dataset.incident = i.id;
+      const main = el('div', 'incident-main');
+      main.append(el('div', 'incident-title', i.title || prettyName(i.trigger) || 'Incident'),
+                  el('div', 'incident-meta', prettyZone(i.zone) + ' · ' + prettyName(i.trigger) + ' · risk ' + i.score));
+      const badge = el('span', 'badge badge-' + sev); badge.append(el('i', 'badge-dot'), document.createTextNode(String(i.level).toUpperCase()));
+      card.append(el('div', 'incident-id', i.id), main, badge, el('div', 'incident-time', fmtTime(i.time)));
+      card.addEventListener('click', () => openIncident(i.id));
+      card.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openIncident(i.id); } });
+      box.appendChild(card);
+    });
+  }
+  async function openIncident(id){
+    currentIncidentId = id; showView('incident-detail');
+    const inc = incidents.find(i => i.id === id); if(!inc) return;
+    document.getElementById('incTitle').textContent = inc.title || prettyName(inc.trigger);
+    document.getElementById('incSub').textContent = [inc.id, prettyZone(inc.zone), String(inc.level).toUpperCase() + ' ' + inc.score + '/100', 'detected ' + fmtTime(inc.time)].join(' · ');
+    document.getElementById('incScore').textContent = 'score ' + inc.score + '/100';
+    const ul = document.getElementById('incActions'); ul.textContent = '';
+    (inc.actions || []).forEach(a => { const li = el('li'); li.append(el('span', 'check-box done', '✓'), el('span', 'check-label-done', prettyName(a))); ul.appendChild(li); });
+    if(!ul.children.length) ul.appendChild(el('li', 'check-label-pending', 'No actions recorded'));
+    let evs = [];
+    try { evs = (await apiFetch('/api/incidents/' + encodeURIComponent(id) + '/events')) || []; } catch(e) { logWs('sys', {incident_events_error: e.message}); }
+    if(currentIncidentId === id) renderIncidentEvents(inc, evs);
+  }
+  const MITRE_NAMES = {T1046: 'Network Service Discovery', T1110: 'Brute Force', T1498: 'Network Denial of Service', T1571: 'Non-Standard Port',
+    T1071: 'Application Layer Protocol', T1557: 'Adversary-in-the-Middle', T1595: 'Active Scanning', T1190: 'Exploit Public-Facing Application',
+    'T1584.005': 'Compromise Infrastructure: Botnet', T1078: 'Valid Accounts'};
+  function renderIncidentEvents(inc, evs){
+    // contract v1.2: the IPS detection event carries data.details (MITRE, IPS score, reports); older sources used engine.ips_report
+    const isDet = e => /^cyber\./.test(e.type) && !/^cyber\.block_/.test(e.type);
+    const dets = evs.filter(e => isDet(e) && e.data && e.data.details), legacy = evs.filter(e => e.type === 'engine.ips_report');
+    const alerts = evs.filter(isDet), last = alerts.length ? alerts[alerts.length - 1].data || {} : {};
+    let rep = legacy.length ? legacy[legacy.length - 1].data || {} : {};
+    if(dets.length){
+      const ev = dets[dets.length - 1], dd = ev.data || {}, dt = dd.details || {}, rp = dt.reports || {};
+      rep = {mitre_technique: dt.mitre_technique, mitre_name: MITRE_NAMES[dt.mitre_technique], attack_type: prettyName(String(ev.type).split('.')[1]),
+             confidence: dd.confidence, src_ip: dd.src_ip, device_id: dd.device_id, ips_score: dt.ips_score, ips_level: dt.ips_level,
+             report_technical: rp.technical, report_plain: rp.executive};
+    }
+    document.getElementById('incScore').textContent = rep.ips_score != null ? 'IPS ' + rep.ips_score + ' (' + rep.ips_level + ') · incident ' + inc.score : 'score ' + inc.score;
+    // MITRE
+    const mitre = document.getElementById('incMitre'); mitre.textContent = '';
+    const mid = String(rep.mitre_technique || last.mitre_technique || '');
+    if(/^T\d{4}(\.\d{3})?$/.test(mid)){
+      const a = el('a', null, mid + ' ' + (rep.mitre_name || '')); a.href = 'https://attack.mitre.org/techniques/' + mid.replace('.', '/') + '/';
+      a.target = '_blank'; a.rel = 'noopener noreferrer'; mitre.appendChild(el('p')).appendChild(a);
+    } else mitre.appendChild(el('p', null, 'No MITRE technique attached to this incident.'));
+    [['Attack type', rep.attack_type || last.attack_type], ['Detection confidence', (rep.confidence != null ? Math.round(rep.confidence * 100) + '%' : null)],
+     ['Source', rep.src_ip || last.src_ip], ['Device', rep.device_id || last.device_id], ['Policy', rep.reason], ['Status', rep.status]]
+      .filter(r => r[1]).forEach(r => { const p = el('p'); p.append(el('b', null, r[0] + ': '), document.createTextNode(String(r[1]))); mitre.appendChild(p); });
+    // risk factors
+    const fbox = document.getElementById('incFactors'); fbox.textContent = '';
+    Object.entries(rep.factors || {}).forEach(([name, f]) => {
+      const v = Math.max(0, Math.min(100, Number(f && f.value) || 0)), row = el('div', 'feature-row'), top = el('div', 'feature-top');
+      top.append(el('b', null, prettyName(name)), el('span', null, Math.round(v) + '/100'));
+      const fill = el('div', 'feature-fill'); fill.style.width = v + '%';
+      const track = el('div', 'feature-track'); track.appendChild(fill); row.append(top, track); fbox.appendChild(row);
+    });
+    if(!fbox.children.length) fbox.appendChild(el('p', null, 'This source sends no factor breakdown; see the technical report.'));
+    // reports
+    const tabs = document.getElementById('incTabs'); tabs.textContent = '';
+    const texts = {technical: rep.report_technical, plain: rep.report_plain, notification: rep.notification};
+    const labels = {technical: 'Technical', plain: 'Plain language', notification: 'Notification'};
+    const avail = Object.keys(texts).filter(k => texts[k]);
+    if(!avail.includes(incTab)) incTab = avail[0] || 'technical';
+    const show = () => { renderMarkdown(document.getElementById('incReport'), texts[incTab] || 'No IPS report is attached to this incident.');
+      [...tabs.children].forEach(b => b.classList.toggle('active', b.dataset.tab === incTab)); };
+    avail.forEach(k => { const b = el('button', 'action-btn', labels[k]); b.dataset.tab = k; b.addEventListener('click', () => { incTab = k; show(); }); tabs.appendChild(b); });
+    show();
+    const copy = document.getElementById('incCopy'); copy.hidden = !rep.notification;
+    copy.onclick = () => { try { navigator.clipboard.writeText(rep.notification); copy.textContent = 'Copied'; setTimeout(() => copy.textContent = 'Copy notification', 1500); } catch(e) { /* clipboard blocked */ } };
+    // timeline
+    const tl = document.getElementById('incTimeline'); tl.textContent = '';
+    evs.forEach(e => {
+      const d = e.data || {}, item = el('div', 'timeline-item'), body = el('div');
+      const extra = e.type === 'engine.ips_report' ? 'IPS report attached'
+        : /^cyber\.block_/.test(e.type) ? [d.action, d.ip, d.dry_run ? 'dry run' : null, d.reason].filter(Boolean).join(' · ')
+        : [e.source, prettyZone(e.zone), d.src_ip, d.attempts != null ? d.attempts + ' attempts' : null, d.details && d.details.mitre_technique].filter(Boolean).join(' · ');
+      body.append(el('div', 'timeline-time', fmtTime(e.ts)), el('div', 'timeline-text', prettyName(e.type) + ' — ' + extra));
+      item.append(el('div', 'timeline-dot'), body); tl.appendChild(item);
+    });
+    if(!tl.children.length) tl.appendChild(el('p', null, 'No events found for this incident.'));
+  }
+  function ipsAlertsText(deviceId){
+    const l = RAW_EVENTS.filter(e => e.data && e.data.device_id === deviceId && /^cyber\./.test(e.type) && !/^cyber\.block_/.test(e.type));
+    return l.length ? l.length + ' · latest ' + prettyName(l[0].type) + ' (' + fmtTime(l[0].ts) + ')' : 'none';
+  }
+  renderIncidentList();
+
+  // ---------- Live feed ----------
+  const feedEvents = [
+    {sev:'sev-critical', html:'<b>DDoS Traffic Surge</b> detected on Smart TV', time:'14:02:07'},
+    {sev:'sev-warning', html:'Trust score dropped to <b>41</b> on Baby Monitor', time:'13:58:12'},
+    {sev:'sev-info', html:'<b>37 packets</b> blocked from unknown IP range', time:'13:51:40'},
+    {sev:'sev-critical', html:'Botnet C2 pattern matched on Health Monitor — Ward 3', time:'13:44:02'},
+    {sev:'sev-info', html:'Baseline retrained on 128 device profiles', time:'13:30:00'},
+    {sev:'sev-warning', html:'Brute-force attempt on Smart Lock — Front Door', time:'13:02:55'},
+    {sev:'sev-info', html:'Firmware fingerprint updated for 6 devices', time:'12:47:19'}
+  ];
+  document.getElementById('feedList').innerHTML = feedEvents.map(e => `
+    <div class="feed-item">
+      <span class="feed-dot ${e.sev}"></span>
+      <span class="feed-text">${e.html}</span>
+      <span class="feed-time">${e.time}</span>
+    </div>
+  `).join('');
+
+  // ---------- Network topology graph ----------
+  (function buildTopology(){
+    const svg = document.getElementById('topologySvg');
+    const ns = 'http://www.w3.org/2000/svg';
+    const cx = 280, cy = 150, r = 108;
+    const colors = devices.map(d => d.trust < 50 ? '#f4436a' : d.trust < 70 ? '#f2a93b' : '#2dd4bf');
+    const n = colors.length;
+
+    // hub
+    const hub = document.createElementNS(ns,'circle');
+    hub.setAttribute('cx', cx); hub.setAttribute('cy', cy); hub.setAttribute('r', 20);
+    hub.setAttribute('fill', '#0f1729'); hub.setAttribute('stroke', '#2dd4bf'); hub.setAttribute('stroke-width', 1.5);
+    svg.appendChild(hub);
+    const hubLabel = document.createElementNS(ns,'text');
+    hubLabel.setAttribute('x', cx); hubLabel.setAttribute('y', cy+3.5); hubLabel.setAttribute('text-anchor','middle');
+    hubLabel.setAttribute('class','node-label'); hubLabel.setAttribute('fill', '#93a1bd');
+    hubLabel.textContent = 'GATEWAY';
+    svg.appendChild(hubLabel);
+
+    for(let i=0;i<n;i++){
+      const angle = (i / n) * Math.PI * 2 - Math.PI/2;
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle) * 0.85;
+      const color = colors[i];
+
+      const line = document.createElementNS(ns,'line');
+      line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+      line.setAttribute('x2', x); line.setAttribute('y2', y);
+      line.setAttribute('stroke', color); line.setAttribute('stroke-opacity', color === '#2dd4bf' ? 0.25 : 0.55);
+      line.setAttribute('stroke-width', color === '#2dd4bf' ? 1 : 1.6);
+      if(color !== '#2dd4bf'){
+        line.setAttribute('stroke-dasharray', '4 3');
+      }
+      svg.appendChild(line);
+
+      const node = document.createElementNS(ns,'circle');
+      node.setAttribute('cx', x); node.setAttribute('cy', y); node.setAttribute('r', 7);
+      node.setAttribute('fill', color); node.setAttribute('fill-opacity', 0.9);
+      if(color !== '#2dd4bf'){
+        const pulse = document.createElementNS(ns,'animate');
+        pulse.setAttribute('attributeName','r');
+        pulse.setAttribute('values','7;9.5;7');
+        pulse.setAttribute('dur','1.8s');
+        pulse.setAttribute('repeatCount','indefinite');
+        node.appendChild(pulse);
+      }
+      svg.appendChild(node);
+    }
+  })();
+
+  // ---------- Copilot chat ----------
+  const copilotMessages = document.getElementById('copilotMessages');
+  const copilotInput = document.getElementById('copilotInput');
+  const copilotSend = document.getElementById('copilotSend');
+
+  function addMsg(role, text){
+    const wrap = document.createElement('div');
+    wrap.className = 'msg ' + (role === 'ai' ? 'msg-ai' : 'msg-user');
+    if(role === 'ai'){
+      wrap.innerHTML = `<div class="msg-avatar">◆</div><div class="bubble">${text}</div>`;
+    } else {
+      wrap.innerHTML = `<div class="bubble">${text}</div>`;
+    }
+    copilotMessages.appendChild(wrap);
+    copilotMessages.scrollTop = copilotMessages.scrollHeight;
+  }
+
+  addMsg('ai', "Hi, I'm Warden's Security Copilot. Ask me about any incident, device, or trend — I'll explain what the model saw and why it acted.");
+
+  function respond(text){
+    const q = text.toLowerCase();
+    if(q.includes('smart tv') || q.includes('1042') || q.includes('ddos')){
+      return "The Smart TV was isolated because its outbound traffic jumped to 340% above its learned baseline, almost entirely SYN/UDP floods aimed at two IP ranges it had never contacted before. The model scored this 0.94 confidence as a DDoS pattern, so containment triggered automatically. Full reasoning is in INC-1042.";
+    }
+    if(q.includes('risk')){
+      return "Right now the Baby Monitor (trust 41) and the Ward 3 Health Monitor (trust 34) carry the most risk — both are showing traffic patterns outside their normal profile. Neither has been isolated yet since confidence is below the auto-response threshold, so they're flagged for analyst review.";
+    }
+    if(q.includes('summar')){
+      return "Last 24 hours: 2 active incidents, 37 connections auto-blocked, 1 device isolated (Smart TV), and 2 devices flagged as suspicious. Detection confidence held steady at 96.4% with no false-positive isolations reported.";
+    }
+    return "I can help explain detections, device trust scores, and recommended remediation. Try asking about a specific device name or an incident ID like INC-1042.";
+  }
+
+  function handleSend(){
+    const text = copilotInput.value.trim();
+    if(!text) return;
+    addMsg('user', text);
+    copilotInput.value = '';
+    setTimeout(()=> addMsg('ai', respond(text)), 550);
+  }
+
+  copilotSend.addEventListener('click', handleSend);
+  copilotInput.addEventListener('keydown', e => { if(e.key === 'Enter') handleSend(); });
+  document.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      copilotInput.value = chip.dataset.prompt;
+      handleSend();
+    });
+  });
+
+
+  // ================================================================
+  // WARDEN FRONTEND INTEGRATION LAYER
+  // Mock JSON today -> FastAPI + WebSocket tomorrow.
+  // ================================================================
+  const API_CONFIG = {
+    mode: 'api', // Person 2 FastAPI behind services/frontend/nginx.conf
+    baseURL: '', // same-origin /api reverse proxy
+    wsURL: '', // derived from current page origin
+    reconnectMs: 3000,
+    timeoutMs: 5000
+  };
+
+  const MOCK_DB = {
+    zones: [
+      {id:'living',name:'Living Room',risk:22,state:'safe'},
+      {id:'hall',name:'Hallway',risk:31,state:'watch'},
+      {id:'kitchen',name:'Kitchen',risk:12,state:'safe'},
+      {id:'garage',name:'Garage',risk:68,state:'watch'},
+      {id:'office',name:'Security Room',risk:9,state:'safe'}
+    ],
+    doors: [
+      {id:'front',name:'Front Door',zone:'Hallway',state:'locked'},
+      {id:'garageDoor',name:'Garage Door',zone:'Garage',state:'closed'},
+      {id:'officeDoor',name:'Security Room',zone:'Security Room',state:'locked'}
+    ],
+    cameras: [
+      {id:'cam01',name:'CAM-01',zone:'Living Room',state:'online',label:'Living'},
+      {id:'cam02',name:'CAM-02',zone:'Garage',state:'alert',label:'Garage'},
+      {id:'cam03',name:'CAM-03',zone:'Front Door',state:'online',label:'Entrance'},
+      {id:'cam04',name:'CAM-04',zone:'Hallway',state:'online',label:'Hall'}
+    ],
+    devices: [
+      {id:'CAM-001',type:'camera',name:'Living Room Camera',zone:'Living Room',ip:'192.168.1.14',status:'online',trust:92},
+      {id:'LOCK-001',type:'lock',name:'Front Door Lock',zone:'Hallway',ip:'192.168.1.22',status:'online',trust:88},
+      {id:'TEMP-001',type:'temperature',name:'Hall Thermostat',zone:'Hallway',ip:'192.168.1.9',status:'online',trust:95},
+      {id:'PIR-001',type:'motion',name:'Garage PIR',zone:'Garage',ip:'192.168.1.27',status:'alert',trust:58},
+      {id:'SMOKE-001',type:'smoke',name:'Kitchen Smoke Sensor',zone:'Kitchen',ip:'192.168.1.18',status:'online',trust:97},
+      {id:'CAM-002',type:'camera',name:'Garage Camera',zone:'Garage',ip:'192.168.1.45',status:'isolated',trust:12}
+    ]
+  };
+
+  // ---------- Live-data helpers (zone/device naming comes from the backend) ----------
+  if(API_CONFIG.mode==='api'){MOCK_DB.zones=[];MOCK_DB.doors=[];MOCK_DB.cameras=[];MOCK_DB.devices=[];}
+  const ACTUATORS=['bulb','siren','lock','valve'];
+  const prettyName=t=>String(t==null?'':t).replace(/[._]+/g,' ').trim().replace(/\b\w/g,c=>c.toUpperCase());
+  const prettyZone=prettyName;
+  const zoneKey=z=>String(z==null?'':z).toLowerCase().trim().replace(/[\s-]+/g,'_');
+  const zoneRiskColor=n=>n>=80?'#f4436a':n>=50?'#f2a93b':'#2dd4bf';
+  const okLevel=l=>l==='safe'||l==='low';
+  function deviceVisualColor(d){
+    if(!d.online&&d.status==='offline')return '#f4436a';
+    if(d.type==='siren'&&String(d.state?.power)==='on')return '#f4436a';
+    return deviceColor(d.status,d.trust);
+  }
+  function deriveFromDevices(){
+    MOCK_DB.doors=MOCK_DB.devices.filter(d=>['door','window','lock'].includes(d.type)).map(d=>{
+      const st=d.state||{};let v=d.online?'online':'offline';
+      if(typeof st.lock==='boolean')v=st.lock?'locked':'unlocked';else if(st.lock!=null)v=String(st.lock);
+      else if(st.open!==undefined)v=st.open?'open':'closed';
+      return {id:d.id,name:d.name,zone:prettyZone(d.zone),state:v};
+    });
+    MOCK_DB.cameras=MOCK_DB.devices.filter(d=>d.type==='camera').map(d=>({id:d.id,name:d.id,zone:prettyZone(d.zone),state:!d.online?'offline':(d.state?.motion?'alert':'online'),label:prettyZone(d.zone)}));
+  }
+  let replaying=false,redrawQueued=false,pendingFlash=null;
+  function scheduleRedraw(flash){
+    if(flash)pendingFlash=zoneKey(flash);
+    if(redrawQueued)return;redrawQueued=true;
+    requestAnimationFrame(()=>{redrawQueued=false;buildFloorPlan();renderNetworkGraph();renderTwinSide();if(pendingFlash){flashZone(pendingFlash);pendingFlash=null;}});
+  }
+  function flashZone(z){const k=zoneKey(z);document.querySelectorAll('#floorPlan .room').forEach(el=>{if(el.getAttribute('data-zone')===k){el.classList.remove('flash');void el.getBoundingClientRect();el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1700);}});}
+
+  const eventBus = new EventTarget();
+  let mockStreamRunning = true;
+  let alertReceived = 0;
+  let accessToken = null; // intentionally memory-only; never persist JWT in localStorage
+  const API_PATHS = {zones:'/api/zones', devices:'/api/devices', events:'/api/events?limit=50', incidents:'/api/incidents?limit=20', risk:'/api/risk'};
+
+  function emitSecurityEvent(event){
+    eventBus.dispatchEvent(new CustomEvent('security-alert', {detail:event}));
+  }
+
+  async function apiFetch(path, options={}){
+    if(API_CONFIG.mode === 'mock') return mockApi(path, options);
+    const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),API_CONFIG.timeoutMs);
+    try{
+      const headers={'Content-Type':'application/json',...(options.headers||{})};
+      if(accessToken) headers.Authorization=`Bearer ${accessToken}`;
+      const res=await fetch(API_CONFIG.baseURL+path,{...options,headers,signal:controller.signal});
+      if(res.status===401){accessToken=null;throw new Error('Session expired. Please log in again.');}
+      if(!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
+      return res.status===204?null:await res.json();
+    }finally{clearTimeout(timer);}
+  }
+  async function mockApi(path){
+    if(path.includes('/devices'))return MOCK_DB.devices;
+    if(path.includes('/zones'))return MOCK_DB.zones;
+    if(path.includes('/incidents'))return incidents;
+    if(path.includes('/risk'))return [{zone:'garage',score:87,level:'high',factors:prototypeRisk,actions:['log','notify','siren']}];
+    if(path.includes('/events'))return [];
+    return {ok:true};
+  }
+  const securityApi={
+    getZones:()=>apiFetch(API_PATHS.zones), getDevices:()=>apiFetch(API_PATHS.devices),
+    getEvents:()=>apiFetch(API_PATHS.events), getIncidents:()=>apiFetch(API_PATHS.incidents),
+    getRisk:()=>apiFetch(API_PATHS.risk),
+    command:(id,action,reason='Requested from Warden dashboard')=>apiFetch(`/api/devices/${encodeURIComponent(id)}/command`,{method:'POST',body:JSON.stringify({action,reason})})
+  };
+  async function loginBackend(){
+    const username=document.getElementById('apiUsername').value.trim(),password=document.getElementById('apiPassword').value;
+    const msg=document.getElementById('apiLoginMessage'),btn=document.getElementById('apiLoginBtn');
+    if(!username||!password){msg.textContent='Enter your backend username and password.';return;}
+    btn.disabled=true;msg.textContent='Connecting…';
+    try{
+      const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+      if(!r.ok)throw new Error(r.status===429?'Too many attempts. Wait 60 seconds.':r.status===401?'Invalid username or password.':`Login failed (${r.status}).`);
+      accessToken=(await r.json()).access_token;
+      API_CONFIG.wsURL=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/events?token='+encodeURIComponent(accessToken);
+      msg.textContent='Authenticated. Loading live system state…';
+      await loadBackendState();connectSecuritySocket();
+      document.getElementById('apiModePill').innerHTML='<i></i> API CONNECTED';
+      document.getElementById('restState').textContent='Authenticated FastAPI';
+      document.getElementById('socketState').textContent='Connecting authenticated WebSocket…';
+      msg.textContent='Connected as '+username+'.';
+    }catch(e){msg.textContent=e.message;logWs('sys',{login_error:e.message});}
+    finally{btn.disabled=false;}
+  }
+  document.getElementById('apiLoginBtn')?.addEventListener('click',loginBackend);
+  async function loadBackendState(){
+    const [zones,devices,events,incs,risks]=await Promise.all([securityApi.getZones(),securityApi.getDevices(),securityApi.getEvents(),securityApi.getIncidents(),securityApi.getRisk()]);
+    MOCK_DB.zones=(zones||[]).map(z=>{const id=zoneKey(z.name),r=(risks||[]).find(x=>zoneKey(x.zone)===id);return {id,name:prettyZone(z.name),risk:r?.score||0,state:r?.level||'low'};});
+    MOCK_DB.devices=(devices||[]).map(d=>({id:d.device_id,type:d.device_type,name:(d.name&&d.name!==d.device_id)?d.name:prettyName(d.device_id),zone:zoneKey(d.zone),ip:d.state?.ip||'',online:!!d.online,status:d.online?'online':'offline',trust:d.state?.trust_score??(d.online?90:15),state:d.state||{},backendId:d.device_id}));
+    deriveFromDevices();
+    topologyData.nodes=[{id:'GW',label:'Warden Gateway',trust:100},...MOCK_DB.devices.map(d=>({id:d.id,label:d.name,trust:d.trust,zone:d.zone,status:d.status}))];
+    topologyData.edges=MOCK_DB.devices.map(d=>['GW',d.id]);
+    incidents.splice(0,incidents.length,...(incs||[]).map(i=>({id:i.id,title:i.summary||i.trigger,level:i.level,score:i.score,zone:i.zone,time:i.ts,status:i.integrity_ok?'active':'integrity warning',trigger:i.trigger,actions:i.actions})));
+    RAW_EVENTS.splice(0,RAW_EVENTS.length,...(events||[]));renderIncidentList();if(currentIncidentId&&document.getElementById('view-incident-detail').classList.contains('active'))openIncident(currentIncidentId);
+    if(risks?.length){const top=[...risks].sort((a,b)=>b.score-a.score)[0];setGauge(top.score,top.level);}
+    buildFloorPlan();renderNetworkGraph();renderTwinSide();
+    replaying=true;try{(events||[]).slice().reverse().forEach(e=>emitSecurityEvent(normalizeBackendFrame({kind:'event',data:e})));}finally{replaying=false;}
+    loadIncidentTimeline().catch(err=>logWs('sys',{timeline_error:err.message}));
+    document.getElementById('restState').textContent=`FastAPI connected · ${devices.length} devices`;
+    logWs('sys',{loaded:{zones:zones.length,devices:devices.length,events:events.length,incidents:incs.length,riskZones:risks.length}});
+  }
+  function normalizeBackendFrame(frame){
+    const d=frame?.data||{};
+    if(frame?.kind==='risk'){const z=MOCK_DB.zones.find(x=>x.id===d.zone||x.name===d.zone);if(z){z.risk=d.score;z.state=d.level;}const top=MOCK_DB.zones.reduce((m,x)=>x.risk>m.risk?x:m,{risk:-1,state:'low'});if(top.risk>=0)setGauge(top.risk,top.state);else setGauge(d.score,d.level);scheduleRedraw();}
+    if(frame?.kind==='event'&&!replaying){scheduleRedraw(d.zone);RAW_EVENTS.unshift(d);if(RAW_EVENTS.length>300)RAW_EVENTS.length=300;}
+    if(frame?.kind==='event')return {schema:'person2.event.v1',event_id:d.id,timestamp:d.ts,source:d.source,device_id:d.data?.sensor_id||d.data?.camera_id||d.data?.door_id||d.source,attack_type:d.type,confidence:d.data?.confidence??0,risk_score:({critical:95,high:75,medium:50,low:20,info:5}[d.severity_hint]||0),risk_level:(d.severity_hint||'info').replace(/^./,x=>x.toUpperCase()),source_ip:d.data?.src_ip||'—',action:'RECORDED',status:d.integrity_ok===false?'integrity warning':'observed',zone:d.zone,raw:d};
+    if(frame?.kind==='risk')return {schema:'person2.risk.v1',event_id:'risk-'+d.zone+'-'+d.ts,timestamp:d.ts,source:'risk-engine',device_id:d.zone,attack_type:'Risk state updated',confidence:1,risk_score:d.score,risk_level:(d.level||'low').replace(/^./,x=>x.toUpperCase()),action:(d.actions||[]).join(', ')||'MONITOR',status:'updated',zone:d.zone,raw:d};
+    if(frame?.kind==='incident')return {schema:'person2.incident.v1',event_id:d.id,timestamp:d.ts,source:'incident-engine',device_id:d.zone,attack_type:d.summary||d.trigger,confidence:1,risk_score:d.score,risk_level:(d.level||'low').replace(/^./,x=>x.toUpperCase()),action:(d.actions||[]).join(', '),status:'incident',zone:d.zone,raw:d};
+    if(frame?.kind==='device_status'){
+      const dev=MOCK_DB.devices.find(x=>x.id===d.device_id);if(dev){dev.status=d.online?'online':'offline';dev.state=d.state||{};dev.online=!!d.online;dev.trust=d.online?Math.max(dev.trust||0,75):10;deriveFromDevices();scheduleRedraw();}
+      return {schema:'person2.device_status.v1',event_id:d.status_id||d.device_id,timestamp:d.ts,source:'device-status',device_id:d.device_id,attack_type:'Device status updated',confidence:1,risk_score:d.online?0:70,risk_level:d.online?'Low':'High',action:'STATE_UPDATE',status:d.online?'online':'offline',zone:d.zone,raw:d};
+    }
+    return frame;
+  }
+  // ---------- Digital Twin ----------
+  function zoneColor(zone){return zone.risk >= 80 ? '#f4436a' : zone.risk >= 50 ? '#f2a93b' : '#2dd4bf';}
+  function deviceColor(status,trust){return status==='isolated'||trust<30 ? '#f4436a' : status==='alert'||trust<65 ? '#f2a93b' : '#2dd4bf';}
+  function svgEl(tag,attrs={}){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));return el;}
+
+  function buildFloorPlan(){
+    const svg=document.getElementById('floorPlan'); if(!svg)return; svg.innerHTML='';
+    const ROOMS={
+      living_room:{x:30,y:40,w:260,h:210},kitchen:{x:305,y:40,w:330,h:210},bedroom:{x:650,y:40,w:220,h:210},
+      garage:{x:30,y:270,w:260,h:210},entrance:{x:305,y:270,w:330,h:210},backyard:{x:650,y:270,w:220,h:210}
+    };
+    const byZone={};MOCK_DB.devices.forEach(d=>{const k=zoneKey(d.zone);(byZone[k]=byZone[k]||[]).push(d);});
+    const extra=Object.keys(byZone).filter(k=>!ROOMS[k]);
+    const rooms=Object.entries(ROOMS).map(([id,r])=>({id,...r}));
+    let H=500;
+    if(extra.length){const n=extra.reduce((a,k)=>a+byZone[k].length,0),rows=Math.ceil(n/6);const h=44+rows*34;rooms.push({id:'__other',x:30,y:492,w:840,h,label:extra.map(prettyZone).join(' / ').toUpperCase()});H=492+h+16;}
+    svg.setAttribute('viewBox','0 0 900 '+H);
+    for(let x=0;x<=900;x+=45) svg.appendChild(svgEl('line',{x1:x,y1:0,x2:x,y2:H,class:'floor-grid'}));
+    for(let y=0;y<=H;y+=45) svg.appendChild(svgEl('line',{x1:0,y1:y,x2:900,y2:y,class:'floor-grid'}));
+    rooms.forEach(r=>{
+      const list=r.id==='__other'?extra.flatMap(k=>byZone[k]):(byZone[r.id]||[]);
+      const z=MOCK_DB.zones.find(x=>x.id===r.id),risk=z?z.risk:0,rc=zoneRiskColor(risk);
+      const label=r.label||prettyZone(r.id).toUpperCase();
+      const rect=svgEl('rect',{x:r.x,y:r.y,width:r.w,height:r.h,rx:10,class:'room',tabindex:0,role:'button','aria-label':'Inspect '+label,'data-zone':r.id,style:risk>=50?'stroke:'+rc:''});
+      const open=()=>openEntity({kind:'zone',id:r.id,label:prettyZone(r.id),zone:r.id});
+      rect.addEventListener('click',open);rect.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+      svg.appendChild(rect);
+      const t=svgEl('text',{x:r.x+15,y:r.y+24,class:'room-label'});t.textContent=label;svg.appendChild(t);
+      const st=svgEl('text',{x:r.x+15,y:r.y+41,class:'room-sub'});st.textContent=list.length+(list.length===1?' device':' devices');svg.appendChild(st);
+      if(z){const bx=r.x+r.w-78;svg.appendChild(svgEl('rect',{x:bx,y:r.y+11,width:66,height:19,class:'zone-badge',stroke:rc}));const bt=svgEl('text',{x:bx+33,y:r.y+24,'text-anchor':'middle',class:'zone-badge-text'});bt.textContent='RISK '+risk;svg.appendChild(bt);}
+      const cols=Math.max(1,Math.floor((r.w-20)/128)),cw=(r.w-20)/cols;
+      list.forEach((d,i)=>{
+        const x=r.x+30+(i%cols)*cw,y=r.y+68+Math.floor(i/cols)*34,c=deviceVisualColor(d);
+        const g=svgEl('g',{class:'device-node','data-id':d.id});
+        const ring=svgEl('circle',{cx:x,cy:y,r:13,class:'node-ring',stroke:c});
+        const core=ACTUATORS.includes(d.type)?svgEl('rect',{x:x-6,y:y-6,width:12,height:12,rx:2,fill:c,class:'dev-shape'}):svgEl('circle',{cx:x,cy:y,r:6.5,fill:c});
+        const label=svgEl('text',{x:x+19,y:y+3,class:'dev-label'});label.textContent=d.id;
+        const title=svgEl('title');title.textContent=`${d.name} · ${d.type} · ${d.status} · trust ${d.trust}`;
+        g.setAttribute('tabindex','0');g.setAttribute('role','button');g.setAttribute('aria-label','Inspect '+d.name);
+        g.append(ring,core,label,title);
+        g.addEventListener('click',()=>{selectTwinDevice(d);openEntity({kind:'device',...d});});
+        g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();g.dispatchEvent(new MouseEvent('click'));}});
+        svg.appendChild(g);
+      });
+    });
+    if(!MOCK_DB.devices.length){const m=svgEl('text',{x:450,y:H/2,'text-anchor':'middle',fill:'#5f6f8e','font-size':13,'font-family':'var(--font-mono)'});m.textContent='Log in to load live devices';svg.appendChild(m);}
+    const zs=document.getElementById('zoneSummary');if(zs)zs.textContent=MOCK_DB.zones.length+' zones';
+    renderTwinSide();
+  }
+    function selectTwinDevice(d){
+    const event={type:'device.selected',device_id:d.id,device:d.name,status:d.status,trust:d.trust,timestamp:new Date().toISOString()};
+    logWs('out',event);
+  }
+  const entityOverlay=document.getElementById('entityOverlay');
+  function openEntity(item){
+    const isZone=item.kind==='zone';
+    const device=isZone?null:MOCK_DB.devices.find(d=>d.id===item.id)||item;
+    const zone=isZone?(MOCK_DB.zones.find(z=>z.id===item.zone)||MOCK_DB.zones.find(z=>z.id===item.id)):MOCK_DB.zones.find(z=>z.id===zoneKey(device.zone));
+    const label=isZone?(zone?.name||item.label):(device.name||device.id);
+    document.getElementById('entityKind').textContent=isZone?'ZONE / ROOM DETAILS':'DEVICE / ENDPOINT DETAILS';
+    document.getElementById('entityTitle').textContent=isZone?label:`${device.id} · ${label}`;
+    document.getElementById('entitySubtitle').textContent=isZone?`Room overview · ${zone?.id||item.id}`:`${device.type||'IoT endpoint'} · ${zone?.name||prettyZone(device.zone)||'Unassigned zone'} · device registry`;
+    const status=isZone?(zone?.state||'unknown'):(device.status||'unknown');
+    document.getElementById('entityStatus').textContent=String(status).toUpperCase();
+    const risk=isZone?(zone?.risk??0):(device.risk??(device.trust<30?87:device.trust<65?62:18));
+    const trust=isZone?Math.max(0,100-risk):(device.trust??'—');
+    document.getElementById('entityMetrics').innerHTML=[['RISK SCORE',risk+'/100'],['DEVICE TRUST',trust+(typeof trust==='number'?'%':'')],['ZONE',zone?.name||device.zone||'Unknown'],['STATE',status]].map(([k,v])=>`<div class="entity-metric"><small>${k}</small><b>${v}</b></div>`).join('');
+    const rows=isZone?[
+      ['Zone ID',zone?.id||item.id],['Risk state',zone?.state||'unknown'],['Risk score',(zone?.risk??0)+'/100'],['Devices in zone',MOCK_DB.devices.filter(d=>zoneKey(d.zone)===zone?.id).length],['Doors',MOCK_DB.doors.filter(d=>zoneKey(d.zone)===zone?.id).map(d=>d.name+': '+d.state).join(', ')||'No door mapped'],['Response posture',risk>=80?'Critical — review policy':risk>=50?'Elevated — monitor':'Normal monitoring']
+    ]:[['Device ID',device.id],['Device type',device.type||'IoT sensor / actuator'],['Zone',zone?.name||prettyZone(device.zone)||'Unassigned'],['Connection',device.status||'unknown'],['Trust score',trust+'/100'],['IPS alerts',ipsAlertsText(device.id)],['Live state',Object.entries(device.state||{}).filter(([k])=>k!=='ip'&&k!=='trust_score').map(([k,v])=>k+': '+v).join(', ')||'—'],['Network identity',device.ip||'Not reported'],['Last telemetry',device.last_seen||'Awaiting backend timestamp'],['Prevention mode',device.status==='isolated'?'Isolated (mock state)':'Monitor / policy-controlled']];
+    const telemetry=document.getElementById('entityTelemetry');telemetry.replaceChildren();rows.forEach(([k,v])=>{const row=document.createElement('div');row.className='entity-kv';const key=document.createElement('span'),value=document.createElement('b');key.textContent=k;value.textContent=String(v??'—');row.append(key,value);telemetry.append(row);});
+    document.getElementById('entityActivity').innerHTML=`<div class="entity-activity-row"><b>${isZone?'Zone opened in Digital Twin':'Device selected for inspection'}</b><small>${new Date().toLocaleString()} · UI interaction</small></div><div class="entity-activity-row"><b>${risk>=80?'Critical risk requires policy review':risk>=50?'Elevated risk under monitoring':'No critical risk currently recorded'}</b><small>Derived from the live risk engine state.</small></div>`;
+    document.getElementById('entityActionResult').textContent='No action requested.';
+    document.getElementById('entityInspectAction').onclick=async()=>{try{if(API_CONFIG.mode==='api'&&accessToken){await loadBackendState();document.getElementById('entityActionResult').textContent='Details refreshed from backend.';}else document.getElementById('entityActionResult').textContent='Mock details refreshed.';}catch(e){document.getElementById('entityActionResult').textContent=e.message;}};
+    const commandRow=document.getElementById('realCommandRow');const select=document.getElementById('deviceCommand');const actions=({bulb:['on','off'],siren:['on','off'],lock:['lock','unlock'],valve:['open','close']})[device?.type]||[];
+    commandRow.style.display=(!isZone&&API_CONFIG.mode==='api'&&accessToken&&actions.length)?'flex':'none';
+    select.innerHTML=actions.map(a=>`<option value="${a}">${a.toUpperCase()}</option>`).join('');
+    document.getElementById('sendDeviceCommand').onclick=async()=>{try{const action=select.value;const r=await securityApi.command(device.id,action,`Warden dashboard command for ${device.name}`);document.getElementById('entityActionResult').textContent=`Backend accepted command: ${r.status}. Waiting for device_status confirmation.`;logWs('out',{command:r});}catch(e){document.getElementById('entityActionResult').textContent='Command failed: '+e.message;}};
+    document.getElementById('entitySimulateAction').onclick=async()=>{const payload={device_id:isZone?null:device.id,zone_id:isZone?(zone?.id||item.id):null,action:risk>=80?'BLOCK_SOURCE':'MONITOR',simulation_only:true};logWs('out',{type:'response.simulation_requested',...payload});document.getElementById('entityActionResult').textContent=`Simulation requested: ${payload.action}. No real device or firewall was changed.`};
+    entityOverlay.classList.add('open');entityOverlay.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
+  }
+  function closeEntity(){entityOverlay.classList.remove('open');entityOverlay.setAttribute('aria-hidden','true');document.body.style.overflow=''}
+  document.getElementById('entityBack')?.addEventListener('click',closeEntity);
+  entityOverlay?.querySelectorAll('[data-close-entity]').forEach(el=>el.addEventListener('click',closeEntity));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeEntity()});
+
+  function renderTwinSide(){
+    const zs=document.getElementById('zoneStateList');if(zs)zs.innerHTML=MOCK_DB.zones.map(z=>`<div class="state-row"><span class="state-dot ${okLevel(z.state)?'ok':'warn'}"></span><div><b>${z.name}</b><small>risk ${z.risk}/100</small></div><div class="meta"><b>${String(z.state).toUpperCase()}</b><small>${z.risk>=50?'monitor':'normal'}</small></div></div>`).join('')||'<div class="state-row"><small>Waiting for live data…</small></div>';
+    const ds=document.getElementById('doorStateList');if(ds)ds.innerHTML=MOCK_DB.doors.map(d=>`<div class="state-row"><div class="state-icon">▣</div><div><b>${d.name}</b><small>${d.zone}</small></div><div class="meta"><b>${String(d.state).toUpperCase()}</b></div></div>`).join('')||'<div class="state-row"><small>No doors, windows or locks reported.</small></div>';
+    const cs=document.getElementById('cameraGrid');if(cs)cs.innerHTML=MOCK_DB.cameras.map(c=>`<div class="camera-tile"><div class="camera-top"><span>${c.name}</span><span class="${c.state==='online'?'camera-online':'camera-alert'}">● ${c.state}</span></div><div class="camera-bottom"><span>${c.label}</span><span>${c.state==='alert'?'MOTION / ALERT':c.state==='offline'?'NO SIGNAL':'REC'}</span></div></div>`).join('')||'<div class="state-row"><small>No cameras reported.</small></div>';
+  }
+  document.getElementById('twinReset')?.addEventListener('click',()=>{if(API_CONFIG.mode==='api'){if(accessToken)loadBackendState().catch(e=>logWs('sys',{error:e.message}));return;}MOCK_DB.zones.find(z=>z.id==='garage').risk=68;MOCK_DB.devices.find(d=>d.id==='CAM-002').status='isolated';buildFloorPlan();});
+
+  // ---------- Live risk gauge ----------
+  function setGauge(score,level){
+    const c=document.getElementById('gaugeValue');if(!c)return;const circumference=490;c.style.strokeDashoffset=String(circumference-(circumference*score/100));document.getElementById('gaugeNumber').textContent=score;document.getElementById('gaugeLabel').textContent=level;
+  }
+  setGauge(API_CONFIG.mode==='api'?0:87,API_CONFIG.mode==='api'?'low':'Critical');
+
+  // ---------- Incident timeline ----------
+  const timelineEvents=[
+    {time:'14:02:03',title:'Suspicious flow observed',detail:'CAM-002 exceeded normal connection rate by 340%.',kind:'warning',tags:['telemetry','CAM-002']},
+    {time:'14:02:04',title:'Features extracted',detail:'Packet rate, source novelty and protocol anomaly passed to detector.',kind:'warning',tags:['features','flow']},
+    {time:'14:02:05',title:'ML detector classified attack',detail:'DDoS Traffic Surge · confidence 94%.',kind:'critical',tags:['ML','94%']},
+    {time:'14:02:05',title:'Risk engine scored event',detail:'Risk 87/100 · Critical. Device criticality increased impact.',kind:'critical',tags:['RISK','87']},
+    {time:'14:02:06',title:'Policy engine matched rule',detail:'risk ≥ 80 and confidence ≥ 0.90 → BLOCK_SOURCE.',kind:'critical',tags:['POLICY','BLOCK_SOURCE']},
+    {time:'14:02:06',title:'Prevention action queued',detail:'Source isolation requested. Prototype mode prevents real firewall execution.',kind:'critical',tags:['IPS','SAFE MODE']},
+    {time:'14:02:07',title:'Incident created + AI explanation',detail:'INC-1042 stored and summarized for the administrator.',kind:'warning',tags:['INC-1042','AI']}
+  ];
+  function renderTimeline(list){const el=document.getElementById('largeTimeline');if(!el)return;const rows=list||timelineEvents;el.innerHTML=rows.length?rows.map(e=>`<div class="tl-event"><span class="tl-dot ${e.kind}"></span><div class="tl-time">${e.time}</div><div class="tl-title">${e.title}</div><div class="tl-detail">${e.detail}</div><div class="tl-tags">${e.tags.map(t=>`<span class="tl-tag">${t}</span>`).join('')}</div></div>`).join(''):'<div class="tl-event"><div class="tl-detail">No incident recorded yet. Run python scripts/demo_incident.py to generate one.</div></div>';document.getElementById('timelineCount').textContent=`${rows.length} events`}
+  async function loadIncidentTimeline(){
+    if(API_CONFIG.mode!=='api')return;
+    const top=incidents[0];if(!top){renderTimeline([]);return;}
+    const evs=await apiFetch('/api/incidents/'+encodeURIComponent(top.id)+'/events');
+    const rows=(evs||[]).map(e=>{const bad=e.integrity_ok===false,hot=/face\.unknown|cyber|smoke|fire|gas|leak/.test(e.type||'');
+      const extra=e.data?Object.entries(e.data).slice(0,3).map(([k,v])=>k+'='+v).join(', '):'';
+      return {time:new Date(e.ts).toLocaleTimeString(),title:prettyName(e.type),detail:bad?'Record failed integrity check':`${e.source} · ${prettyZone(e.zone)}${extra?' · '+extra:''}`,kind:bad||hot?'critical':'warning',tags:[e.type,prettyZone(e.zone)]};});
+    renderTimeline(rows);
+    document.getElementById('timelineCount').textContent=`${rows.length} events · ${top.title||top.id}`;
+  }
+
+  // ---------- Network renderer: data is renderer-independent ----------
+  const topologyData={nodes:[{id:'GW',label:'Warden Gateway',trust:100},{id:'CAM-001',label:'Living Camera',trust:92},{id:'LOCK-001',label:'Front Lock',trust:88},{id:'TEMP-001',label:'Thermostat',trust:95},{id:'PIR-001',label:'Garage PIR',trust:58},{id:'SMOKE-001',label:'Smoke Sensor',trust:97},{id:'CAM-002',label:'Garage Camera',trust:12}],edges:[['GW','CAM-001'],['GW','LOCK-001'],['GW','TEMP-001'],['GW','PIR-001'],['GW','SMOKE-001'],['GW','CAM-002']]};
+  function renderNetworkGraph(){
+    const svg=document.getElementById('networkGraphLarge');if(!svg)return;svg.innerHTML='';
+    const devs=MOCK_DB.devices;
+    if(!devs.length){const m=svgEl('text',{x:450,y:280,'text-anchor':'middle',fill:'#5f6f8e','font-size':13,'font-family':'var(--font-mono)'});m.textContent='Log in to load the live device topology';svg.appendChild(m);return;}
+    const cx=450,cy=285,RX=300,RY=215,IX=125,IY=92;
+    const zones=[...new Set(devs.map(d=>zoneKey(d.zone)))];
+    const ordered=zones.flatMap(z=>devs.filter(d=>zoneKey(d.zone)===z)),N=ordered.length,pos={},zpos={};
+    ordered.forEach((d,i)=>{const a=-Math.PI/2+(i+.5)/N*2*Math.PI;pos[d.id]={x:cx+RX*Math.cos(a),y:cy+RY*Math.sin(a),a};});
+    zones.forEach(z=>{const as=ordered.filter(d=>zoneKey(d.zone)===z).map(d=>pos[d.id].a),a=as.reduce((p,v)=>p+v,0)/as.length;zpos[z]={x:cx+IX*Math.cos(a),y:cy+IY*Math.sin(a)};});
+    const zr=z=>MOCK_DB.zones.find(x=>x.id===z)?.risk||0;
+    const line=(a,b,c,w,dash)=>svg.appendChild(svgEl('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:c,'stroke-opacity':.45,'stroke-width':w,'stroke-dasharray':dash||'none'}));
+    zones.forEach(z=>line({x:cx,y:cy},zpos[z],zoneRiskColor(zr(z)),zr(z)>=50?2.5:1.4,zr(z)>=50?'5 4':null));
+    ordered.forEach(d=>{const bad=!d.online||d.trust<65;line(zpos[zoneKey(d.zone)],pos[d.id],deviceVisualColor(d),bad?2.2:1.1,bad?'5 4':null);});
+    const mkText=(x,y,txt,anchor,size,fill)=>{const t=svgEl('text',{x,y,'text-anchor':anchor,fill:fill||'#d8e0ee','font-size':size,'font-family':'var(--font-mono)'});t.textContent=txt;return t;};
+    const gw=svgEl('g',{class:'topology-node'});gw.appendChild(svgEl('circle',{cx,cy,r:28,fill:'#0f1729',stroke:'#22d3ee','stroke-width':2}));gw.appendChild(mkText(cx,cy+3,'WARDEN','middle',9));svg.appendChild(gw);
+    zones.forEach(z=>{
+      const p=zpos[z],c=zoneRiskColor(zr(z)),g=svgEl('g',{class:'topology-node',tabindex:0,role:'button','aria-label':'Inspect zone '+prettyZone(z)});
+      g.appendChild(svgEl('circle',{cx:p.x,cy:p.y,r:17,fill:'#0f1729',stroke:c,'stroke-width':2}));
+      g.appendChild(mkText(p.x,p.y+3,String(zr(z)),'middle',9,c));
+      g.appendChild(mkText(p.x,p.y+31,prettyZone(z),'middle',9,'#8fa0bd'));
+      const open=()=>openEntity({kind:'zone',id:z,label:prettyZone(z),zone:z});
+      g.addEventListener('click',open);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});svg.appendChild(g);
+    });
+    ordered.forEach(d=>{
+      const p=pos[d.id],c=deviceVisualColor(d),g=svgEl('g',{class:'topology-node',tabindex:0,role:'button','aria-label':'Inspect network node '+d.name});
+      g.appendChild(svgEl('circle',{cx:p.x,cy:p.y,r:8,fill:'#0f1729',stroke:c,'stroke-width':2}));
+      g.appendChild(svgEl('circle',{cx:p.x,cy:p.y,r:3,fill:c}));
+      const cs=Math.cos(p.a),mid=Math.abs(cs)<.25;
+      g.appendChild(mkText(mid?p.x:p.x+(cs>0?14:-14),mid?p.y+(Math.sin(p.a)>0?22:-14):p.y+3,d.id,mid?'middle':(cs>0?'start':'end'),9));
+      const t=svgEl('title');t.textContent=`${d.name} · ${d.type} · trust ${d.trust}`;g.appendChild(t);
+      g.addEventListener('click',()=>openEntity({kind:'device',...d}));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();g.dispatchEvent(new MouseEvent('click'));}});
+      svg.appendChild(g);
+    });
+  }
+  document.getElementById('networkPulse')?.addEventListener('click',()=>{if(API_CONFIG.mode==='api'){logWs('sys',{message:'Demo pulse is disabled in API mode. Run: python scripts/demo_incident.py'});return;}emitSecurityEvent(makeMockAlert('Reconnaissance','PIR-001',72,'10.0.0.55'));document.getElementById('unknownMetric').textContent='8';});
+
+  // ---------- WebSocket-compatible normalized event handling ----------
+  function makeMockAlert(type='DDoS Traffic Surge',device='CAM-002',risk=87,source='192.168.1.100'){return {schema:'security.alert.v1',event_id:'evt-'+Date.now(),timestamp:new Date().toISOString(),source:'mock',device_id:device,attack_type:type,confidence:type==='DDoS Traffic Surge'?.94:.86,risk_score:risk,risk_level:risk>=80?'Critical':risk>=60?'High':risk>=30?'Medium':'Low',source_ip:source,action:risk>=80?'BLOCK_SOURCE':'MONITOR',status:risk>=80?'contained':'investigating'};}
+  function handleSecurityAlert(event){const a=event.detail;alertReceived++;const el=document.getElementById('alertStream');if(!el)return;const color=a.risk_level==='Critical'?'var(--danger)':a.risk_level==='High'?'var(--warn)':'var(--cyan)';const row=document.createElement('div');row.className='alert-item';const dot=document.createElement('span');dot.className='a-dot';dot.style.background=color;const body=document.createElement('div');const title=document.createElement('b');title.textContent=`${a.attack_type||a.type||'Security event'} · ${a.device_id||a.zone||'unknown'}`;const detail=document.createElement('p');detail.textContent=`Risk ${a.risk_score??'—'}/100 · confidence ${Math.round((a.confidence||0)*100)}% · ${a.action||'RECORDED'}`;body.append(title,detail);const time=document.createElement('time');time.textContent=new Date(a.timestamp||Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});row.append(dot,body,time);el.prepend(row);while(el.children.length>30)el.lastChild.remove();document.getElementById('alertCount').textContent=`${alertReceived} received`;if(Number.isFinite(Number(a.risk_score)))setGauge(Math.min(100,Math.max(0,Number(a.risk_score))),a.risk_level||'Unknown');logWs('in',a);}
+  eventBus.addEventListener('security-alert',handleSecurityAlert);
+  function logWs(direction,payload){const c=document.getElementById('wsConsole');if(!c)return;const line=document.createElement('div');line.className=direction==='in'?'in':'out';line.textContent=`[${new Date().toLocaleTimeString()}] ${direction.toUpperCase()} ${JSON.stringify(payload)}`;c.prepend(line);}
+
+  let mockTimer=null;
+  if(API_CONFIG.mode==='mock') mockTimer=setInterval(()=>{if(mockStreamRunning)emitSecurityEvent(makeMockAlert(Math.random()>.65?'Brute Force':'Behavioral Anomaly',Math.random()>.5?'PIR-001':'TEMP-001',Math.floor(45+Math.random()*45),'10.0.0.'+Math.floor(20+Math.random()*60)));},7000);
+  document.getElementById('toggleMockStream')?.addEventListener('click',e=>{if(API_CONFIG.mode!=='mock'){logWs('sys',{message:'Mock stream disabled in API mode'});return;}mockStreamRunning=!mockStreamRunning;e.target.textContent=mockStreamRunning?'Pause stream':'Resume stream';document.getElementById('wsStatus').innerHTML=`<i></i> WS MOCK ${mockStreamRunning?'CONNECTED':'PAUSED'}`;});
+
+  // Real WebSocket adapter. Disabled while API_CONFIG.mode === 'mock'.
+  let socket=null,wsRetry=0;
+  function connectSecuritySocket(){
+    if(API_CONFIG.mode==='mock'){document.getElementById('socketState').textContent='Local event bus (mock)';return;}
+    try{
+      if(!accessToken){document.getElementById('socketState').textContent='Login required';return;}
+      socket=new WebSocket(API_CONFIG.wsURL);socket.addEventListener('open',()=>{wsRetry=0;});
+      socket.onopen=()=>{document.getElementById('socketState').textContent='Connected to '+API_CONFIG.wsURL;document.getElementById('wsStatus').innerHTML='<i></i> WS CONNECTED';logWs('sys',{message:'WebSocket connected'});};
+      socket.onmessage=e=>{try{const frame=JSON.parse(e.data);logWs('in',frame);const normalized=normalizeBackendFrame(frame);if(normalized)emitSecurityEvent(normalized);if(frame.kind==='incident'){loadBackendState().catch(err=>logWs('sys',{refresh_error:err.message}));}}catch(err){logWs('sys',{message:'Invalid JSON event',error:String(err)})}};
+      socket.onerror=()=>logWs('sys',{message:'WebSocket error'});
+      socket.onclose=e=>{document.getElementById('socketState').textContent='Disconnected ('+e.code+')';document.getElementById('wsStatus').innerHTML='<i></i> WS OFFLINE';if(e.code===1008){accessToken=null;document.getElementById('apiLoginMessage').textContent='Session expired. Please log in again.';return;}const delay=Math.min(30000,1000*Math.pow(2,wsRetry++));setTimeout(async()=>{if(!accessToken)return;if(e.code===1011||wsRetry>4){try{await loadBackendState();}catch(err){logWs('sys',{reload_error:err.message});}}connectSecuritySocket();},delay);};
+    }catch(err){logWs('sys',{message:'WebSocket unavailable',error:String(err)})}
+  }
+
+  // Initial integration render.
+  buildFloorPlan();renderTimeline(API_CONFIG.mode==='api'?[]:null);renderNetworkGraph();
+  logWs('sys',{mode:API_CONFIG.mode,rest:'/api/*',websocket:'/ws/events?token=JWT',schema:'Person 2 event contract'});
+  document.getElementById('socketState').textContent='Login required';
+  document.getElementById('restState').textContent='Waiting for authenticated login';
+
+</script>
+</body>
+</html>

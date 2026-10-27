@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: ["/"]
+    schedule: {interval: weekly}
+
+  - package-ecosystem: docker
+    directories: ["/docker", "/services/frontend"]
+    schedule: {interval: weekly}
+
+  - package-ecosystem: pip
+    directories:
+      - "/libs/common"
+      - "/services/api"
+      - "/services/simulators"
+      - "/services/vision"
+      - "/services/cyber"
+      - "/services/engine"
+    schedule: {interval: weekly}

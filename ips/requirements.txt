@@ -1,0 +1,7 @@
+# Everything needed to run the pipeline, the demo and the test suite (Python 3.10 or newer).
+# pip install -r requirements.txt   (or: pip install -e ".[dev]")
+pyyaml>=6.0
+pytest>=7
+
+# Only for rebuilding the dataset files in data/ (scripts/data/*, needs Python 3.11 or newer):
+#   pip install -e ".[data]"   or   pip install pandas numpy

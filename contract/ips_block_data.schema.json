@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SmartSecure IPS block result data",
+  "description": "The data object of cyber.block_applied and cyber.block_refused (CONTRACT 3.1).",
+  "type": "object",
+  "required": [
+    "ip",
+    "action",
+    "device_id",
+    "reason",
+    "dry_run"
+  ],
+  "properties": {
+    "ip": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 45
+    },
+    "action": {
+      "enum": [
+        "block_source",
+        "temporary_block",
+        "isolate_device"
+      ]
+    },
+    "device_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 50
+    },
+    "reason": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]{1,64}$"
+    },
+    "dry_run": {
+      "type": "boolean"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

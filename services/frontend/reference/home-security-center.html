@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartSecure | Home Security Center</title>
+
+<style>
+  :root {
+    --bg: #0b1019;
+    --sidebar: #0e1521;
+    --panel: #131d2a;
+    --panel-light: #182839;
+    --panel-raised: #1c2d40;
+    --border: #273648;
+    --border-soft: #1d2b3b;
+    --text: #f1f5f9;
+    --muted: #94a9bd;
+    --faint: #5c7085;
+    --cyan: #53d8ee;
+    --cyan-dim: #2a7f93;
+    --green: #55d6a5;
+    --red: #ff6577;
+    --red-glow: rgba(255, 101, 119, .45);
+    --orange: #ffb86b;
+    --info: #7c93e0;
+    --mono: "SF Mono", "Cascadia Code", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, system-ui, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: var(--cyan); }
+
+  :focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* ---------------------------------------------------------- login ---- */
+  .login-screen {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background:
+      radial-gradient(circle at 20% 15%, #10263a66, transparent 45%),
+      radial-gradient(circle at 85% 80%, #122a2366, transparent 45%),
+      var(--bg);
+  }
+
+  .login-form {
+    width: 100%;
+    max-width: 400px;
+    padding: 32px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .login-form::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--cyan), var(--green), var(--cyan));
+    background-size: 200% 100%;
+    animation: sweep 5s linear infinite;
+  }
+
+  @keyframes sweep { to { background-position: -200% 0; } }
+
+  .login-form h1 { margin: 0 0 8px; }
+  .login-form label { display: block; margin: 18px 0 8px; color: var(--muted); font-size: 13px; }
+
+  .login-form input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: white;
+  }
+
+  .primary {
+    border: 0;
+    border-radius: 8px;
+    padding: 12px;
+    background: var(--cyan);
+    color: #07111b;
+    font-weight: 700;
+  }
+
+  .primary:disabled { opacity: .6; cursor: progress; }
+  .login-form .primary { width: 100%; margin-top: 20px; }
+  .error { color: #ff9da9; font-size: 13px; }
+
+  /* ---------------------------------------------------------- shell ---- */
+  .app { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    padding: 24px 16px;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 36px; padding: 0 4px; }
+
+  .brand-icon {
+    width: 48px; height: 48px; border-radius: 15px;
+    background: #153c49; color: var(--cyan);
+    display: grid; place-items: center; font-size: 23px;
+  }
+
+  .brand strong { display: block; font-size: 19px; }
+  .brand small { color: var(--muted); font-size: 12px; }
+
+  .nav-label { color: var(--muted); font-size: 11px; letter-spacing: 1.7px; margin: 12px; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; text-align: left;
+    padding: 13px 12px; margin: 3px 0;
+    border: 1px solid transparent; border-radius: 12px;
+    background: transparent; color: #b5c6d8;
+  }
+
+  .nav-item .nav-ic { width: 18px; text-align: center; }
+
+  .nav-item.active, .nav-item:hover { color: var(--cyan); background: #142c3a; border-color: #244351; }
+
+  .nav-badge {
+    margin-left: auto;
+    background: var(--red); color: #1a060a;
+    font-size: 10px; font-weight: 800;
+    padding: 1px 7px; border-radius: 20px;
+  }
+
+  .sidebar-status {
+    margin-top: auto; border: 1px solid var(--border); border-radius: 15px;
+    padding: 16px; color: var(--muted); font-size: 13px; line-height: 2;
+  }
+
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; }
+  .dot.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .dot.red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .dot.live { animation: pulse-dot 1.8s ease-in-out infinite; }
+
+  @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+  main { flex: 1; min-width: 0; padding: 30px 32px; }
+
+  .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 29px; margin: 4px 0 4px; letter-spacing: -.3px; }
+  .subtitle { color: var(--muted); margin: 0 0 20px; }
+
+  .pills { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .pill {
+    border: 1px solid var(--border); border-radius: 30px; padding: 9px 14px;
+    color: var(--muted); font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .pill strong { color: var(--text); }
+  .pill.mono { font-family: var(--mono); }
+
+  /* ---------------------------------------------------------- stats ---- */
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 20px 0 22px; }
+
+  .stat, .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 18px; padding: 22px;
+  }
+
+  .stat-top { display: flex; justify-content: space-between; color: var(--muted); gap: 8px; font-size: 13px; }
+  .stat-value { font-size: 32px; font-weight: 750; margin: 18px 0 6px; }
+  .stat-note { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  .cyan { color: var(--cyan); } .green { color: var(--green); }
+  .red { color: var(--red); } .orange { color: var(--orange); } .info { color: var(--info); }
+
+  .panel { margin-bottom: 20px; }
+  .panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .panel-heading h2 { font-size: 17px; margin: 0 0 4px; }
+  .panel-heading p { color: var(--muted); font-size: 12.5px; margin: 0; }
+
+  .content-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 20px; }
+
+  /* ---------------------------------------------------------- risk ----- */
+  .risk-layout { display: grid; grid-template-columns: 180px 1fr; gap: 26px; align-items: center; }
+
+  .risk-gauge-wrap { text-align: center; }
+  .risk-gauge { width: 100%; max-width: 180px; }
+  .risk-gauge-score { font-size: 34px; font-weight: 800; margin-top: -40px; }
+  .risk-gauge-label { font-size: 11px; color: var(--muted); letter-spacing: .5px; }
+
+  .risk-rows { display: grid; gap: 10px; }
+  .risk-row { display: grid; grid-template-columns: 110px 1fr 46px; align-items: center; gap: 12px; font-size: 13px; }
+  .risk-row .rr-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .risk-track { height: 9px; border-radius: 6px; background: #0e1824; overflow: hidden; border: 1px solid var(--border-soft); }
+  .risk-fill { height: 100%; border-radius: 6px; transition: width .5s ease; }
+  .risk-row .rr-score { text-align: right; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+
+  .level-info   { color: var(--info); }
+  .level-low    { color: var(--green); }
+  .level-medium { color: var(--orange); }
+  .level-high, .level-critical { color: var(--red); }
+
+  .fill-info    { background: var(--info); }
+  .fill-low     { background: var(--green); }
+  .fill-medium  { background: var(--orange); }
+  .fill-high    { background: var(--red); }
+  .fill-critical{ background: var(--red); box-shadow: 0 0 10px var(--red-glow); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10.5px; font-weight: 800; padding: 4px 9px; border-radius: 20px;
+    border: 1px solid currentColor; letter-spacing: .3px;
+  }
+
+  /* ------------------------------------------------------- digital twin --- */
+  .ico { display: inline-block; transition: opacity .2s, filter .2s; }
+  .ico.dim { opacity: .35; }
+  .ico.on { filter: drop-shadow(0 0 6px var(--cyan)); }
+  .ico.warn { filter: drop-shadow(0 0 6px var(--orange)); }
+  .state-badge {
+    display: inline-block; padding: 1px 8px; margin-right: 6px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 750; letter-spacing: .04em; border: 1px solid var(--border);
+  }
+  .state-badge.on { color: var(--green); border-color: #2c6350; background: #0f2a24; }
+  .state-badge.off { color: var(--muted); }
+  .state-badge.warn { color: var(--orange); border-color: #6b4f1f; background: #2a2211; }
+  .device-status.pending { color: var(--cyan); }
+  .detail-device.just-updated { border-color: var(--cyan); }
+  .ctrl-btn[aria-pressed="true"] { background: #142c3a; }
+
+  .twin-fallback {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+    padding: 18px; border: 1px solid var(--border); border-radius: 16px; background-color: #101a27;
+    background-image: linear-gradient(#20304455 1px, transparent 1px), linear-gradient(90deg, #20304455 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .room-flat {
+    min-width: 0; min-height: 128px; padding: 15px; text-align: left; color: var(--text);
+    background: #172a3a; border: 1px solid #355064; border-radius: 13px;
+  }
+  .room-flat:hover { border-color: var(--cyan); }
+  .room-flat-top { display: flex; justify-content: space-between; gap: 8px; }
+  .room-flat-name { font-weight: 750; font-size: 14px; }
+
+  .zone-empty, .empty { color: var(--muted); font-size: 13px; padding: 14px 0; }
+
+  .back-button {
+    border: 1px solid var(--border); background: #182839; color: var(--cyan);
+    border-radius: 9px; padding: 10px 13px; margin-bottom: 22px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .back-button:hover { background: #20394a; }
+
+  .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+
+  /* ----------------------------------------------------- device rows --- */
+  .device-table { display: grid; gap: 10px; }
+  .device-row {
+    display: flex; align-items: center; gap: 12px; padding: 13px;
+    background: var(--panel-light); border-radius: 11px; border: 1px solid transparent;
+  }
+  .device-row.just-updated { border-color: var(--cyan); }
+  .device-row .device-info { flex: 1; min-width: 0; }
+
+  .detail-device {
+    display: flex; align-items: center; gap: 13px; min-width: 0; padding: 15px;
+    background: var(--panel-light); border: 1px solid var(--border); border-radius: 12px;
+  }
+
+  .device-icon {
+    width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center;
+    background: #20394a; border-radius: 10px; font-size: 21px;
+  }
+  .device-row .device-icon { width: 40px; height: 40px; font-size: 18px; }
+
+  .device-info strong { display: block; font-size: 14px; margin-bottom: 4px; overflow-wrap: anywhere; }
+  .device-info small { color: var(--muted); overflow-wrap: anywhere; display: block; }
+
+  .device-controls { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+  .ctrl-btn {
+    border: 1px solid var(--border); background: var(--panel-raised); color: var(--text);
+    border-radius: 8px; padding: 8px 11px; font-size: 12px; font-weight: 650;
+    display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  }
+  .ctrl-btn:hover { border-color: var(--cyan-dim); }
+  .ctrl-btn.danger { color: var(--red); }
+  .ctrl-btn.confirm { background: var(--red); color: #210006; border-color: var(--red); }
+  .ctrl-btn:disabled { opacity: .5; cursor: wait; }
+  .ctrl-btn.on-state { color: var(--green); border-color: #2c6350; }
+
+  /* --------------------------------------------------------- incidents  */
+  .incident-card {
+    padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel-light);
+  }
+  .incident-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .incident-meta { font-size: 12px; color: var(--muted); line-height: 1.8; margin: 10px 0; font-family: var(--mono); }
+  .incident-summary { font-size: 13px; line-height: 1.7; margin: 0 0 10px; }
+  .incident-actions { font-size: 12px; color: var(--muted); padding-left: 20px; margin: 8px 0; }
+  .incident-foot { display: flex; justify-content: flex-end; margin-top: 8px; }
+
+  .timeline-list { display: grid; gap: 10px; }
+  .timeline-item { display: flex; gap: 12px; padding: 13px; background: var(--panel-light); border-radius: 11px; border-left: 3px solid var(--cyan-dim); }
+  .timeline-item .ti-icon { font-size: 18px; }
+  .timeline-item .ti-time { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  /* --------------------------------------------------------- cameras --- */
+  .snapshot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+  .snapshot-card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--panel-light); }
+  .snapshot-card img { width: 100%; height: 130px; object-fit: cover; display: block; background: #0d1824; }
+  .snapshot-card .sc-meta { padding: 10px 12px; font-size: 11.5px; color: var(--muted); }
+  .snapshot-card .sc-meta strong { color: var(--text); display: block; font-size: 12.5px; margin-bottom: 2px; }
+
+  /* ----------------------------------------------------------- audit --- */
+  .audit-row {
+    display: grid; grid-template-columns: 150px 1fr 170px; gap: 14px; align-items: start;
+    padding: 13px; background: var(--panel-light); border-radius: 11px; font-size: 13px;
+  }
+  .audit-row .ar-time { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  .audit-row .ar-action { font-weight: 650; }
+  .audit-row .ar-target { color: var(--muted); font-size: 12px; }
+  .audit-row details summary { cursor: pointer; color: var(--muted); font-size: 11.5px; }
+  .audit-row pre {
+    margin: 6px 0 0; font-size: 11px; color: var(--muted); white-space: pre-wrap;
+    background: #0d1824; padding: 8px; border-radius: 6px; font-family: var(--mono);
+  }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  footer { color: var(--faint); font-size: 11px; margin-top: 24px; }
+
+  /* ----------------------------------------------------------- toasts -- */
+  .toast-stack {
+    position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 10px;
+    z-index: 200; max-width: 320px;
+  }
+  .toast {
+    background: var(--panel-raised); border: 1px solid var(--border); border-left: 3px solid var(--cyan);
+    border-radius: 10px; padding: 12px 14px; font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    animation: toast-in .25s ease;
+  }
+  .toast.ok { border-left-color: var(--green); }
+  .toast.error { border-left-color: var(--red); }
+  .toast.live { border-left-color: var(--orange); }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001s !important; transition-duration: .001s !important; }
+  }
+
+  @media (max-width: 1150px) {
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .content-grid { grid-template-columns: 1fr; }
+    .risk-layout { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 950px) {
+    .sidebar { width: 220px; }
+    main { padding: 24px 18px; }
+  }
+
+  @media (max-width: 650px) {
+    .app { display: block; }
+    .sidebar { width: 100%; padding: 15px; }
+    .brand { margin-bottom: 15px; }
+    .sidebar-status { margin-top: 15px; }
+    main { padding: 22px 14px; }
+    .twin-fallback { grid-template-columns: 1fr; padding: 10px; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: 1fr; gap: 10px; }
+    .stat { padding: 15px; }
+    .stat-value { font-size: 27px; }
+    h1 { font-size: 24px; }
+    .audit-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="login-screen">
+  <form id="login-form" class="login-form">
+    <h1>SmartSecure<span class="cyan">.</span></h1>
+    <p class="subtitle">Home Security Center</p>
+
+    <label for="username">Username</label>
+    <input id="username" name="username" autocomplete="username" required>
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+    <button class="primary" type="submit">Sign in</button>
+    <p id="login-message" class="error" role="alert"></p>
+  </form>
+</div>
+
+<!-- APPLICATION -->
+<div id="app" class="app" hidden>
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">⌂</div>
+      <div>
+        <strong>SmartSecure.</strong>
+        <small>HOME SECURITY CENTER</small>
+      </div>
+    </div>
+
+    <div class="nav-label">WORKSPACE</div>
+    <button class="nav-item active" data-section="overview"><span class="nav-ic">▦</span> Overview</button>
+    <button class="nav-item" data-section="digital-twin"><span class="nav-ic">⌂</span> Digital Twin</button>
+    <button class="nav-item" data-section="devices"><span class="nav-ic">◇</span> Devices</button>
+    <button class="nav-item" data-section="cameras"><span class="nav-ic">▣</span> Cameras</button>
+    <button class="nav-item" data-section="incidents"><span class="nav-ic">◷</span> Incidents <span class="nav-badge" id="incident-badge" hidden>0</span></button>
+    <button class="nav-item" data-section="network"><span class="nav-ic">⌘</span> Network</button>
+    <button class="nav-item" data-section="audit"><span class="nav-ic">▤</span> Audit Trail</button>
+
+    <div class="sidebar-status">
+      <div><span class="dot green live" id="connection-dot"></span><span id="connection-status">Dashboard running</span></div>
+      <div>Data mode: <strong>Live API</strong></div>
+      <div>API: <strong id="api-status">Connected</strong></div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="page-head">
+      <div>
+        <h1 id="page-title">Security Overview</h1>
+        <p class="subtitle" id="page-subtitle">Monitor your home, devices and active threats.</p>
+      </div>
+      <div class="pills">
+        <span class="pill"><span class="dot green live"></span>Live dashboard</span>
+        <span class="pill mono" id="clock">--:--:--</span>
+      </div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section id="overview" class="section active">
+
+      <div class="stats">
+        <article class="stat">
+          <div class="stat-top"><span>Connected devices</span><span class="cyan">◇</span></div>
+          <div class="stat-value" id="connected-count">—</div>
+          <div class="stat-note">Devices returned by the API</div>
+        </article>
+
+        <article class="stat">
+          <div class="stat-top"><span>Active incidents</span><span class="red">!</span></div>
+          <div class="stat-value" id="incident-count">—</div>
+          <div class="stat-note" id="incident-note">Loading incidents</div>
+        </article>
+
+        <article class="stat">
+          <div class="stat-top"><span>Home temperature</span><span class="orange">♨</span></div>
+          <div class="stat-value" id="temperature-value">—</div>
+          <div class="stat-note" id="temperature-note">Waiting for sensor readings</div>
+        </article>
+
+        <article class="stat">
+          <div class="stat-top"><span>Peak risk level</span><span class="red" id="risk-stat-icon">●</span></div>
+          <div class="stat-value" id="risk-stat-value" style="font-size:27px">—</div>
+          <div class="stat-note" id="risk-stat-note">Waiting for the risk engine</div>
+        </article>
+      </div>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Risk by zone</h2>
+            <p>Live scores from the risk engine (Person 6)</p>
+          </div>
+          <span class="pill" id="risk-updated">—</span>
+        </div>
+
+        <div class="risk-layout">
+          <div class="risk-gauge-wrap">
+            <svg class="risk-gauge" viewBox="0 0 120 68">
+              <path d="M10,62 A50,50 0 0 1 110,62" fill="none" stroke="#17263a" stroke-width="10" stroke-linecap="round"/>
+              <path id="risk-gauge-arc" d="M10,62 A50,50 0 0 1 110,62" fill="none" stroke="var(--cyan)"
+                    stroke-width="10" stroke-linecap="round" stroke-dasharray="157.08" stroke-dashoffset="157.08"/>
+            </svg>
+            <div class="risk-gauge-score" id="risk-gauge-score">0</div>
+            <div class="risk-gauge-label">PEAK SCORE / 100</div>
+          </div>
+          <div class="risk-rows" id="risk-rows">
+            <p class="empty">Sign in to load risk data.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="content-grid" id="dashboard-content-grid">
+        <section class="panel">
+          <div class="panel-heading">
+            <div><h2>Recent Devices</h2><p>Devices retrieved from the backend</p></div>
+            <span class="pill" id="recent-count">0 devices</span>
+          </div>
+          <div id="recent-devices" class="device-table"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <div><h2>Recent Incidents</h2><p>Latest incidents from the risk engine</p></div>
+          </div>
+          <div id="recent-incidents" class="device-table">
+            <p class="empty">Incident data has not been loaded.</p>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- DIGITAL TWIN -->
+    <section id="digital-twin" class="section">
+      <section class="panel" id="digital-twin-card">
+        <div class="panel-heading">
+          <div>
+            <h2>Digital Twin</h2>
+            <p>Home floor plan · Select a zone to open it</p>
+          </div>
+          <span class="pill" id="zone-count">0 zones</span>
+        </div>
+        <div id="twin-host"></div>
+      </section>
+    </section>
+
+    <!-- ZONE DETAIL PAGE -->
+    <section class="panel" id="zone-detail" hidden>
+      <button type="button" class="back-button" id="back-to-floorplan">← Back to Digital Twin</button>
+
+      <div class="panel-heading">
+        <div>
+          <h2 id="zone-detail-title">Zone</h2>
+          <p id="zone-detail-subtitle">Devices in this zone</p>
+        </div>
+        <span class="pill" id="zone-detail-risk">—</span>
+      </div>
+
+      <div class="detail-grid" id="zone-detail-devices"></div>
+    </section>
+
+    <!-- ALL DEVICES -->
+    <section id="devices" class="section">
+      <section class="panel">
+        <div class="panel-heading">
+          <div><h2>All Devices</h2><p>Devices registered in the backend — controls only appear for controllable types</p></div>
+          <span class="pill" id="all-device-count">0 devices</span>
+        </div>
+        <div id="all-devices" class="device-table"></div>
+      </section>
+    </section>
+
+    <!-- CAMERAS -->
+    <section id="cameras" class="section">
+      <section class="panel">
+        <div class="panel-heading">
+          <div><h2>Cameras</h2><p>Camera devices registered in the system</p></div>
+        </div>
+        <div id="camera-devices" class="device-table"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div><h2>Recent captures</h2><p>Snapshots attached to the latest vision events</p></div>
+          <span class="pill" id="snapshot-count">0 captures</span>
+        </div>
+        <div id="snapshot-grid" class="snapshot-grid">
+          <p class="empty">No snapshots loaded yet.</p>
+        </div>
+      </section>
+    </section>
+
+    <!-- INCIDENTS -->
+    <section id="incidents" class="section">
+      <section class="panel" id="incident-list-panel">
+        <div class="panel-heading">
+          <div><h2>Incidents</h2><p>Incident records from the backend — open one for its event timeline</p></div>
+        </div>
+        <div id="incident-list" class="device-table"></div>
+      </section>
+
+      <section class="panel" id="incident-timeline-panel" hidden>
+        <button type="button" class="back-button" id="back-to-incidents">← Back to incidents</button>
+        <div class="panel-heading">
+          <div>
+            <h2 id="timeline-title">Incident timeline</h2>
+            <p id="timeline-subtitle">Events that built this incident, in order</p>
+          </div>
+        </div>
+        <div id="timeline-list" class="timeline-list"></div>
+      </section>
+    </section>
+
+    <!-- NETWORK -->
+    <section id="network" class="section">
+      <section class="panel">
+        <div class="panel-heading">
+          <div><h2>Network devices</h2><p>Routers, access points and other network-zone devices</p></div>
+        </div>
+        <div id="network-devices" class="device-table"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div><h2>Recent network &amp; cyber events</h2><p>From the cyber service (Person 5) — scans, brute force, rogue devices</p></div>
+        </div>
+        <div id="network-events" class="device-table">
+          <p class="empty">No network events loaded yet.</p>
+        </div>
+      </section>
+    </section>
+
+    <!-- AUDIT -->
+    <section id="audit" class="section">
+      <section class="panel">
+        <div class="panel-heading">
+          <div><h2>Audit trail</h2><p>Every authenticated action taken through the API, including device commands</p></div>
+          <span class="pill" id="audit-count">0 entries</span>
+        </div>
+        <div id="audit-list" style="display:grid; gap:10px;"></div>
+      </section>
+    </section>
+
+    <footer>SmartSecure Home · Device data is loaded from the backend.</footer>
+  </main>
+</div>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script>
+(() => {
+  const loginForm = document.getElementById("login-form");
+  const loginScreen = document.getElementById("login-screen");
+  const app = document.getElementById("app");
+  const loginMessage = document.getElementById("login-message");
+
+  const state = {
+    token: "",
+    devices: [],
+    incidents: [],
+    zones: [],          // [{id, name, is_outdoor}]
+    risk: new Map(),    // zone -> risk object
+    audit: [],
+    currentZoneName: null,
+    liveSocket: null,
+    reconnectTimer: null,
+    armedButtons: new Map(), // button -> timeout id, for the confirm-to-arm pattern
+    pending: new Map(),      // device_id -> {action, timer}: command sent, waiting for the device
+  };
+
+  const deviceIcons = {
+    temperature_sensor: "🌡️", temperature: "🌡️", pir: "🚶", door: "🚪",
+    camera: "📷", bulb: "💡", siren: "🚨", lock: "🔒", window: "🪟",
+    smoke: "🔥", gas: "⚠️", water_leak: "💧", valve: "🚰",
+    router: "📡", access_point: "📶",
+  };
+
+  const ALLOWED_ACTIONS = {
+    bulb: ["on", "off"],
+    siren: ["on", "off"],
+    lock: ["lock", "unlock"],
+    valve: ["open", "close"],
+  };
+
+  const DANGEROUS_ACTIONS = new Set(["unlock", "lock", "on" /* only dangerous for siren, handled below */]);
+
+  const LEVEL_ORDER = ["info", "low", "medium", "high", "critical"];
+
+  // ---------------------------------------------------------------- utils
+  function pretty(value) {
+    return String(value || "Unknown").replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  function getDeviceName(device) { return device.name || device.device_id || device.id || "Unnamed device"; }
+  function getZone(device) { return String(device.zone || "unassigned").trim() || "unassigned"; }
+  function getDeviceIcon(device) { return deviceIcons[String(device.device_type || "").toLowerCase()] || "📟"; }
+
+  function getDeviceStatusText(device) {
+    const status = device.online ? "Online" : "Offline";
+    const stateDetails = Object.entries(device.state || {})
+      .filter(([, v]) => v !== null && v !== undefined && typeof v !== "object")
+      .slice(0, 3)
+      .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`);
+    return stateDetails.length ? `${status} · ${stateDetails.join(" · ")}` : status;
+  }
+
+  function timeAgo(iso) {
+    if (!iso) return "unknown time";
+    const ms = Date.now() - new Date(iso).getTime();
+    if (!Number.isFinite(ms)) return iso;
+    if (ms < 5000) return "just now";
+    if (ms < 60000) return `${Math.floor(ms / 1000)}s ago`;
+    if (ms < 3600000) return `${Math.floor(ms / 60000)}m ago`;
+    if (ms < 86400000) return `${Math.floor(ms / 3600000)}h ago`;
+    return new Date(iso).toLocaleString();
+  }
+
+  function toast(message, kind = "live") {
+    const stack = document.getElementById("toast-stack");
+    const el = document.createElement("div");
+    el.className = `toast ${kind}`;
+    el.textContent = message;
+    stack.append(el);
+    setTimeout(() => el.remove(), 5200);
+  }
+
+  // -------------------------------------------------------------- devices
+  function createDeviceRow(device) {
+    const row = document.createElement("div");
+    row.className = "device-row";
+    row.dataset.deviceId = device.device_id || "";
+
+    const icon = document.createElement("div");
+    icon.className = "device-icon";
+    icon.textContent = getDeviceIcon(device);
+
+    const info = document.createElement("div");
+    info.className = "device-info";
+
+    const name = document.createElement("strong");
+    name.textContent = getDeviceName(device);
+
+    const detail = document.createElement("small");
+    detail.textContent = `${pretty(device.device_type)} · ${pretty(getZone(device))}`;
+
+    info.append(name, detail, buildStatusLine(device));
+    row.append(icon, info);
+
+    const controls = buildDeviceControls(device);
+    if (controls) row.append(controls);
+
+    return row;
+  }
+
+  // What each command does to the device state. Mirrors services/simulators/sim/catalog.py ACTIONS.
+  const STATE_FOR_ACTION = {
+    bulb: { on: { power: "on" }, off: { power: "off" } },
+    siren: { on: { power: "on" }, off: { power: "off" } },
+    lock: { lock: { lock: "locked" }, unlock: { lock: "unlocked" } },
+    valve: { open: { open: true }, close: { open: false } },
+  };
+  const ACTION_LABELS = { on: "Turn on", off: "Turn off", lock: "Lock", unlock: "Unlock", open: "Open", close: "Close" };
+
+  function typeOf(device) { return String(device.device_type || "").toLowerCase(); }
+
+  function matchesAction(device, action) {
+    const want = (STATE_FOR_ACTION[typeOf(device)] || {})[action];
+    if (!want) return false;
+    const current = device.state || {};
+    return Object.entries(want).every(([key, value]) => current[key] === value);
+  }
+
+  // {label, cls} describing the device's current state, or null if it has not reported one yet.
+  function stateBadge(device) {
+    const s = device.state || {};
+    switch (typeOf(device)) {
+      case "bulb": case "siren":
+        return s.power === undefined ? null : s.power === "on" ? { label: "ON", cls: "on" } : { label: "OFF", cls: "off" };
+      case "lock":
+        return s.lock === undefined ? null : s.lock === "unlocked" ? { label: "UNLOCKED", cls: "warn" } : { label: "LOCKED", cls: "on" };
+      case "valve":
+        return s.open === undefined ? null : s.open === false ? { label: "CLOSED", cls: "warn" } : { label: "OPEN", cls: "on" };
+      default:
+        return null;
+    }
+  }
+
+  function buildStatusLine(device) {
+    const line = document.createElement("small");
+    line.className = "device-status";
+    line.style.marginTop = "6px";
+    line.style.color = device.online ? "var(--green)" : "var(--muted)";
+    const badge = stateBadge(device);
+    if (badge) {
+      const pill = document.createElement("span");
+      pill.className = `state-badge ${badge.cls}`;
+      pill.textContent = badge.label;
+      line.append(pill);
+    }
+    line.append(getDeviceStatusText(device));
+    if (state.pending.has(device.device_id)) {
+      line.classList.add("pending");
+      line.append(" · waiting for the device…");
+    }
+    return line;
+  }
+
+  function buildDeviceControls(device) {
+    const actions = ALLOWED_ACTIONS[typeOf(device)];
+    if (!actions) return null;
+
+    const wrap = document.createElement("div");
+    wrap.className = "device-controls";
+
+    const icons = { on: "⏻", off: "⏻", lock: "🔒", unlock: "🔓", open: "▲", close: "▼" };
+    const risky = new Set(typeOf(device) === "siren" ? ["on"] : typeOf(device) === "lock" ? ["unlock"] : []);
+    const waiting = state.pending.has(device.device_id);
+    const offline = device.online === false;
+
+    actions.forEach(action => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      const active = matchesAction(device, action);        // the state the device is in right now
+      btn.className = "ctrl-btn" + (risky.has(action) ? " danger" : "") + (active ? " on-state" : "");
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+      btn.innerHTML = `<span>${icons[action] || "●"}</span><span>${ACTION_LABELS[action] || pretty(action)}</span>`;
+      if (waiting || offline) {
+        btn.disabled = true;
+        btn.title = offline ? "Device is offline" : "Waiting for the device to confirm";
+      }
+
+      btn.addEventListener("click", () => {
+        if (risky.has(action) && btn.dataset.armed !== "1") {
+          armButton(btn, `Confirm ${ACTION_LABELS[action].toLowerCase()}?`);
+          return;
+        }
+        disarmButton(btn);
+        sendCommand(device, action, btn);
+      });
+
+      wrap.append(btn);
+    });
+
+    return wrap;
+  }
+
+  function armButton(btn, confirmText) {
+    disarmAllExcept(btn);
+    btn.dataset.armed = "1";
+    btn.dataset.originalHtml = btn.innerHTML;
+    btn.classList.add("confirm");
+    btn.textContent = confirmText;
+    const timeoutId = setTimeout(() => disarmButton(btn), 4000);
+    state.armedButtons.set(btn, timeoutId);
+  }
+
+  function disarmButton(btn) {
+    if (state.armedButtons.has(btn)) {
+      clearTimeout(state.armedButtons.get(btn));
+      state.armedButtons.delete(btn);
+    }
+    if (btn.dataset.armed === "1") {
+      btn.classList.remove("confirm");
+      if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
+      delete btn.dataset.armed;
+    }
+  }
+
+  function disarmAllExcept(keep) {
+    [...state.armedButtons.keys()].forEach(btn => { if (btn !== keep) disarmButton(btn); });
+  }
+
+  async function sendCommand(device, action, btn) {
+    btn.disabled = true;
+    btn.textContent = "Sending…";
+
+    try {
+      const response = await fetch(`/api/devices/${encodeURIComponent(device.device_id)}/command`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${state.token}` },
+        body: JSON.stringify({ action, reason: "dashboard" }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || `Command failed (${response.status})`);
+
+      // Accepted by the API and published to MQTT. The screen changes when the DEVICE confirms
+      // (device_status over the WebSocket); until then show "waiting", and re-check if it stays silent.
+      toast(`${ACTION_LABELS[action] || pretty(action)} sent to ${getDeviceName(device)}`, "live");
+      setPending(device, action);
+    } catch (error) {
+      toast(error.message || "Could not send command.", "error");
+    } finally {
+      refreshDevice(device.device_id);          // rebuild the buttons (re-enables them on failure)
+    }
+  }
+
+  function clearPending(deviceId) {
+    const entry = state.pending.get(deviceId);
+    if (entry) clearTimeout(entry.timer);
+    state.pending.delete(deviceId);
+  }
+
+  function setPending(device, action) {
+    clearPending(device.device_id);
+    const timer = setTimeout(() => pendingTimedOut(device.device_id), 4000);
+    state.pending.set(device.device_id, { action, timer });
+  }
+
+  async function resyncDevices() {
+    try {
+      const response = await fetch("/api/devices", { headers: { Authorization: `Bearer ${state.token}` } });
+      if (!response.ok) return;
+      const result = await response.json();
+      (Array.isArray(result) ? result : result.devices || []).forEach(fresh => {
+        const current = state.devices.find(d => d.device_id === fresh.device_id);
+        if (current) Object.assign(current, fresh); else state.devices.push(fresh);
+      });
+    } catch { /* keep what we have */ }
+  }
+
+  async function pendingTimedOut(deviceId) {
+    const entry = state.pending.get(deviceId);
+    if (!entry) return;
+    await resyncDevices();                       // maybe the WebSocket missed it
+    state.pending.delete(deviceId);
+    const device = state.devices.find(d => d.device_id === deviceId);
+    if (!device) return;
+    refreshDevice(deviceId);
+    renderDashboard(false);
+    if (matchesAction(device, entry.action)) {
+      toast(`${getDeviceName(device)}: ${ACTION_LABELS[entry.action].toLowerCase()} done`, "ok");
+    } else {
+      toast(`${getDeviceName(device)} did not confirm "${ACTION_LABELS[entry.action].toLowerCase()}". The command was sent, but its state did not change.`, "error");
+    }
+  }
+
+  // Rebuild every card/row of one device in place (zone page, Devices page, ...), so that a state
+  // change shows up immediately. A card whose confirm button is armed is left alone.
+  function refreshDevice(deviceId) {
+    const device = state.devices.find(d => d.device_id === deviceId);
+    if (!device) return;
+    document.querySelectorAll(`[data-device-id="${CSS.escape(deviceId)}"]`).forEach(el => {
+      if (el.querySelector('.ctrl-btn[data-armed="1"]')) return;
+      const fresh = el.classList.contains("detail-device")
+        ? createZoneCard(device, state.currentZoneName || getZone(device))
+        : createDeviceRow(device);
+      el.replaceWith(fresh);
+    });
+  }
+
+  function createZoneCard(device, zoneName) {
+    const card = document.createElement("article");
+    card.className = "detail-device";
+    card.dataset.deviceId = device.device_id || "";
+
+    const icon = document.createElement("div");
+    icon.className = "device-icon";
+    icon.textContent = getDeviceIcon(device);
+
+    const info = document.createElement("div");
+    info.className = "device-info";
+    const name = document.createElement("strong");
+    name.textContent = getDeviceName(device);
+    const detail = document.createElement("small");
+    detail.textContent = `${pretty(device.device_type)} · ${zoneName}`;
+    info.append(name, detail, buildStatusLine(device));
+
+    card.append(icon, info);
+    const controls = buildDeviceControls(device);
+    if (controls) card.append(controls);
+    return card;
+  }
+
+  function renderDeviceList(containerId, list, emptyText) {
+    const container = document.getElementById(containerId);
+    container.replaceChildren();
+    if (!list.length) {
+      const message = document.createElement("p");
+      message.className = "empty";
+      message.textContent = emptyText;
+      container.append(message);
+      return;
+    }
+    list.forEach(device => container.append(createDeviceRow(device)));
+  }
+
+  function flashDeviceRow(deviceId) {
+    document.querySelectorAll(`.device-row[data-device-id="${CSS.escape(deviceId)}"], .detail-device[data-device-id="${CSS.escape(deviceId)}"]`).forEach(row => {
+      row.classList.add("just-updated");
+      setTimeout(() => row.classList.remove("just-updated"), 1600);
+    });
+  }
+
+  // ----------------------------------------------------------- risk/zones
+  function riskLevelOf(zoneName) {
+    const entry = state.risk.get(zoneName);
+    return entry ? entry.level : "info";
+  }
+
+  function riskScoreOf(zoneName) {
+    const entry = state.risk.get(zoneName);
+    return entry ? entry.score : 0;
+  }
+
+  function renderRiskPanel() {
+    const rowsEl = document.getElementById("risk-rows");
+    rowsEl.replaceChildren();
+
+    const entries = [...state.risk.values()].sort((a, b) => b.score - a.score);
+
+    if (!entries.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "No risk data yet — the risk engine publishes this once a zone has activity.";
+      rowsEl.append(empty);
+    } else {
+      entries.forEach(risk => {
+        const row = document.createElement("div");
+        row.className = "risk-row";
+
+        const name = document.createElement("span");
+        name.className = "rr-name";
+        name.textContent = pretty(risk.zone);
+
+        const track = document.createElement("div");
+        track.className = "risk-track";
+        const fill = document.createElement("div");
+        fill.className = `risk-fill fill-${risk.level}`;
+        fill.style.width = `${Math.max(2, Math.min(100, risk.score))}%`;
+        track.append(fill);
+
+        const score = document.createElement("span");
+        score.className = "rr-score";
+        score.textContent = `${risk.score} · ${risk.level}`;
+
+        row.append(name, track, score);
+        rowsEl.append(row);
+      });
+    }
+
+    const peak = entries.reduce((max, r) => (r.score > max.score ? r : max), { score: 0, level: "info", zone: "" });
+    const arc = document.getElementById("risk-gauge-arc");
+    const circumference = 157.08;
+    arc.style.strokeDashoffset = String(circumference * (1 - Math.min(100, peak.score) / 100));
+    arc.style.stroke = {
+      info: "var(--info)", low: "var(--green)", medium: "var(--orange)",
+      high: "var(--red)", critical: "var(--red)",
+    }[peak.level] || "var(--cyan)";
+
+    document.getElementById("risk-gauge-score").textContent = String(peak.score);
+    document.getElementById("risk-stat-value").textContent = peak.zone ? `${pretty(peak.level)}` : "Nominal";
+    document.getElementById("risk-stat-note").textContent = peak.zone
+      ? `${pretty(peak.zone)} · score ${peak.score}`
+      : "No elevated risk right now";
+    document.getElementById("risk-stat-icon").className = {
+      info: "cyan", low: "green", medium: "orange", high: "red", critical: "red",
+    }[peak.level] || "cyan";
+
+    const latestTs = entries.reduce((latest, r) => (r.ts && r.ts > latest ? r.ts : latest), "");
+    document.getElementById("risk-updated").textContent = latestTs ? `Updated ${timeAgo(latestTs)}` : "Waiting for data";
+  }
+
+  async function loadRisk() {
+    try {
+      const response = await fetch("/api/risk", { headers: { Authorization: `Bearer ${state.token}` } });
+      if (!response.ok) throw new Error();
+      const result = await response.json();
+      state.risk = new Map(result.map(r => [r.zone, r]));
+    } catch {
+      /* keep whatever we already had; the panel will just say "waiting" */
+    }
+    renderRiskPanel();
+  }
+
+  async function loadZones() {
+    try {
+      const response = await fetch("/api/zones", { headers: { Authorization: `Bearer ${state.token}` } });
+      if (response.ok) state.zones = await response.json();
+    } catch {
+      state.zones = [];
+    }
+  }
+
+  // -------------------------------------------------------- digital twin
+  function zoneGroups() {
+    const groups = new Map();
+    state.zones.forEach(z => groups.set(z.name, { devices: [], is_outdoor: z.is_outdoor }));
+    state.devices.forEach(device => {
+      const zone = getZone(device);
+      if (!groups.has(zone)) groups.set(zone, { devices: [], is_outdoor: false });
+      groups.get(zone).devices.push(device);
+    });
+    return groups;
+  }
+
+  function buildTwin() {
+    const host = document.getElementById("twin-host");
+    const entries = [...zoneGroups().entries()].sort(([a], [b]) => a.localeCompare(b));
+
+    document.getElementById("zone-count").textContent = `${entries.length} zones`;
+    host.replaceChildren();
+
+    if (!entries.length) {
+      const empty = document.createElement("p");
+      empty.className = "zone-empty";
+      empty.textContent = "No zones were returned by the API.";
+      host.append(empty);
+      return;
+    }
+    host.append(buildFlatFloorplan(entries));
+  }
+
+  // Dimmed = actuator is off/idle, glowing = on, orange = unlocked / valve closed.
+  function deviceIconSpan(device) {
+    const span = document.createElement("span");
+    span.className = "ico";
+    span.textContent = getDeviceIcon(device);
+    const badge = stateBadge(device);
+    if (badge) {
+      span.title = `${getDeviceName(device)}: ${badge.label}`;
+      const type = typeOf(device);
+      const energised = (type === "bulb" || type === "siren") ? badge.cls === "on" : badge.cls === "warn";
+      span.classList.add(energised ? (badge.cls === "warn" ? "warn" : "on") : "dim");
+    }
+    return span;
+  }
+
+  function buildFlatFloorplan(entries) {
+    const wrap = document.createElement("div");
+    wrap.className = "twin-fallback";
+
+    entries.forEach(([zoneName, group]) => {
+      const level = riskLevelOf(zoneName);
+      const room = document.createElement("button");
+      room.type = "button";
+      room.className = "room-flat";
+      room.setAttribute("aria-label", `Open ${pretty(zoneName)} zone`);
+
+      const top = document.createElement("div");
+      top.className = "room-flat-top";
+      const name = document.createElement("span");
+      name.className = "room-flat-name";
+      name.textContent = pretty(zoneName);
+      const badge = document.createElement("span");
+      badge.className = `badge level-${level}`;
+      badge.textContent = level;
+      top.append(name, badge);
+
+      const count = document.createElement("div");
+      count.style.cssText = "color:var(--muted); font-size:12px; margin-top:10px;";
+      count.textContent = `${group.devices.length} devices`;
+
+      const icons = document.createElement("div");
+      icons.style.cssText = "margin-top:12px; font-size:18px; display:flex; gap:8px; flex-wrap:wrap;";
+      if (group.devices.length) group.devices.slice(0, 8).forEach(d => icons.append(deviceIconSpan(d)));
+      else icons.textContent = "—";
+
+      room.append(top, count, icons);
+      room.addEventListener("click", () => openZone(zoneName, group.devices));
+      wrap.append(room);
+    });
+
+    return wrap;
+  }
+
+  function openZone(zoneName, zoneDevices) {
+    state.currentZoneName = zoneName;
+    document.getElementById("digital-twin-card").hidden = true;
+    document.getElementById("zone-detail").hidden = false;
+
+    document.getElementById("zone-detail-title").textContent = pretty(zoneName);
+    document.getElementById("zone-detail-subtitle").textContent = `Zone: ${zoneName}`;
+
+    const level = riskLevelOf(zoneName);
+    const riskPill = document.getElementById("zone-detail-risk");
+    riskPill.textContent = `Risk: ${level} (${riskScoreOf(zoneName)})`;
+    riskPill.className = `pill level-${level}`;
+
+    const list = document.getElementById("zone-detail-devices");
+    list.replaceChildren();
+
+    if (!zoneDevices.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "No devices are assigned to this zone.";
+      list.append(empty);
+    }
+
+    zoneDevices.forEach(device => list.append(createZoneCard(device, zoneName)));
+
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
+  }
+
+  function closeZone() {
+    state.currentZoneName = null;
+    document.getElementById("zone-detail").hidden = true;
+    document.getElementById("digital-twin-card").hidden = false;
+
+    document.getElementById("page-title").textContent = "Digital Twin";
+    document.getElementById("page-subtitle").textContent = "Select a zone to view its devices and controls.";
+
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    document.getElementById("digital-twin").classList.add("active");
+    document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
+    document.querySelector('[data-section="digital-twin"]').classList.add("active");
+    buildTwin();
+  }
+
+  document.getElementById("back-to-floorplan").addEventListener("click", closeZone);
+
+  // -------------------------------------------------------------- live ws
+  function connectLiveUpdates() {
+    if (!state.token) return;
+    if (state.liveSocket && (state.liveSocket.readyState === WebSocket.OPEN || state.liveSocket.readyState === WebSocket.CONNECTING)) return;
+
+    const wsUrl = new URL("/ws/events", window.location.href);
+    wsUrl.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    wsUrl.searchParams.set("token", state.token);
+
+    const socket = new WebSocket(wsUrl);
+    state.liveSocket = socket;
+
+    socket.addEventListener("open", () => {
+      document.getElementById("connection-status").textContent = "Live updates connected";
+      document.getElementById("connection-dot").className = "dot green live";
+    });
+
+    socket.addEventListener("message", event => {
+      let message;
+      try { message = JSON.parse(event.data); } catch { return; }
+      handleLiveMessage(message);
+    });
+
+    socket.addEventListener("close", () => {
+      document.getElementById("connection-status").textContent = "Reconnecting…";
+      document.getElementById("connection-dot").className = "dot red live";
+      state.liveSocket = null;
+      clearTimeout(state.reconnectTimer);
+      state.reconnectTimer = setTimeout(connectLiveUpdates, 3000);
+    });
+
+    socket.addEventListener("error", () => socket.close());
+  }
+
+  function handleLiveMessage(message) {
+    const { kind, data } = message || {};
+    if (!kind || !data) return;
+
+    if (kind === "device_status") {
+      const existing = state.devices.find(d => d.device_id === data.device_id);
+      if (existing) {
+        existing.online = data.online;
+        existing.state = data.state;
+        existing.zone = data.zone;
+        existing.device_type = data.device_type;
+        const waiting = state.pending.get(data.device_id);
+        if (waiting && matchesAction(existing, waiting.action)) {
+          clearPending(data.device_id);
+          const badge = stateBadge(existing);
+          toast(`${getDeviceName(existing)} is now ${badge ? badge.label : "updated"}`, "ok");
+        }
+        refreshDevice(data.device_id);          // update just this device's cards: nothing else flickers
+        renderDashboard(false);
+      } else {
+        state.devices.push({
+          device_id: data.device_id, name: data.device_id, device_type: data.device_type,
+          zone: data.zone, online: data.online, state: data.state,
+        });
+        renderDashboard();
+      }
+      flashDeviceRow(data.device_id);
+    } else if (kind === "risk") {
+      const previous = state.risk.get(data.zone);
+      state.risk.set(data.zone, data);
+      renderRiskPanel();
+      buildTwin();
+      if (previous && LEVEL_ORDER.indexOf(data.level) > LEVEL_ORDER.indexOf(previous.level) && LEVEL_ORDER.indexOf(data.level) >= 3) {
+        toast(`Risk escalated in ${pretty(data.zone)}: now ${data.level}`, "error");
+      }
+    } else if (kind === "incident") {
+      const idx = state.incidents.findIndex(i => i.id === data.id);
+      if (idx >= 0) state.incidents[idx] = { ...state.incidents[idx], ...data };
+      else state.incidents.unshift(data);
+      renderIncidents();
+      toast(`New incident in ${pretty(data.zone)}: ${data.trigger}`, "error");
+    } else if (kind === "event") {
+      if (data.source === "cyber" || data.source === "vision") {
+        toast(`Live: ${pretty(data.type)} · ${pretty(data.zone)}`, "live");
+      }
+      if (data.data && data.data.snapshot && document.getElementById("cameras").classList.contains("active")) {
+        loadSnapshots();
+      }
+    }
+  }
+
+  // ------------------------------------------------------------ incidents
+  const severityColors = { info: "var(--info)", low: "var(--green)", medium: "var(--orange)", high: "var(--red)", critical: "var(--red)" };
+
+  function incidentCard(incident) {
+    const card = document.createElement("article");
+    card.className = "incident-card";
+
+    const header = document.createElement("div");
+    header.className = "incident-head";
+    const title = document.createElement("strong");
+    title.textContent = incident.trigger || "Security incident";
+    const level = document.createElement("span");
+    const sev = String(incident.level || "info").toLowerCase();
+    level.className = "badge";
+    level.style.color = severityColors[sev] || "var(--muted)";
+    level.textContent = sev.toUpperCase();
+    header.append(title, level);
+
+    const metadata = document.createElement("p");
+    metadata.className = "incident-meta";
+    metadata.textContent = `${incident.ts ? new Date(incident.ts).toLocaleString() : "Time unavailable"} · ${pretty(incident.zone)} · score ${incident.score}`;
+
+    const summary = document.createElement("p");
+    summary.className = "incident-summary";
+    summary.textContent = incident.summary || "No summary provided.";
+
+    card.append(header, metadata, summary);
+
+    if (Array.isArray(incident.actions) && incident.actions.length) {
+      const actionsTitle = document.createElement("strong");
+      actionsTitle.style.fontSize = "12px";
+      actionsTitle.textContent = "Recorded actions";
+      const actionsList = document.createElement("ul");
+      actionsList.className = "incident-actions";
+      incident.actions.forEach(action => {
+        const item = document.createElement("li");
+        item.textContent = String(action);
+        actionsList.append(item);
+      });
+      card.append(actionsTitle, actionsList);
+    }
+
+    if (incident.integrity_ok === false) {
+      const warning = document.createElement("p");
+      warning.className = "error";
+      warning.textContent = "Warning: integrity verification failed for some incident data.";
+      card.append(warning);
+    }
+
+    const foot = document.createElement("div");
+    foot.className = "incident-foot";
+    const timelineBtn = document.createElement("button");
+    timelineBtn.type = "button";
+    timelineBtn.className = "ctrl-btn";
+    timelineBtn.textContent = "View timeline →";
+    timelineBtn.addEventListener("click", () => openIncidentTimeline(incident));
+    foot.append(timelineBtn);
+    card.append(foot);
+
+    return card;
+  }
+
+  function renderIncidents() {
+    const incidentContainer = document.getElementById("incident-list");
+    const recentContainer = document.getElementById("recent-incidents");
+
+    [[incidentContainer, state.incidents], [recentContainer, state.incidents.slice(0, 3)]].forEach(([container, list]) => {
+      container.replaceChildren();
+      if (!list.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No incidents available.";
+        container.append(empty);
+        return;
+      }
+      list.forEach(incident => container.append(incidentCard(incident)));
+    });
+
+    document.getElementById("incident-count").textContent = state.incidents.length;
+    document.getElementById("incident-note").textContent = "Real incidents returned by the API";
+    const badge = document.getElementById("incident-badge");
+    if (state.incidents.length) { badge.hidden = false; badge.textContent = String(state.incidents.length); }
+    else badge.hidden = true;
+  }
+
+  async function loadIncidents() {
+    try {
+      const response = await fetch("/api/incidents?limit=50", { headers: { Authorization: `Bearer ${state.token}` } });
+      if (!response.ok) throw new Error("Could not load incidents: " + response.status);
+      state.incidents = await response.json();
+      renderIncidents();
+    } catch (error) {
+      document.getElementById("incident-count").textContent = "—";
+      document.getElementById("incident-note").textContent = "Could not load incident data";
+      const incidentContainer = document.getElementById("incident-list");
+      const recentContainer = document.getElementById("recent-incidents");
+      [incidentContainer, recentContainer].forEach(c => {
+        c.replaceChildren();
+        const message = document.createElement("p");
+        message.className = "empty";
+        message.textContent = error.message || "Incident loading failed.";
+        c.append(message);
+      });
+    }
+  }
+
+  const eventIcons = {
+    "face.unknown": "🙂", "fire.detected": "🔥", "person.detected": "🚶", "vehicle.detected": "🚗",
+    "package.detected": "📦", "motion.night": "🌙", "motion.outdoor": "🌳", "door.open": "🚪",
+    "temperature.abnormal": "🌡️", "valve.closed": "🚰", "lock.login_failed": "🔐", "camera.disconnected": "📷",
+    "window.open": "🪟",
+  };
+
+  async function openIncidentTimeline(incident) {
+    document.getElementById("incident-list-panel").hidden = true;
+    document.getElementById("incident-timeline-panel").hidden = false;
+    document.getElementById("timeline-title").textContent = incident.trigger || "Incident timeline";
+    document.getElementById("timeline-subtitle").textContent = `${pretty(incident.zone)} · ${incident.ts ? new Date(incident.ts).toLocaleString() : ""}`;
+
+    const list = document.getElementById("timeline-list");
+    list.replaceChildren();
+    const loading = document.createElement("p");
+    loading.className = "empty";
+    loading.textContent = "Loading timeline…";
+    list.append(loading);
+
+    try {
+      const response = await fetch(`/api/incidents/${encodeURIComponent(incident.id)}/events`, {
+        headers: { Authorization: `Bearer ${state.token}` },
+      });
+      if (!response.ok) throw new Error("Could not load the timeline for this incident.");
+      const events = await response.json();
+      list.replaceChildren();
+
+      if (!events.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No events are linked to this incident.";
+        list.append(empty);
+        return;
+      }
+
+      events.forEach(evt => {
+        const item = document.createElement("div");
+        item.className = "timeline-item";
+        const icon = document.createElement("div");
+        icon.className = "ti-icon";
+        icon.textContent = eventIcons[evt.type] || "•";
+        const body = document.createElement("div");
+        body.style.flex = "1";
+        const line = document.createElement("div");
+        line.innerHTML = `<strong>${pretty(evt.type)}</strong> · ${pretty(evt.zone)} · ${pretty(evt.source)}`;
+        const time = document.createElement("div");
+        time.className = "ti-time";
+        time.textContent = evt.ts ? new Date(evt.ts).toLocaleString() : "unknown time";
+        body.append(line, time);
+        if (evt.data && evt.data.snapshot) {
+          const img = document.createElement("img");
+          img.src = `/${evt.data.snapshot}`;
+          img.alt = `Snapshot for ${evt.type}`;
+          img.style.cssText = "margin-top:8px; width:160px; border-radius:8px; display:block;";
+          img.loading = "lazy";
+          body.append(img);
+        }
+        item.append(icon, body);
+        list.append(item);
+      });
+    } catch (error) {
+      list.replaceChildren();
+      const message = document.createElement("p");
+      message.className = "empty";
+      message.textContent = error.message;
+      list.append(message);
+    }
+  }
+
+  document.getElementById("back-to-incidents").addEventListener("click", () => {
+    document.getElementById("incident-timeline-panel").hidden = true;
+    document.getElementById("incident-list-panel").hidden = false;
+  });
+
+  // --------------------------------------------------------------- audit
+  function auditRow(entry) {
+    const row = document.createElement("div");
+    row.className = "audit-row";
+
+    const time = document.createElement("div");
+    time.className = "ar-time";
+    time.textContent = entry.ts ? new Date(entry.ts).toLocaleString() : "unknown";
+
+    const mid = document.createElement("div");
+    const action = document.createElement("div");
+    action.className = "ar-action";
+    action.textContent = pretty(entry.action);
+    const target = document.createElement("div");
+    target.className = "ar-target";
+    target.textContent = `${entry.actor} → ${entry.target}`;
+    mid.append(action, target);
+
+    if (entry.details && Object.keys(entry.details).length) {
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "Details";
+      const pre = document.createElement("pre");
+      pre.textContent = JSON.stringify(entry.details, null, 2);
+      details.append(summary, pre);
+      mid.append(details);
+    }
+
+    const right = document.createElement("div");
+    right.style.cssText = "text-align:right; color:var(--muted); font-size:11.5px;";
+    right.textContent = entry.integrity_ok === false ? "⚠ integrity check failed" : "";
+
+    row.append(time, mid, right);
+    return row;
+  }
+
+  async function loadAudit() {
+    const container = document.getElementById("audit-list");
+    try {
+      const response = await fetch("/api/audit?limit=100", { headers: { Authorization: `Bearer ${state.token}` } });
+      if (!response.ok) throw new Error("Could not load the audit trail.");
+      state.audit = await response.json();
+      container.replaceChildren();
+      document.getElementById("audit-count").textContent = `${state.audit.length} entries`;
+      if (!state.audit.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No audit entries yet.";
+        container.append(empty);
+        return;
+      }
+      state.audit.forEach(entry => container.append(auditRow(entry)));
+    } catch (error) {
+      container.replaceChildren();
+      const message = document.createElement("p");
+      message.className = "empty";
+      message.textContent = error.message;
+      container.append(message);
+    }
+  }
+
+  // ------------------------------------------------------------- cameras
+  async function loadSnapshots() {
+    const grid = document.getElementById("snapshot-grid");
+    try {
+      const response = await fetch("/api/events?source=vision&limit=40", { headers: { Authorization: `Bearer ${state.token}` } });
+      if (!response.ok) throw new Error();
+      const events = await response.json();
+      const withSnapshots = events.filter(e => e.data && e.data.snapshot);
+      document.getElementById("snapshot-count").textContent = `${withSnapshots.length} captures`;
+      grid.replaceChildren();
+      if (!withSnapshots.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No camera captures recorded yet.";
+        grid.append(empty);
+        return;
+      }
+      withSnapshots.forEach(evt => {
+        const card = document.createElement("div");
+        card.className = "snapshot-card";
+        const img = document.createElement("img");
+        img.src = `/${evt.data.snapshot}`;
+        img.alt = pretty(evt.type);
+        img.loading = "lazy";
+        const meta = document.createElement("div");
+        meta.className = "sc-meta";
+        meta.innerHTML = `<strong>${pretty(evt.type)}</strong>${pretty(evt.zone)} · ${timeAgo(evt.ts)}`;
+        card.append(img, meta);
+        grid.append(card);
+      });
+    } catch {
+      grid.replaceChildren();
+      const message = document.createElement("p");
+      message.className = "empty";
+      message.textContent = "Could not load recent captures.";
+      grid.append(message);
+    }
+  }
+
+  // ------------------------------------------------------------- network
+  async function loadNetworkEvents() {
+    const container = document.getElementById("network-events");
+    try {
+      const response = await fetch("/api/events?source=cyber&limit=30", { headers: { Authorization: `Bearer ${state.token}` } });
+      if (!response.ok) throw new Error();
+      const events = await response.json();
+      container.replaceChildren();
+      if (!events.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No cyber/network events recorded yet.";
+        container.append(empty);
+        return;
+      }
+      events.forEach(evt => {
+        const row = document.createElement("div");
+        row.className = "device-row";
+        const icon = document.createElement("div");
+        icon.className = "device-icon";
+        icon.textContent = "🛰️";
+        const info = document.createElement("div");
+        info.className = "device-info";
+        const name = document.createElement("strong");
+        name.textContent = pretty(evt.type);
+        const detail = document.createElement("small");
+        detail.textContent = `${pretty(evt.zone)} · ${pretty(evt.severity_hint)} · ${timeAgo(evt.ts)}`;
+        info.append(name, detail);
+        row.append(icon, info);
+        container.append(row);
+      });
+    } catch {
+      container.replaceChildren();
+      const message = document.createElement("p");
+      message.className = "empty";
+      message.textContent = "Could not load network events.";
+      container.append(message);
+    }
+  }
+
+  // ----------------------------------------------------------- dashboard
+  function renderDashboard(listsToo = true) {
+    document.getElementById("connected-count").textContent = state.devices.length;
+    document.getElementById("recent-count").textContent = `${Math.min(state.devices.length, 6)} devices`;
+    document.getElementById("all-device-count").textContent = `${state.devices.length} devices`;
+
+    buildTwin();
+
+    if (listsToo) {
+      renderDeviceList("recent-devices", state.devices.slice(0, 6), "No devices returned by the API.");
+      renderDeviceList("all-devices", state.devices, "No devices returned by the API.");
+
+      const cameras = state.devices.filter(d => {
+        const type = String(d.device_type || "").toLowerCase();
+        return type.includes("camera") || type.includes("cam");
+      });
+      renderDeviceList("camera-devices", cameras, "No camera devices found.");
+
+      const networkDevices = state.devices.filter(d => {
+        const type = String(d.device_type || "").toLowerCase();
+        const zone = getZone(d).toLowerCase();
+        return type.includes("network") || type.includes("router") || type.includes("access_point") || zone.includes("network");
+      });
+      renderDeviceList("network-devices", networkDevices, "No network-specific devices were found in the device list.");
+    }
+
+    const temperatures = state.devices
+      .filter(d => /temperature|temp/i.test(String(d.device_type || d.device_id || "")))
+      .map(d => {
+        const value = (d.state || {}).temperature_c ?? (d.state || {}).temperature ?? (d.state || {}).value;
+        const number = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : NaN;
+        return Number.isFinite(number) && number > -50 && number < 100 ? number : null;
+      })
+      .filter(v => v !== null);
+
+    if (temperatures.length) {
+      const average = temperatures.reduce((sum, v) => sum + v, 0) / temperatures.length;
+      document.getElementById("temperature-value").textContent = `${average.toFixed(1)}°C`;
+      document.getElementById("temperature-note").textContent = "Live average from available temperature sensors";
+    } else {
+      document.getElementById("temperature-value").textContent = "—";
+      document.getElementById("temperature-note").textContent = "Waiting for numeric temperature readings";
+    }
+  }
+
+  // -------------------------------------------------------------- login
+  loginForm.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+    const submitButton = loginForm.querySelector('button[type="submit"]');
+
+    loginMessage.textContent = "";
+    submitButton.disabled = true;
+    submitButton.textContent = "Signing in...";
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Login failed. Check your credentials.");
+      if (!data.access_token) throw new Error("The API did not return an access token.");
+
+      state.token = data.access_token;
+      window.smartSecureToken = state.token;
+
+      const devicesResponse = await fetch("/api/devices", { headers: { Authorization: `Bearer ${state.token}` } });
+      if (!devicesResponse.ok) throw new Error("Could not load devices: " + devicesResponse.status);
+      const result = await devicesResponse.json();
+      state.devices = Array.isArray(result) ? result : Array.isArray(result.devices) ? result.devices : [];
+
+      await loadZones();
+      await loadRisk();
+      renderDashboard();
+
+      loginScreen.hidden = true;
+      app.hidden = false;
+
+      await loadIncidents();
+      connectLiveUpdates();
+
+      document.getElementById("api-status").textContent = "Connected";
+      document.getElementById("connection-status").textContent = "Dashboard running";
+    } catch (error) {
+      loginMessage.textContent = error.message || "Could not connect to the server.";
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = "Sign in";
+    }
+  });
+
+  // --------------------------------------------------------------- nav
+  document.querySelectorAll(".nav-item").forEach(button => {
+    button.addEventListener("click", () => {
+      const sectionId = button.dataset.section;
+
+      document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
+      document.querySelectorAll(".section").forEach(section => section.classList.remove("active"));
+
+      document.getElementById("zone-detail").hidden = true;
+      document.getElementById("digital-twin-card").hidden = false;
+      document.getElementById("dashboard-content-grid").hidden = false;
+      document.querySelector("#overview .stats").hidden = false;
+      document.querySelectorAll("#overview .panel").forEach(p => (p.hidden = false));
+
+      button.classList.add("active");
+      const section = document.getElementById(sectionId);
+      if (section) section.classList.add("active");
+
+      const titles = {
+        overview: "Security Overview", "digital-twin": "Digital Twin", devices: "Devices",
+        cameras: "Cameras", incidents: "Incidents", network: "Network", audit: "Audit Trail",
+      };
+      document.getElementById("page-title").textContent = titles[sectionId] || "Security Overview";
+      document.getElementById("page-subtitle").textContent =
+        sectionId === "digital-twin" ? "Select a zone to view its devices and controls." :
+        sectionId === "audit" ? "Every authenticated action, for accountability." :
+        "Monitor your home, devices and active threats.";
+
+      if (sectionId === "digital-twin") buildTwin();
+      if (sectionId === "cameras") loadSnapshots();
+      if (sectionId === "network") loadNetworkEvents();
+      if (sectionId === "audit") loadAudit();
+      if (sectionId === "incidents") {
+        document.getElementById("incident-timeline-panel").hidden = true;
+        document.getElementById("incident-list-panel").hidden = false;
+      }
+    });
+  });
+
+  let twinResizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(twinResizeTimer);
+    twinResizeTimer = setTimeout(() => {
+      if (document.getElementById("digital-twin-card") && !document.getElementById("digital-twin-card").hidden) buildTwin();
+    }, 250);
+  });
+
+  function updateClock() {
+    document.getElementById("clock").textContent = new Date().toLocaleTimeString([], { hour12: true });
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+})();
+</script>
+</body>
+</html>

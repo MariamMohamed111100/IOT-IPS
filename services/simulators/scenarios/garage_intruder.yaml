@@ -1,0 +1,8 @@
+name: garage_intruder
+description: >
+  The first step of the proposal's demo timeline: motion in the garage at night (10:30:21).
+  `make demo-incident` plays the rest (unknown face, port scan, risk 85, siren) on top of it.
+expect: engine adds 20 points (motion.night); with face.unknown (40) and a port scan (25) the score reaches 85 (High)
+emits: [motion.night]
+steps:
+  - {delay: 0, device: pir_garage, event: motion, comment: "Motion detected - Garage"}

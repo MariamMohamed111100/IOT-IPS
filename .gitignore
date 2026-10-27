@@ -1,0 +1,123 @@
+# ==========================================================================
+# Secrets and generated credentials
+# ==========================================================================
+.env
+.env.*
+!.env.example
+infra/ca/
+infra/certs/*
+!infra/certs/.gitkeep
+infra/mosquitto/passwd
+*.key
+*.pem
+*.p12
+*.pfx
+*.csr
+*.srl
+
+# ==========================================================================
+# Python
+# ==========================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+pip-wheel-metadata/
+*.manifest
+.python-version
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Tests, linting and coverage
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# ==========================================================================
+# Node / frontend
+# ==========================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+services/frontend/test/node_modules/
+
+# ==========================================================================
+# Databases, logs and runtime state
+# ==========================================================================
+*.db
+*.sqlite
+*.sqlite3
+*.log
+*.pid
+
+# Docker named volume bind target (runtime snapshots / exports)
+/data/
+
+# ==========================================================================
+# IoT-IPS
+# ==========================================================================
+ips/output/
+ips/data/raw/
+ips/data/interim/
+ips/build/
+ips/dist/
+ips/**/incidents.db*
+ips/**/actions.jsonl
+# Demo fixtures are kept on purpose: they make the demo reproducible.
+!ips/examples/demo/incidents.db
+!ips/examples/demo/actions.jsonl
+scripts/ips/.notifier_state.json
+
+# ==========================================================================
+# Vision: downloaded models, media and personal data
+# ==========================================================================
+services/vision/models/*
+!services/vision/models/.gitkeep
+!services/vision/models/join_models.py
+*.onnx
+*.pt
+*.engine
+*.tflite
+
+services/vision/media/videos/*
+!services/vision/media/videos/.gitkeep
+services/vision/media/known_faces/*
+!services/vision/media/known_faces/.gitkeep
+
+# Face photos are personal data and must never be committed.
+known_faces/
+
+# ==========================================================================
+# Editors, OS and temporary files
+# ==========================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+.history/

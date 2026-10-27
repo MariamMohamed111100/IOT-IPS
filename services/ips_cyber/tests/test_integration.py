@@ -1,0 +1,139 @@
+"""End-to-end checks of the cyber service with the repository's own detector, risk engine and policy.
+
+Run from services/ips_cyber:  python -m pytest tests
+Needs scapy and jsonschema (see requirements.txt).
+"""
+import json
+import os
+import tempfile
+import unittest
+from pathlib import Path
+
+import pytest
+
+pytest.importorskip("scapy")
+jsonschema = pytest.importorskip("jsonschema")
+
+import pcap_helpers as H  # noqa: E402
+from iot_ips import actions, detector, policy, risk  # noqa: E402
+from iot_ips.paths import DATA_DIR, DEFAULT_DEVICES_PATH  # noqa: E402
+from ips_cyber import flow_engine, sources  # noqa: E402
+from ips_cyber import service as svc  # noqa: E402
+
+CONTRACT = Path(__file__).resolve().parents[3] / "contract"
+DEVICES = svc.load_devices(str(DEFAULT_DEVICES_PATH))
+CONFIG = svc.load_service_config()
+CAM, ATT, LAN, VIEWER, CLOUD = "192.168.1.50", "203.0.113.45", "192.168.1.66", "192.168.1.20", "52.29.14.7"
+
+
+class Memory:
+    def __init__(self):
+        self.messages = []
+
+    def publish(self, topic, payload):
+        self.messages.append((topic, payload))
+        return True
+
+    def close(self):
+        pass
+
+
+def run_pcap(packets):
+    with tempfile.TemporaryDirectory() as tmp:
+        path = H.write(os.path.join(tmp, "x.pcap"), packets)
+        memory = Memory()
+        service = svc.IpsCyberService(DEVICES, memory, config=CONFIG)
+        stats = service.run(sources.pcap_source(path, DEVICES, CONFIG["flow_engine"]), "x.pcap")
+    return [m[1] for m in memory.messages], stats
+
+
+def kinds(alerts):
+    return {(a["type"], a["data"]["src_ip"]) for a in alerts}
+
+
+class ContractTests(unittest.TestCase):
+    def test_every_sample_alert_matches_the_backend_schema(self):
+        schema = json.loads((CONTRACT / "ips_event_data.schema.json").read_text())
+        memory = Memory()
+        service = svc.IpsCyberService(DEVICES, memory, config=CONFIG)
+        service.run(sources.csv_source(str(DATA_DIR / "sample_events.csv")), "sample")
+        self.assertEqual(len(memory.messages), 7)
+        for _, alert in memory.messages:
+            jsonschema.validate(alert["data"], schema)          # includes duration and the protocol enum
+
+    def test_protocol_outside_the_contract_is_refused_not_sent(self):
+        event = {"device_id": "CAM-001", "protocol": "ESP", "src_ip": ATT, "dst_ip": CAM, "dst_port": "0"}
+        service = svc.IpsCyberService(DEVICES, Memory(), config=CONFIG,
+                                      detect_fn=lambda e, p: {"label": "ATTACK", "attack_type": "DoS",
+                                                              "confidence": 0.9, "mitre_technique": "T1498"})
+        self.assertIsNone(service.handle_event("r", event, "t"))
+
+
+class TrafficTests(unittest.TestCase):
+    def test_150_normal_viewer_sessions_are_not_a_dos(self):
+        pk = []
+        for i in range(150):
+            pk += H.long_session(1 + i * 0.3, VIEWER, CAM, 40000 + i, 554, seconds=5)
+        for i in range(30):
+            pk += H.long_session(10 + i, CAM, CLOUD, 50000 + i, 443, seconds=3, packets=14)
+        alerts, _ = run_pcap(pk)
+        self.assertEqual(alerts, [])
+
+    def test_a_port_scan_is_reported_as_a_scan_not_a_dos(self):
+        pk = []
+        for p in range(1, 1001):
+            pk += H.refused(1 + p * 0.03, LAN, CAM, 42000 + p % 1000, p)
+        alerts, _ = run_pcap(pk)
+        types = {a["type"] for a in alerts}
+        self.assertIn("cyber.port_scan", types)
+        self.assertNotIn("cyber.dos", types)
+
+    def test_brute_force_is_reported(self):
+        pk = []
+        for i in range(300):
+            pk += H.failed_login(1 + i * 0.15, ATT, CAM, 41000 + i, 22)
+        alerts, _ = run_pcap(pk)
+        self.assertIn(("cyber.brute_force", ATT), kinds(alerts))
+
+    def test_spread_out_flood_is_caught_by_the_aggregate_event(self):
+        pk = []
+        for i in range(5000):
+            pk += H.syn_only(1 + i * 0.002, "198.51.100.%d" % (1 + i % 250), CAM, 10000 + i % 50000, 554)
+        alerts, _ = run_pcap(pk)
+        dos = [a for a in alerts if a["type"] == "cyber.dos"]
+        self.assertTrue(dos)
+        self.assertEqual({a["data"]["src_ip"] for a in dos}, {flow_engine.AGGREGATE_SRC})
+
+    def test_the_aggregate_source_is_never_blocked_by_the_policy(self):
+        self.assertTrue(actions.is_never_block(actions.ipaddress.ip_address(flow_engine.AGGREGATE_SRC)))
+        event = {"src_ip": flow_engine.AGGREGATE_SRC, "device_id": "CAM-001", "direction": "inbound"}
+        detection = {"label": "ATTACK", "attack_type": "DoS", "confidence": 0.95, "mitre_technique": "T1498"}
+        profile = {d["device_id"]: d for d in DEVICES}["CAM-001"]
+        rsk = risk.assess(detection, event, profile)
+        decision = policy.decide(rsk, detection, event, profile)
+        self.assertNotIn("block_source", decision["action"])
+        self.assertNotIn("temporary_block", decision["action"])
+        self.assertIn({"action": "temporary_block", "why": "source_never_block"}, decision["skipped"])
+
+    def test_capture_limits_stop_a_runaway_pcap(self):
+        cfg = dict(CONFIG["flow_engine"], max_packets=50)
+        pk = []
+        for i in range(30):
+            pk += H.long_session(1 + i, VIEWER, CAM, 40000 + i, 554, seconds=1)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = H.write(os.path.join(tmp, "big.pcap"), pk)
+            with self.assertRaises(flow_engine.FlowEngineError):
+                list(sources.pcap_source(path, DEVICES, cfg))
+
+    def test_no_false_alarms_on_the_rtsp_profiles(self):
+        pk = []
+        for i in range(60):
+            pk += H.long_session(1 + i * 2, VIEWER, CAM, 20000 + i, 554, seconds=2)
+        alerts, _ = run_pcap(pk)
+        self.assertEqual(alerts, [])
+
+
+class DetectorRuleTests(unittest.TestCase):
+    def test_default_rule_file_uses_the_calibrated_connection_floor(self):
+        text = Path(detector.DEFAULT_CONFIG).read_text()
+        self.assertRegex(text, r"min_connection_attempts:\s*500\b")

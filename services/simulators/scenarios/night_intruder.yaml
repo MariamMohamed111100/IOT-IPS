@@ -1,0 +1,11 @@
+name: night_intruder
+description: >
+  Someone enters the garage at night and moves into the house. Matches the timeline in the
+  proposal (motion in the garage first). Pair it with an unknown face (vision) and a port
+  scan (cyber) to reach the 85-point demo incident.
+expect: engine raises the score (motion.night 20 + door.open 30 ...) and turns bulb_garage on
+emits: [motion.night, door.open, motion.night]
+steps:
+  - {delay: 0, device: pir_garage, event: motion, comment: "Motion in the garage"}
+  - {delay: 2, device: door_garage, event: open, comment: "Garage door forced open"}
+  - {delay: 3, device: pir_living, event: motion, comment: "Intruder reaches the living room"}

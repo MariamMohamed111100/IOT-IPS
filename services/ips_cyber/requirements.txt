@@ -1,0 +1,3 @@
+# smartsecure-common (paho-mqtt, pydantic) is installed by the Dockerfile; the IPS package is installed from ips/
+pyyaml>=6.0
+scapy>=2.5          # PCAP and live capture (the CSV replay source does not need it)

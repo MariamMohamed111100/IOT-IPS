@@ -1,0 +1,21 @@
+line-length = 100
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "I", "B"]
+
+[lint.isort]
+# service modules are imported as top-level names (each service runs from its own folder)
+known-first-party = [
+  "smartsecure_common", "sim",
+  "database", "models", "routes", "security", "storage", "audit",
+  "mqtt_handler", "websocket_manager", "zones_seed", "vis", "eng", "cyb",
+]
+
+[lint.per-file-ignores]
+# The IoT-IPS code base and its link scripts use a compact style (long lines, one-line statements, local imports).
+# Real-bug rules (F: unused or undefined names, B: bug-prone patterns) still apply to them.
+"ips/**" = ["E501", "E701", "E702", "E731", "E402", "E741", "E401", "I001", "B904", "B905"]
+"services/ips_cyber/**" = ["E501"]
+"services/engine/**" = ["E501"]
+"scripts/ips/**" = ["E501", "E701", "E702", "E731", "E402", "E741", "E401", "I001", "B904", "B905"]

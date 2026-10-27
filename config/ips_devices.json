@@ -1,0 +1,109 @@
+{
+  "devices": [
+    {
+      "device_id": "CAM-001",
+      "device_type": "surveillance_camera",
+      "ip": "192.168.1.50",
+      "criticality": "high",
+      "expected_protocols": [
+        "TCP",
+        "UDP"
+      ],
+      "expected_ports": [
+        554,
+        443
+      ],
+      "expected_outbound_ports": [
+        53,
+        123,
+        443,
+        8883
+      ],
+      "zone": "entrance",
+      "backend_id": "cam_001",
+      "backend_type": "camera"
+    },
+    {
+      "device_id": "THERMO-001",
+      "device_type": "thermostat",
+      "ip": "192.168.1.51",
+      "criticality": "medium",
+      "expected_protocols": [
+        "TCP",
+        "UDP"
+      ],
+      "expected_ports": [
+        53,
+        443
+      ],
+      "zone": "living_room",
+      "backend_id": "thermo_001",
+      "backend_type": "temperature"
+    },
+    {
+      "device_id": "PLUG-001",
+      "device_type": "smart_plug",
+      "ip": "192.168.1.52",
+      "criticality": "low",
+      "expected_protocols": [
+        "TCP",
+        "UDP"
+      ],
+      "expected_ports": [
+        80,
+        443,
+        53
+      ],
+      "zone": "living_room",
+      "backend_id": "plug_001",
+      "backend_type": "plug"
+    },
+    {
+      "device_id": "TEMP-001",
+      "device_type": "temperature_sensor",
+      "ip": "192.168.1.70",
+      "criticality": "medium",
+      "expected_protocols": [
+        "TCP"
+      ],
+      "expected_ports": [
+        80,
+        1883
+      ],
+      "zone": "kitchen",
+      "backend_id": "temp_001",
+      "backend_type": "temperature"
+    },
+    {
+      "device_id": "BULB-001",
+      "device_type": "smart_bulb",
+      "ip": "192.168.1.60",
+      "criticality": "low",
+      "expected_protocols": [
+        "TCP",
+        "UDP"
+      ],
+      "expected_ports": [
+        80
+      ],
+      "zone": "bedroom",
+      "backend_id": "bulb_001",
+      "backend_type": "bulb"
+    },
+    {
+      "device_id": "IND-001",
+      "device_type": "industrial_sensor",
+      "ip": "192.168.1.80",
+      "criticality": "critical",
+      "expected_protocols": [
+        "TCP"
+      ],
+      "expected_ports": [
+        502
+      ],
+      "zone": "garage",
+      "backend_id": "ind_001",
+      "backend_type": "industrial_sensor"
+    }
+  ]
+}

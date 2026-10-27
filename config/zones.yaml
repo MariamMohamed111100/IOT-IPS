@@ -1,0 +1,5 @@
+# Zones usable in topics and events. Add zones here first, then use them in code.
+zones: [garage, kitchen, living_room, bedroom, entrance, backyard, network]
+# indoor/outdoor classification: outdoor zones emit motion.outdoor (not
+# motion.night) and drive the door/valve response policy differently.
+outdoor_zones: [entrance, backyard]

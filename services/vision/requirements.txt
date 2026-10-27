@@ -1,0 +1,5 @@
+# smartsecure-common is installed automatically. OpenCV does video, YOLO (via its DNN module) and
+# faces (YuNet + SFace), so the image needs no PyTorch.
+opencv-python-headless>=4.10,<4.14
+numpy>=1.26,<3
+pyyaml>=6.0

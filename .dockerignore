@@ -1,0 +1,35 @@
+# Secrets and generated credentials are bind-mounted at runtime, never baked into images.
+.env
+.env.*
+infra/certs/
+infra/mosquitto/passwd
+
+# VCS, CI and build artifacts
+.git/
+.github/
+.venv/
+node_modules/
+data/
+**/__pycache__/
+*.pyc
+*.egg-info/
+.ruff_cache/
+**/.pytest_cache/
+
+# CA private key and any stray key material must never reach the build context
+infra/ca/
+*.key
+*.pem
+
+# Not needed inside images (keeps them small, avoids shipping test code and fixtures)
+**/tests/
+**/*.db
+docs/
+
+# cyber demo rig (own build contexts) and Suricata rules (bind-mounted) are not in the image
+services/cyber/demo/
+services/cyber/suricata/
+
+# vision models/videos/faces are bind-mounted at runtime, never baked into the image
+services/vision/models/
+services/vision/media/

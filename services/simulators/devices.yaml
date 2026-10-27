@@ -1,0 +1,34 @@
+# The simulated house. One line per device. Zones must exist in config/zones.yaml (a test checks).
+# kind       -> topic device_type (home/<zone>/<kind>/<id>/event|cmd|status)
+# extra keys -> device options (threshold_c, base_c, hold_s ...)
+# gpio_pin   -> optional: used instead of the simulator when HAL_DRIVER=gpio (Pi phase, M4)
+
+outdoor_zones: [entrance, backyard]   # must equal outdoor_zones in config/zones.yaml (tested)
+
+devices:
+  # --- motion (PIR): indoor zones emit motion.night, outdoor zones emit motion.outdoor
+  - {id: pir_garage,      kind: pir,         zone: garage}
+  - {id: pir_living,      kind: pir,         zone: living_room}
+  - {id: pir_backyard,    kind: pir,         zone: backyard}
+  # --- doors / windows (reed switches)
+  - {id: door_main,       kind: door,        zone: entrance}
+  - {id: door_garage,     kind: door,        zone: garage}
+  - {id: window_kitchen,  kind: window,      zone: kitchen}
+  # --- hazards
+  - {id: smoke_kitchen,   kind: smoke,       zone: kitchen}
+  - {id: gas_kitchen,     kind: gas,         zone: kitchen}
+  - {id: leak_kitchen,    kind: water_leak,  zone: kitchen}
+  # --- temperature (abnormal above threshold_c)
+  - {id: temp_living,     kind: temperature, zone: living_room, base_c: 22.0, threshold_c: 45}
+  - {id: temp_kitchen,    kind: temperature, zone: kitchen,     base_c: 24.0, threshold_c: 50}
+  # --- cameras (stream health only; video comes from the vision module)
+  - {id: cam_garage,      kind: camera,      zone: garage}
+  - {id: cam_entrance,    kind: camera,      zone: entrance}
+  # --- actuators (receive .../cmd)
+  - {id: lock_front,      kind: lock,        zone: entrance}
+  - {id: lock_back,       kind: lock,        zone: backyard}
+  - {id: bulb_living,     kind: bulb,        zone: living_room}
+  - {id: bulb_kitchen,    kind: bulb,        zone: kitchen}
+  - {id: bulb_garage,     kind: bulb,        zone: garage}
+  - {id: siren_main,      kind: siren,       zone: living_room}
+  - {id: valve_main,      kind: valve,       zone: kitchen}

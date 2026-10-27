@@ -1,0 +1,3 @@
+pyyaml>=6.0
+# Raspberry Pi phase only (HAL_DRIVER=gpio): install on the Pi image, not needed for simulation
+# gpiozero>=2.0

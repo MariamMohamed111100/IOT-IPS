@@ -1,0 +1,6 @@
+name: water_leak
+description: A leak under the kitchen sink. The engine should close the main valve.
+expect: engine sends close to valve_main, which confirms with valve.closed
+emits: [water.leak]
+steps:
+  - {delay: 0, device: leak_kitchen, event: leak, comment: "Flood sensor detects water"}

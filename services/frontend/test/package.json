@@ -1,0 +1,1 @@
+{"name":"warden-frontend-tests","private":true,"scripts":{"test":"node test_incidents.js"},"devDependencies":{"jsdom":"^24.0.0"}}

@@ -1,0 +1,18 @@
+# SmartSecure Home: custom Suricata rules (Person 5). Loaded EXCLUSIVELY (suricata -S), so the
+# sensor needs no internet access for rule downloads. Add Emerging Threats Open with
+# `suricata-update` for a wider net; the cyber service only acts on the three sids below.
+#
+# The rules emit EVIDENCE only. Counting and de-duplication happen in the cyber service, so one
+# attack becomes ONE event for the risk engine (services/cyber/cyb/detectors.py).
+#
+# sid 9000001: SYN probes. detection_filter keeps normal traffic silent and alerts only after
+#   10 SYNs from one source inside 5 s; the service then needs PORTSCAN_MIN_TARGETS distinct
+#   host:port pairs before it reports a scan, so one busy client is not a scanner.
+alert tcp any any -> $HOME_NET any (msg:"SMARTSECURE port scan - SYN probe burst"; flow:stateless; flags:S,12; detection_filter:track by_src, count 10, seconds 5; classtype:attempted-recon; sid:9000001; rev:1;)
+
+# sid 9000002: every login POST to the smart-lock endpoint. Thresholding is done by the service
+#   (BRUTE_MIN_ATTEMPTS in BRUTE_WINDOW_S), so mistyping a PIN twice does not alert.
+alert http any any -> $HOME_NET any (msg:"SMARTSECURE login attempt - HTTP POST /login"; flow:established,to_server; http.method; content:"POST"; http.uri; content:"/login"; startswith; classtype:attempted-user; sid:9000002; rev:1;)
+
+# sid 9000003: new connections to SSH. Same idea: the service counts them.
+alert tcp any any -> $HOME_NET 22 (msg:"SMARTSECURE ssh connection attempt"; flow:stateless; flags:S,12; classtype:attempted-user; sid:9000003; rev:1;)

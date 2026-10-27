@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "incident_details.schema.json",
+  "title": "SmartSecure incident details",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "mitre_technique": {
+      "type": "string",
+      "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$"
+    },
+    "ips_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "ips_level": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "ips_score_raw": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "reports": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "technical": {
+          "type": "string",
+          "maxLength": 12288
+        },
+        "executive": {
+          "type": "string",
+          "maxLength": 12288
+        }
+      }
+    }
+  }
+}

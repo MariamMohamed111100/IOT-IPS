@@ -1,0 +1,24 @@
+# Configuration of the cyber service (checked at start-up; unknown keys are errors).
+topic: security/alerts/cyber     # where alerts are published
+source: cyber                    # "source" field of every alert envelope
+default_zone: network            # every IPS alert uses this zone (CONTRACT 12); the device's room is not used
+
+# severity_hint comes from the detector's confidence (the engine's risk score decides the real level):
+#   confidence <  medium_from             -> low
+#   medium_from <= confidence < high_from -> medium
+#   confidence >= high_from               -> high
+severity:
+  medium_from: 0.60
+  high_from: 0.85
+
+# Flow/context engine (see flow_engine.py). Measure these on lab traffic and tune them.
+flow_engine:
+  window_seconds: 60
+  step_seconds: 10
+  idle_timeout_seconds: 30
+  auth_ports: [22, 23, 554]
+  short_flow_seconds: 2.0
+  short_flow_max_packets: 12
+  aggregate_min_sources: 20     # this many sources hitting one device: one extra event sums them up (distributed flood)
+  max_packets: 5000000          # a capture with more packets is refused
+  max_flows: 500000             # a capture with more flows is refused

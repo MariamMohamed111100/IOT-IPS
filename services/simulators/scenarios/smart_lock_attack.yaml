@@ -1,0 +1,12 @@
+name: smart_lock_attack
+description: >
+  Someone guesses the front lock code, the entrance camera goes dark, then the door opens.
+  Triggers the proposal's correlations: "failed lock login" and "camera offline + door open".
+expect: engine correlates camera.disconnected + door.open and escalates to High
+emits: [lock.login_failed, lock.login_failed, lock.login_failed, camera.disconnected, door.open]
+steps:
+  - {delay: 0, device: lock_front, event: login_failed, data: {attempts: 1}, comment: "Wrong code"}
+  - {delay: 1, device: lock_front, event: login_failed, data: {attempts: 2}, comment: "Wrong code"}
+  - {delay: 1, device: lock_front, event: login_failed, data: {attempts: 3}, comment: "Wrong code"}
+  - {delay: 2, device: cam_entrance, event: disconnect, comment: "Camera cable cut / jammed"}
+  - {delay: 2, device: door_main, event: open, comment: "Front door opens"}

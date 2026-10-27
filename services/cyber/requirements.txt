@@ -1,0 +1,2 @@
+# smartsecure-common (paho-mqtt, pydantic) is installed automatically
+pyyaml>=6.0
