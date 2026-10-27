@@ -1146,13 +1146,19 @@
   const copilotInput = document.getElementById('copilotInput');
   const copilotSend = document.getElementById('copilotSend');
 
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
   function addMsg(role, text){
     const wrap = document.createElement('div');
     wrap.className = 'msg ' + (role === 'ai' ? 'msg-ai' : 'msg-user');
+    const safe = escapeHtml(text);
     if(role === 'ai'){
-      wrap.innerHTML = `<div class="msg-avatar">◆</div><div class="bubble">${text}</div>`;
+      wrap.innerHTML = `<div class="msg-avatar">◆</div><div class="bubble">${safe}</div>`;
     } else {
-      wrap.innerHTML = `<div class="bubble">${text}</div>`;
+      wrap.innerHTML = `<div class="bubble">${safe}</div>`;
     }
     copilotMessages.appendChild(wrap);
     copilotMessages.scrollTop = copilotMessages.scrollHeight;
