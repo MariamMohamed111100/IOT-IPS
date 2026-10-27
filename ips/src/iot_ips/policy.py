@@ -274,7 +274,7 @@ def load_policy(path: Optional[str] = None, expected_sha256: Optional[str] = Non
         except OSError:
             pass
     try:
-        raw = yaml.load(data.decode("utf-8"), Loader=_UniqueKeyLoader)  # noqa: S506 (SafeLoader subclass)
+        raw = yaml.load(data.decode("utf-8"), Loader=_UniqueKeyLoader)  # nosec B506 (SafeLoader subclass)
     except (yaml.YAMLError, UnicodeDecodeError, RecursionError):
         raise PolicyConfigError("policy file is not valid safe YAML")
     return _validate_policy(raw)
