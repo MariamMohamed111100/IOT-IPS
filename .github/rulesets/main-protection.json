@@ -1,0 +1,28 @@
+repos:
+  - repo: MariamMohamed111100/IOT-IPS
+    default_branch: main
+    teams: []
+    rules:
+      - type: required_status_checks
+        parameters:
+          strict_required_status_checks_policy: true
+          required_status_checks:
+            - context: lint-test
+            - context: security
+            - context: docker
+            - context: ips (3.10)
+            - context: ips (3.12)
+            - context: ips-cyber
+            - context: dashboard
+            - context: Analyze (python)
+      - type: pull_request
+        parameters:
+          dismiss_stale_reviews_on_push: true
+          require_code_owner_review: false
+          required_approving_review_count: 1
+          require_last_push_approval: false
+          required_review_thread_resolution: true
+      - type: non_fast_forward
+      - type: deletion
+      - type: creation
+    bypass_actors: []

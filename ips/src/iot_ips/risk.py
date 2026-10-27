@@ -361,7 +361,7 @@ def load_config(path: Optional[str] = None, expected_sha256: Optional[str] = Non
 
     try:
         # _UniqueKeyLoader is a SafeLoader subclass: plain data only, no Python objects.
-        raw = yaml.load(data.decode("utf-8"), Loader=_UniqueKeyLoader)  # noqa: S506
+        raw = yaml.load(data.decode("utf-8"), Loader=_UniqueKeyLoader)  # nosec B506
     except (yaml.YAMLError, UnicodeDecodeError, RecursionError):
         raise RiskConfigError("config file is not valid safe YAML")
     return _validate_config(raw)

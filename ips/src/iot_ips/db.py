@@ -428,7 +428,9 @@ class IncidentDB:
             fields["row_hash"] = self._digest(row_id, fields, prev)
             columns = ("id",) + _STORED + ("prev_hash", "row_hash")
             values = (row_id,) + tuple(fields[c] for c in _STORED) + (prev, fields["row_hash"])
-            self._conn.execute("INSERT INTO incidents (%s) VALUES (%s)" % (", ".join(columns), ", ".join("?" * len(columns))),
+            placeholders = ", ".join("?" * len(columns))
+            column_list = ", ".join(columns)
+            self._conn.execute(f"INSERT INTO incidents ({column_list}) VALUES ({placeholders})",  # nosec B608
                                values)
             self._conn.execute("COMMIT")
         except BaseException:
@@ -521,7 +523,8 @@ class IncidentDB:
                 raise ValueError("since must be an ISO date or time")
             clauses.append("timestamp >= ?")
             params.append(moment.strftime("%Y-%m-%dT%H:%M:%SZ"))
-        sql = "SELECT * FROM incidents" + (" WHERE " + " AND ".join(clauses) if clauses else "") + " ORDER BY id DESC LIMIT ?"
+        where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+        sql = "SELECT * FROM incidents" + where + " ORDER BY id DESC LIMIT ?"  # nosec B608
         params.append(limit)
         return [self._row_to_incident(r, include_reports) for r in self._conn.execute(sql, params).fetchall()]
 
