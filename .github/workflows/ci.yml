@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: {python-version: "3.12", cache: pip}
       - run: pip install ruff pytest jsonschema pyyaml gpiozero httpx -r services/api/requirements.txt -r services/vision/requirements.txt -r services/engine/requirements.txt -r services/cyber/requirements.txt -e libs/common
       - run: ruff check .
