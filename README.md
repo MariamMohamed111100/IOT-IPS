@@ -1,18 +1,52 @@
 # IoT-IPS — Smart Home Intrusion Prevention System
 
-Graduation project that combines the **SmartSecure Home** backend with our **IoT-IPS** detection,
-risk-scoring and response engine, plus the **Warden** dashboard.
+A graduation project that unifies the **SmartSecure Home** backend with a custom **IoT-IPS** detection, risk-scoring, and automated response engine, alongside the **Warden** real-time dashboard.
 
-One repository, four parts:
+The system detects, correlates, enriches, and responds to network, physical, and vision-based threats inside a smart home environment with full traceability and auditability.
 
-| Part | Where | What it is |
+## Table of Contents
+
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [System Architecture](#system-architecture)
+- [Repository Structure](#repository-structure)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [IoT-IPS Python Package](#iot-ips-python-package)
+- [Testing](#testing)
+- [Demos & Scenarios](#demos--scenarios)
+- [IPS → Warden End-to-End](#ips--warden-end-to-end)
+- [Security Notes](#security-notes)
+- [Documentation](#documentation)
+- [Status](#status)
+- [License](#license)
+
+## Overview
+
+This repository combines four tightly integrated components into one monorepo:
+
+| Component | Location | Description |
 |---|---|---|
-| **Backend** | `services/`, `libs/`, `infra/`, `config/`, `contract/`, `docker-compose.yml`, `Makefile` | API (JWT, REST, WebSocket), MQTT broker with TLS + ACLs, device simulators, `cyber` (Suricata detection and blocking), `engine` (risk, correlation, incidents, automated responses) and `vision` (YOLO / face / fire detection). Backend notes: [`docs/BACKEND_README.md`](docs/BACKEND_README.md); message formats: [`docs/CONTRACT.md`](docs/CONTRACT.md). |
-| **IoT-IPS** | `ips/` | Installable Python package `iot_ips` (`ips/src`): rule-based detector, risk engine, policy and simulated actions, pipeline and hash-chained incident database, MITRE/GRC reports, calibration and evaluation tools. Start with [`ips/README.md`](ips/README.md); design document in `ips/docs/design/`. |
-| **Warden dashboard** | `services/frontend/index.html` | Floor-plan digital twin, network graph, live incident list and incident detail (MITRE, risk factors, reports, timeline). Tested with `services/frontend/test`. The backend team's original dashboard is kept for reference in `services/frontend/reference/`. |
-| **Link between them** | `services/ips_cyber/`, `scripts/ips/`, `docs/IPS_INTEGRATION.md` | `ips_cyber` turns PCAP/CSV/live flows into scored `cyber.*` alerts on `security/alerts/cyber`; the engine enriches them with MITRE technique + technical/executive reports. Adapter, device seeding, fake publisher and end-to-end checker live in `scripts/ips/`. |
+| **SmartSecure Backend** | `services/`, `libs/`, `infra/`, `config/`, `contract/`, `docker-compose.yml`, `Makefile` | Core backend providing REST, WebSocket, JWT auth, audit logging, MQTT broker with mTLS & ACLs, device simulators, Suricata-based cyber defense, correlation engine, and vision inference. |
+| **IoT-IPS Engine (Package)** | `ips/` | A standalone, installable Python package (`iot_ips`) responsible for rule-based network detection, dynamic risk scoring, policy enforcement, simulated response actions, a hash-chained incident database, MITRE ATT&CK mapping, and GRC-ready reports. |
+| **Warden Dashboard** | `services/frontend/` | An interactive web dashboard acting as a digital twin for the smart home. It visualizes the floor plan, live network graph, active incidents, MITRE techniques, risk factors, timelines, and detailed incident reports. |
+| **IPS–Backend Integration Layer** | `services/ips_cyber/`, `scripts/ips/`, `docs/IPS_INTEGRATION.md` | Bridges raw network traffic (PCAP/CSV/live) to the backend. `ips_cyber` normalizes and scores traffic using `iot_ips`, publishes `cyber.*` alerts to MQTT, and the Engine enriches them with MITRE mapping, technical/executive reports, and incident creation. |
 
-## Architecture
+## Key Features
+
+- **Multi-Layer Threat Detection** – Covers network-based attacks, physical intrusion, smart-lock abuse, fire/smoke, and suspicious vision events.
+- **Real-Time Risk Scoring** – Context-aware scoring based on device criticality, zone, severity, and correlated events.
+- **MITRE ATT&CK Mapping** – Every cyber incident is mapped to relevant MITRE techniques for better traceability.
+- **Automated Response** – Dynamic actions such as IP blocking via Suricata/iptables, alerting via `ntfy`, triggering lights/siren, and logging response history.
+- **Hash-Chained Incident Ledger** – Tamper-evident incident storage with cryptographic chaining to ensure integrity.
+- **Secure Communication** – End-to-end secured with MQTT over TLS (8883), ACLs, JWT authentication for API/WebSocket, and mTLS where applicable.
+- **Warden Digital Twin** – Live visualization of devices, topology, zones, and active threats in a single UI.
+- **Vision Intelligence** – On-device/served inference for person detection, face recognition, and fire/smoke detection using YOLO and OpenCV.
+- **GRC & Reporting** – Automated generation of technical and executive reports with full incident context.
+- **Reproducible Demos** – Pre-committed datasets, hash-chained demo DB, and ready-to-run attack scenarios.
+
+## System Architecture
 
 ```text
  simulators / real devices            PCAP / CSV / live flows
@@ -36,7 +70,15 @@ One repository, four parts:
             └──► vision (security/alerts/vision)
 ```
 
-## Repository structure
+**Flow Summary:**
+
+1. **Ingress**: Simulated/real devices publish events over MQTT over TLS, or network traffic is captured as PCAP/CSV/live.
+2. **Detection**: `ips_cyber` uses the `iot_ips` package to detect, classify, and score cyber events.
+3. **Enrichment & Correlation**: The `engine` correlates alerts, applies zone/criticality rules, maps to MITRE, and computes final risk.
+4. **Response**: Automated actions are triggered (blocking, notifications, smart-home commands) via the `cyber` service and engine actions.
+5. **Visualization**: The Warden dashboard consumes REST/WebSocket streams from the API to display live threats and incidents.
+
+## Repository Structure
 
 ```text
 .
@@ -77,71 +119,136 @@ One repository, four parts:
 └── README.md
 ```
 
-## Requirements
+## Tech Stack
 
-- Docker Desktop (Linux containers) with Compose v2
-- Python 3.11 or newer
-- `make` and a POSIX shell (Git Bash on Windows) for the convenience targets
-- Optional: `openssl` (used by `scripts/setup.sh`)
+| Layer | Technologies |
+|---|---|
+| **Orchestration** | Docker, Docker Compose v2 |
+| **Backend/API** | FastAPI, Uvicorn, Pydantic, WebSocket |
+| **Messaging** | Eclipse Mosquitto (MQTT over TLS 1.2/1.3), custom ACLs |
+| **Database** | PostgreSQL |
+| **Network Security** | Suricata, iptables/blocklist integration |
+| **IPS Core** | Python 3.11, Scapy, Pandas, NumPy, PyYAML, JSONSchema |
+| **Vision** | Ultralytics YOLO, OpenCV, face-recognition, PyTorch/ONNX Runtime |
+| **Frontend/Dashboard** | Vanilla HTML/CSS/JS, Nginx (reverse proxy for `/api` & `/ws`) |
+| **Tooling/QA** | PyTest, Ruff, GitHub Actions, CodeQL |
 
-## Quick start
+## Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) with **Linux containers** and **Compose v2**
+- [Python 3.11+](https://www.python.org/downloads/)
+- [`make`](https://www.gnu.org/software/make/) and a POSIX shell (Git Bash recommended on Windows)
+- [OpenSSL](https://www.openssl.org/) (used by `scripts/setup.sh` to generate certs/keys)
+
+## Quick Start
+
+### 1) Clone the repository
 
 ```bash
-make setup       # generate .env with random secrets, TLS certs and MQTT users
-make up          # build and start the stack
-make smoke       # verify MQTT/mTLS/ACL/JWT/API/WebSocket end to end
+git clone https://github.com/MariamMohamed111100/IOT-IPS.git
+cd IOT-IPS
 ```
 
-| Service | URL |
-|---|---|
-| Warden dashboard | <http://localhost:8080> |
-| API + Swagger (dev) | <https://localhost:8443/docs> |
-| MQTT over TLS | `localhost:8883` |
-| RTSP demo camera (demo profile) | `rtsp://localhost:8554/camera` |
-| ntfy (demo profile) | <http://localhost:8090> |
+### 2) Generate secrets, certificates & MQTT users
 
-The dashboard proxies `/api` and `/ws` to the HTTPS API through nginx, so there is no CORS and
-WebSockets work from one origin. Login credentials are generated into `.env`
-(`API_USERS=admin:<random>`); read them with:
+```bash
+make setup
+```
+
+This will create `.env`, TLS certificates under `infra/`, and MQTT credentials securely.
+
+### 3) Build and start the full stack
+
+```bash
+make up
+```
+
+### 4) Run end-to-end smoke tests
+
+```bash
+make smoke
+```
+
+### 5) Access the services
+
+| Service | URL/Address | Notes |
+|---|---|---|
+| **Warden Dashboard** | [http://localhost:8080](http://localhost:8080) | Main UI with live incidents & digital twin |
+| **API + Swagger UI (Dev)** | [https://localhost:8443/docs](https://localhost:8443/docs) | REST & schema reference (disable in prod via `API_DOCS_ENABLED=false`) |
+| **MQTT over TLS** | `localhost:8883` | Secured broker for all services/devices |
+| **RTSP Demo Camera (demo profile)** | `rtsp://localhost:8554/camera` | Used by vision demos |
+| **ntfy (demo profile)** | [http://localhost:8090](http://localhost:8090) | Real-time push notifications |
+
+> The dashboard proxies `/api` and `/ws` to the HTTPS API through Nginx, so no CORS issues and WebSockets work from the same origin.
+
+**Get login credentials:**
 
 ```bash
 grep '^API_USERS=' .env
 ```
 
-Vision models are not committed (they are large). Download them once, then restart vision:
+### 6) Download vision models (required for real vision inference)
+
+Vision models are **not** committed due to size. Download them once and restart the vision service:
 
 ```bash
 make vision-models
 docker compose restart vision
 ```
 
-## IoT-IPS package
+## IoT-IPS Python Package
+
+The `ips/` directory is a fully self-contained package. You can use it independently for research, evaluation, or integration.
 
 ```bash
 cd ips
 pip install -e ".[dev]"
-python -m pytest                 # unit + integration tests
-python run_demo.py               # 6 incidents, 7 attacks, verify the hash chain
-python scripts/evaluate.py       # precision / recall / F1 on the labelled sample
-python scripts/calibrate.py      # threshold calibration
+
+# Run unit + integration tests
+python -m pytest
+
+# Run the interactive demo (6 incidents / 7 attacks + hash-chain verification)
+python run_demo.py
+
+# Evaluate against the labeled sample
+python scripts/evaluate.py
+
+# Calibrate detection thresholds
+python scripts/calibrate.py
 ```
 
-## Tests
+Key modules under `ips/src/iot_ips/` include: `detector`, `risk`, `policy`, `actions`, `pipeline`, `db` (hash-chained), `report`, and `utils`.
+
+## Testing
+
+Run all test suites locally with the following commands:
 
 ```bash
-make test                                        # backend unit tests (no Docker needed)
-make lint                                        # ruff
+# Backend unit tests (no Docker required)
+make test
 
-cd ips && python -m pytest                       # IoT-IPS package
-python -m pytest services/ips_cyber              # IPS network sensor
-python -m pytest services/engine                 # engine (risk, incidents, IPS enrichment)
-cd services/frontend/test && npm test            # dashboard checks
+# Linting
+make lint
+
+# IoT-IPS package tests
+cd ips && python -m pytest
+
+# IPS network sensor service
+python -m pytest services/ips_cyber
+
+# Engine tests (risk, correlation, incidents, IPS enrichment)
+python -m pytest services/engine
+
+# Warden dashboard tests
+cd services/frontend/test && npm test
 ```
 
-The suite is expected to finish with **0 failed and 0 skipped**. The real-model vision tests need
-`make vision-models` first (otherwise they are marked as skipped by design).
+**Expectation:** All suites must complete with **0 failed** and **0 skipped**.  
+Vision tests that rely on real model weights will be **skipped by design** unless `make vision-models` has been run.
 
-## Demos and scenarios
+## Demos & Scenarios
+
+### Quick attack demos
 
 ```bash
 make demo-up                                     # stack + attacker / smartlock / Suricata / ntfy
@@ -149,18 +256,20 @@ make demo-scan                                   # nmap scan → cyber.port_scan
 make demo-incident                               # garage intruder: risk 85/High, lights, siren, block
 ```
 
-If the engine still holds risk from a previous run, restart it before the scripted incident so the
-score is exactly 85:
+> If the engine retains previous risk state, restart it before running the scripted incident to guarantee a clean **Risk: 85 / High** result:
 
 ```bash
 docker compose restart engine
 python scripts/demo_incident.py
 ```
 
-Simulator scenarios:
+### Smart-home scenario runner
 
 ```bash
+# List available scenarios
 docker compose exec simulators python scenario_runner.py --list
+
+# Run specific scenarios
 docker compose exec simulators python scenario_runner.py night_intruder
 docker compose exec simulators python scenario_runner.py kitchen_fire
 docker compose exec simulators python scenario_runner.py smart_lock_attack
@@ -170,21 +279,26 @@ docker compose exec simulators python scenario_runner.py water_leak
 IPS → Warden end-to-end:
 
 ```bash
+# Seed IPS devices into the backend
 python scripts/ips/seed_ips_devices.py --devices ips/config/devices.json
+
+# Publish synthetic IPS alerts now
 python scripts/ips/fake_ips_publisher.py --now
+
+# Verify end-to-end delivery and count
 python scripts/ips/ips_e2e_check.py --expect 7
 ```
 
-## Security notes
+Successful execution confirms that `ips_cyber` publishes scored `cyber.*` alerts, the engine enriches them with MITRE techniques, IPS scores, and technical/executive reports, and incidents appear correctly in the Warden dashboard.
 
-- `.env`, `infra/certs/*`, `infra/ca/`, MQTT passwords and private keys are **never committed**;
-  `make setup` generates them.
-- Vision models (`*.onnx`, `*.pt`), demo videos and face photos are ignored. `make vision-models`
-  downloads the public models.
-- The demo hash-chained database (`ips/examples/demo/`) and the IPS dataset
-  (`ips/data/train.csv`, `ips/data/test.csv`) are committed on purpose so demos and data checks are
-  reproducible.
-- API docs (`/docs`) are enabled for development only; disable them with `API_DOCS_ENABLED=false`.
+## Security Notes
+
+- **Secrets**: `.env`, `infra/certs/*`, `infra/ca/`, MQTT passwords, and private keys are **never committed**. `make setup` generates all of them locally.
+- **Models & Media**: Vision weights (`*.onnx`, `*.pt`), demo videos, and face photos are ignored by Git. Use `make vision-models` to fetch public models.
+- **Reproducible Artifacts**: The hash-chained demo DB (`ips/examples/demo/`) and the IPS datasets (`ips/data/train.csv`, `ips/data/test.csv`) are intentionally committed to guarantee consistent demos and evaluation.
+- **API Exposure**: Swagger/OpenAPI docs at `/docs` are enabled for development only. In production, set `API_DOCS_ENABLED=false`.
+- **Network Hardening**: MQTT runs with TLS + per-user ACLs. Suricata is integrated for network inspection with IP blocking capabilities.
+- **Integrity**: Incidents are written to a hash-chained store to detect tampering.
 
 ## Documentation
 
@@ -197,7 +311,12 @@ python scripts/ips/ips_e2e_check.py --expect 7
 
 ## Status
 
-- Backend, IoT-IPS and the dashboard are implemented and tested together.
-- `services/ips_cyber` publishes scored `cyber.*` alerts; the engine enriches them with MITRE
-  technique, IPS score and technical/executive reports before opening an incident.
-- All local suites (backend, IPS, IPS sensor, engine, dashboard) pass with no failures or skips.
+- **Integration**: Backend, IoT-IPS, IPS-Cyber, Engine, Vision, and Warden Dashboard are fully implemented and integrated.
+- **Enrichment Pipeline**: `services/ips_cyber` publishes scored `cyber.*` alerts; the Engine enriches them with MITRE techniques, IPS scores, and technical/executive reports before creating incidents.
+- **Testing**: All local test suites (Backend, IoT-IPS, IPS Sensor, Engine, and Dashboard) pass with **no failures** and **no skips**.
+- **CI/CD**: GitHub Actions, CodeQL, and security workflows are configured and passing.
+- **Ready for Demo & Evaluation**: Fully reproducible with committed datasets and demo assets.
+
+## License
+
+This project was developed as a **Graduation Project** for academic purposes. All rights reserved by the project team unless otherwise stated.
