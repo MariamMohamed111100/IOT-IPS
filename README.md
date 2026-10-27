@@ -1,7 +1,6 @@
-# IoT-IPS — Smart Home Intrusion Prevention System
+# IoT-IPS - Smart Home Intrusion Prevention System
 
-Graduation project that combines the **SmartSecure Home** backend with our **IoT-IPS** detection,
-risk-scoring and response engine, plus the **Warden** dashboard.
+Graduation project that combines the **SmartSecure Home** backend with our **IoT-IPS** detection, risk-scoring and response engine, plus the **Warden** dashboard.
 
 One repository, four parts:
 
@@ -94,15 +93,13 @@ make smoke       # verify MQTT/mTLS/ACL/JWT/API/WebSocket end to end
 
 | Service | URL |
 |---|---|
-| Warden dashboard | <http://localhost:8080> |
-| API + Swagger (dev) | <https://localhost:8443/docs> |
-| MQTT over TLS | `localhost:8883` |
-| RTSP demo camera (demo profile) | `rtsp://localhost:8554/camera` |
-| ntfy (demo profile) | <http://localhost:8090> |
+| Warden dashboard | http://localhost:8080 |
+| API + Swagger (dev) | https://localhost:8443/docs |
+| MQTT over TLS | localhost:8883 |
+| RTSP demo camera (demo profile) | rtsp://localhost:8554/camera |
+| ntfy (demo profile) | http://localhost:8090 |
 
-The dashboard proxies `/api` and `/ws` to the HTTPS API through nginx, so there is no CORS and
-WebSockets work from one origin. Login credentials are generated into `.env`
-(`API_USERS=admin:<random>`); read them with:
+The dashboard proxies `/api` and `/ws` to the HTTPS API through nginx, so there is no CORS and WebSockets work from one origin. Login credentials are generated into `.env` (`API_USERS=admin:<random>`); read them with:
 
 ```bash
 grep '^API_USERS=' .env
@@ -138,8 +135,7 @@ python -m pytest services/engine                 # engine (risk, incidents, IPS 
 cd services/frontend/test && npm test            # dashboard checks
 ```
 
-The suite is expected to finish with **0 failed and 0 skipped**. The real-model vision tests need
-`make vision-models` first (otherwise they are marked as skipped by design).
+The suite is expected to finish with **0 failed and 0 skipped**. The real-model vision tests need `make vision-models` first (otherwise they are marked as skipped by design).
 
 ## Demos and scenarios
 
@@ -149,8 +145,7 @@ make demo-scan                                   # nmap scan → cyber.port_scan
 make demo-incident                               # garage intruder: risk 85/High, lights, siren, block
 ```
 
-If the engine still holds risk from a previous run, restart it before the scripted incident so the
-score is exactly 85:
+If the engine still holds risk from a previous run, restart it before the scripted incident so the score is exactly 85:
 
 ```bash
 docker compose restart engine
@@ -177,27 +172,22 @@ python scripts/ips/ips_e2e_check.py --expect 7
 
 ## Security notes
 
-- `.env`, `infra/certs/*`, `infra/ca/`, MQTT passwords and private keys are **never committed**;
-  `make setup` generates them.
-- Vision models (`*.onnx`, `*.pt`), demo videos and face photos are ignored. `make vision-models`
-  downloads the public models.
-- The demo hash-chained database (`ips/examples/demo/`) and the IPS dataset
-  (`ips/data/train.csv`, `ips/data/test.csv`) are committed on purpose so demos and data checks are
-  reproducible.
+- `.env`, `infra/certs/*`, `infra/ca/`, MQTT passwords and private keys are **never committed**; `make setup` generates them.
+- Vision models (`*.onnx`, `*.pt`), demo videos and face photos are ignored. `make vision-models` downloads the public models.
+- The demo hash-chained database (`ips/examples/demo/`) and the IPS dataset (`ips/data/train.csv`, `ips/data/test.csv`) are committed on purpose so demos and data checks are reproducible.
 - API docs (`/docs`) are enabled for development only; disable them with `API_DOCS_ENABLED=false`.
 
 ## Documentation
 
-- [`docs/BACKEND_README.md`](docs/BACKEND_README.md) — backend details and message flow
-- [`docs/CONTRACT.md`](docs/CONTRACT.md) — event/command/risk/incident contract
-- [`docs/IPS_INTEGRATION.md`](docs/IPS_INTEGRATION.md) — IPS → engine integration and scoring bands
-- [`docs/IPS_WARDEN.md`](docs/IPS_WARDEN.md) — dashboard behaviour for IPS alerts
-- [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) — presentation script
-- [`ips/README.md`](ips/README.md) — IoT-IPS package usage
+- [`docs/BACKEND_README.md`](docs/BACKEND_README.md) - backend details and message flow
+- [`docs/CONTRACT.md`](docs/CONTRACT.md) - event/command/risk/incident contract
+- [`docs/IPS_INTEGRATION.md`](docs/IPS_INTEGRATION.md) - IPS → engine integration and scoring bands
+- [`docs/IPS_WARDEN.md`](docs/IPS_WARDEN.md) - dashboard behaviour for IPS alerts
+- [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) - presentation script
+- [`ips/README.md`](ips/README.md) - IoT-IPS package usage
 
 ## Status
 
 - Backend, IoT-IPS and the dashboard are implemented and tested together.
-- `services/ips_cyber` publishes scored `cyber.*` alerts; the engine enriches them with MITRE
-  technique, IPS score and technical/executive reports before opening an incident.
+- `services/ips_cyber` publishes scored `cyber.*` alerts; the engine enriches them with MITRE technique, IPS score and technical/executive reports before opening an incident.
 - All local suites (backend, IPS, IPS sensor, engine, dashboard) pass with no failures or skips.
