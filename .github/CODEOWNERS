@@ -1,10 +1,16 @@
-# Replace with real GitHub handles. Reviews are requested automatically.
-*                         @person1
-/services/api/            @person2
-/services/simulators/     @person3
-/services/vision/         @person4
-/services/cyber/          @person5
-/services/engine/         @person6
-/config/                  @person6
-/services/frontend/       @person7
-/infra/ /docker/ /contract/ /.github/ /scripts/ @person1
+# Code owners for security-critical files
+# Require review from the repo owner for changes to workflows, security policies, and configs
+
+/.github/ @MariamMohamed111100
+/SECURITY.md @MariamMohamed111100
+/CONTRIBUTING.md @MariamMohamed111100
+/docker-compose.yml @MariamMohamed111100
+/.env.example @MariamMohamed111100
+/infra/ @MariamMohamed111100
+/config/ @MariamMohamed111100
+/services/api/ @MariamMohamed111100
+/services/cyber/ @MariamMohamed111100
+/services/engine/ @MariamMohamed111100
+/services/ips_cyber/ @MariamMohamed111100
+/ips/ @MariamMohamed111100
+/libs/common/ @MariamMohamed111100
