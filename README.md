@@ -40,7 +40,7 @@ One repository, four parts:
 
 ```text
 .
-├── .github/workflows/          # CI (IPS tests)
+├── .github/workflows/          # CI (lint, tests, secret scan, Docker smoke), CodeQL, IPS tests
 ├── config/                     # risk_scores.yaml, zones.yaml, ips_devices.json
 ├── contract/                   # contract v1.2 JSON schemas
 ├── docker/                     # shared Python service Dockerfile

@@ -1,6 +1,6 @@
 fastapi>=0.110
 uvicorn[standard]>=0.29
 pyjwt>=2.8
-sqlalchemy>=2.0
+sqlalchemy>=2.1.6
 psycopg[binary]>=3.1
 pyyaml>=6.0
