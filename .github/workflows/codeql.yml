@@ -35,6 +35,7 @@ jobs:
           category: "/language:python"
           output: codeql-results
           upload: never
+          upload-database: false
       - name: Upload the SARIF results (viewable/downloadable artifact)
         if: always()
         uses: actions/upload-artifact@v7
