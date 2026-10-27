@@ -4,12 +4,16 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   lint-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: {python-version: "3.12", cache: pip}
       - run: pip install ruff pytest jsonschema pyyaml gpiozero httpx -r services/api/requirements.txt -r services/vision/requirements.txt -r services/engine/requirements.txt -r services/cyber/requirements.txt -e libs/common
       - run: ruff check .
@@ -28,13 +32,13 @@ jobs:
         run: |
           pip install pip-audit
           pip-audit -r services/api/requirements.txt -r services/simulators/requirements.txt \
-            -r services/vision/requirements.txt -r services/engine/requirements.txt -r services/cyber/requirements.txt \
-            -r services/engine/requirements.txt
+            -r services/vision/requirements.txt -r services/engine/requirements.txt -r services/cyber/requirements.txt
 
   security:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: {fetch-depth: 0}
       - name: Gitleaks (secret scan)
         run: |
@@ -43,18 +47,20 @@ jobs:
           /tmp/gitleaks detect -v --redact
 
   docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [lint-test, security]
+    timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup (secrets, certs, MQTT users)
         run: ./scripts/setup.sh
       - run: docker compose config -q
       - run: docker compose build
+      - name: Start the stack and wait until every service is up
+        run: docker compose up -d --wait --wait-timeout 600
       - name: Integration smoke test
-        run: |
-          docker compose up -d
-          sleep 15
-          ./scripts/smoke-test.sh
+        run: ./scripts/smoke-test.sh
       - if: failure()
-        run: docker compose logs --tail=100
+        run: docker compose logs --tail=200
+      - if: always()
+        run: docker compose down -v --remove-orphans

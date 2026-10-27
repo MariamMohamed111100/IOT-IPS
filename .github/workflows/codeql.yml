@@ -7,19 +7,39 @@ on:
   schedule:
     - cron: "0 6 * * 1"
 
+permissions:
+  contents: read
+
 jobs:
   analyze:
     name: Analyze (python)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
-      security-events: write
-      packages: read
+      actions: read          # CodeQL telemetry reads the workflow run
       contents: read
+      security-events: write # required only when the SARIF upload is enabled
     steps:
-      - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v4
         with:
           languages: python
-      - uses: github/codeql-action/analyze@v3
+      # This repository is private and GitHub code scanning (Advanced Security)
+      # is not enabled on it, so uploading the SARIF fails with
+      # "Resource not accessible by integration". The scan still runs and the
+      # results are published as an artifact below. Enable code scanning (or
+      # make the repository public) and switch to `upload: always` to get the
+      # alerts in the Security tab.
+      - uses: github/codeql-action/analyze@v4
         with:
           category: "/language:python"
+          output: codeql-results
+          upload: never
+      - name: Upload the SARIF results (viewable/downloadable artifact)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: codeql-sarif
+          path: codeql-results
+          if-no-files-found: warn
+          retention-days: 30
