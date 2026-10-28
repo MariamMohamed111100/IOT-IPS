@@ -256,7 +256,7 @@ def test_the_number_of_blocks_is_capped(tmp_path):
 
 def test_a_failing_firewall_never_records_a_block_that_does_not_exist(tmp_path):
     class Broken(BlocklistFirewall):
-        def block(self, ip):
+        def block(self, ip, *args, **kw):
             raise FirewallError("netfilter said no")
 
     mgr, _, rec = manager(tmp_path, fw=Broken())

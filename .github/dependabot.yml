@@ -16,4 +16,6 @@ updates:
       - "/services/vision"
       - "/services/cyber"
       - "/services/engine"
+      - "/services/ips_cyber"
+      - "/services/ml"
     schedule: {interval: weekly}

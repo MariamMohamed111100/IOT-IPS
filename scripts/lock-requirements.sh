@@ -45,9 +45,12 @@ lock requirements/ips-dev-3.10.txt 3.10 --extra dev ips/pyproject.toml
 lock requirements/ips-dev-3.12.txt 3.12 --extra dev ips/pyproject.toml
 # .github/workflows/ips-tests.yml - "Dataset checks" step (Python 3.12 only).
 lock requirements/ips-data-py312.txt 3.12 --extra data ips/pyproject.toml
-# .github/workflows/ips-tests.yml - "ips-cyber" job (ips + ips_cyber + common).
-lock requirements/ips-cyber-py312.txt 3.12 --extra dev \
+# .github/workflows/ips-tests.yml - the "ips-cyber" and "ml" jobs. One superset lock:
+# ips + ips_cyber + libs/common + the ML service (its tests import iot_ips, ids_ml and
+# the ips_cyber package, so a job that lacks one of them would skip tests).
+lock requirements/ml-py312.txt 3.12 --extra dev \
   ips/pyproject.toml \
+  services/ml/requirements.txt \
   services/ips_cyber/requirements.txt \
   libs/common/pyproject.toml
 

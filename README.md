@@ -110,6 +110,7 @@ This repository combines four tightly integrated components into one monorepo:
 │   ├── frontend/               # Warden dashboard (static assets + Nginx reverse proxy)
 │   ├── ips_cyber/              # IoT-IPS network sensor (PCAP/CSV/live ingestion)
 │   ├── simulators/             # Virtual smart-home devices & scenario runner
+│   ├── ml/                     # Machine-learning detector (CICIoT2023 features, rules + model)
 │   └── vision/                 # YOLO, face recognition, fire/smoke detection service
 ├── docker-compose.yml
 ├── Makefile

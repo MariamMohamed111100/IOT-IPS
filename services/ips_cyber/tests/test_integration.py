@@ -17,7 +17,7 @@ jsonschema = pytest.importorskip("jsonschema")
 import pcap_helpers as H  # noqa: E402
 from iot_ips import actions, detector, policy, risk  # noqa: E402
 from iot_ips.paths import DATA_DIR, DEFAULT_DEVICES_PATH  # noqa: E402
-from ips_cyber import flow_engine, sources  # noqa: E402
+from ips_cyber import envelope, flow_engine, sources  # noqa: E402
 from ips_cyber import service as svc  # noqa: E402
 
 CONTRACT = Path(__file__).resolve().parents[3] / "contract"
@@ -137,3 +137,47 @@ class DetectorRuleTests(unittest.TestCase):
     def test_default_rule_file_uses_the_calibrated_connection_floor(self):
         text = Path(detector.DEFAULT_CONFIG).read_text()
         self.assertRegex(text, r"min_connection_attempts:\s*500\b")
+
+
+class MlTests(unittest.TestCase):
+    def test_the_ml_attack_groups_map_onto_the_four_contract_event_types(self):
+        wanted = {"Recon": "cyber.port_scan", "BruteForce": "cyber.brute_force", "DDoS": "cyber.dos",
+                  "DoS": "cyber.dos", "Mirai": "cyber.dos", "Spoofing": "cyber.unexpected_traffic",
+                  "Web": "cyber.unexpected_traffic"}
+        self.assertEqual({k: envelope.event_type(k) for k in wanted}, wanted)
+
+    def test_combined_detector_adds_the_attacks_the_rules_miss(self):
+        pytest.importorskip("ids_ml")
+        out = []
+
+        class Collect(Memory):
+            def publish(self, topic, payload):
+                out.append(payload)
+                return True
+        csv = str(DATA_DIR / "sample_events.csv")
+        rc = svc.main(["--source", "csv", "--file", csv, "--devices", str(DEFAULT_DEVICES_PATH),
+                       "--publisher", "stdout", "--detector", "combined"], publisher_override=Collect())
+        self.assertEqual(rc, 0)
+        types = [(a["type"], a["data"]["attack_type"]) for a in out]
+        self.assertEqual(len(out), 9)                                       # the 7 of the rules + Recon + Spoofing
+        self.assertIn(("cyber.port_scan", "Recon"), types)
+        self.assertIn(("cyber.unexpected_traffic", "Spoofing"), types)
+        schema = json.loads((CONTRACT / "ips_event_data.schema.json").read_text())
+        for a in out:
+            jsonschema.validate(a["data"], schema)
+
+    def test_combined_without_the_ml_package_stops_with_a_clear_message(self):
+        import builtins
+        real = builtins.__import__
+
+        def no_ml(name, *a, **k):
+            if name.startswith("ids_ml"):
+                raise ImportError("no ids_ml")
+            return real(name, *a, **k)
+        builtins.__import__ = no_ml
+        try:
+            rc = svc.main(["--source", "csv", "--file", str(DATA_DIR / "sample_events.csv"),
+                           "--devices", str(DEFAULT_DEVICES_PATH), "--detector", "combined"])
+        finally:
+            builtins.__import__ = real
+        self.assertEqual(rc, 2)

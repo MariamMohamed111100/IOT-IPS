@@ -139,6 +139,10 @@ def build_arg_parser():
     p.add_argument("--out", help="output file for --publisher file")
     p.add_argument("--config", default=DEFAULT_CONFIG)
     p.add_argument("--rules", default=detector.DEFAULT_CONFIG)
+    p.add_argument("--detector", choices=["rules", "combined"], default="rules",
+                   help="combined = rules plus the ML model of services/ml (needs `pip install -e services/ml`)")
+    p.add_argument("--ml-min-confidence", type=float, default=0.90,
+                   help="the model may raise an alert alone only at this confidence (combined mode)")
     p.add_argument("-v", "--verbose", action="store_true")
     return p
 
@@ -166,7 +170,16 @@ def main(argv=None, publisher_override=None):
         else:
             publisher = pub.StdoutPublisher()
 
-        service = IpsCyberService(devices, publisher, config, rules_path=args.rules)
+        detect_fn = None
+        if args.detector == "combined":
+            try:
+                from ids_ml.combined import make_detect
+            except ImportError as exc:
+                raise ValueError("--detector combined needs the ML package: pip install -e services/ml (%s)" % exc) from None
+            detector.load_config(args.rules)                           # a bad rules file still stops the start
+            detect_fn = make_detect(args.ml_min_confidence,
+                                    rules=lambda ev, prof=None: detector.detect(ev, prof, config_path=args.rules))
+        service = IpsCyberService(devices, publisher, config, detect_fn=detect_fn, rules_path=args.rules)
         if args.source == "csv":
             src = sources.csv_source(args.file)
         elif args.source == "pcap":

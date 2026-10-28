@@ -44,7 +44,8 @@ class CyberService:
         self.blocks = BlockManager(
             firewall or make_firewall(s.firewall), s.state_file, self._emit,
             default_s=s.block_default_s, min_s=s.block_min_s, max_s=s.block_max_s,
-            max_blocks=s.max_blocks, never_block=s.never_block, clock=clock)
+            max_blocks=s.max_blocks, never_block=s.never_block, report_results=s.report_block_results,
+            clock=clock)
         self.tailer = EveTailer(s.eve_path, s.eve_from_start)
         self.stats: Counter = Counter()
         self._sent: deque[float] = deque()

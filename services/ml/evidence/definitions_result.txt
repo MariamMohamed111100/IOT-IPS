@@ -1,0 +1,25 @@
+Loading C:\Users\Asus\OneDrive\Desktop\Final Project Ai part\ids-ml\data\Merged01_partial.csv ...
+  + 173,654 extra rows from BenignTraffic_partial.csv (Benign)
+  +   5,409 extra rows from CommandInjection.pcap.csv (Web)
+  +  13,064 extra rows from DictionaryBruteForce.pcap.csv (BruteForce)
+  + 193,404 extra rows from MITM-ArpSpoofing_partial.csv (Spoofing)
+  +  82,284 extra rows from Recon-PortScan.pcap.csv (Recon)
+  + 124,065 extra rows from VulnerabilityScan_partial.csv (Recon)
+Cleaned: removed 30 broken rows, 735,352 left.
+735,352 rows
+ 100.00%  Number is the window size (10 or 100, fewer at a file end)
+ 100.00%  AVG = Tot sum / Number
+ 100.00%  Tot size = AVG
+ 100.00%  Variance = Std^2
+ 100.00%  Min <= AVG <= Max
+ 100.00%  ack_count = ack_flag_number x Number
+ 100.00%  syn_count = syn_flag_number x Number
+ 100.00%  fin_count = fin_flag_number x Number
+ 100.00%  rst_count = rst_flag_number x Number
+ 100.00%  IPv = LLC
+ 100.00%  IPv + ARP = 1
+  98.86%  Protocol Type = protocol of the majority of packets
+ 100.00%  Header_Length = 8 when all packets are UDP (UDP header)
+  47.14%  Rate = 1 / IAT  (it is not: Rate = Number / window duration, see compare_pcap.py)
+
+Std test on 94,746 two-size windows: sample std (n-1) matches 91.82%, population std (n) 0.01%

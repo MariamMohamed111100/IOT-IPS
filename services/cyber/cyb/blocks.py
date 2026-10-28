@@ -11,6 +11,7 @@ import ipaddress
 import json
 import logging
 import os
+import re
 import time
 from collections import OrderedDict
 from collections.abc import Callable
@@ -27,6 +28,11 @@ SEEN_IDS = 4096
 Emit = Callable[[str, str, dict], object]
 
 
+def _device(value: object) -> str:
+    """A backend device id (lowercase letters, digits, underscore) or "unknown"."""
+    return value if isinstance(value, str) and re.fullmatch(r"[a-z0-9_]{1,50}", value) else "unknown"
+
+
 def iso(ts: float) -> str:
     return datetime.fromtimestamp(ts, timezone.utc).isoformat(timespec="milliseconds")
 
@@ -38,16 +44,19 @@ class Block:
     blocked_at: float
     expires_at: float
     by: str
+    both: bool = False                  # isolation: drop traffic to the address as well
+    device_id: str = "unknown"          # backend id of the device the block protects (reports only)
 
 
 class BlockManager:
     def __init__(self, firewall: Firewall, state_file: Path, emit: Emit, *, default_s: float,
                  min_s: float, max_s: float, max_blocks: int,
-                 never_block: tuple[IPNetwork, ...] = (),
+                 never_block: tuple[IPNetwork, ...] = (), report_results: bool = False,
                  clock: Callable[[], float] = time.time) -> None:
         self.fw, self.state_file, self.emit, self.clock = firewall, Path(state_file), emit, clock
         self.default_s, self.min_s, self.max_s = default_s, min_s, max_s
         self.max_blocks, self.never_block = max_blocks, never_block
+        self.report_results = report_results     # also publish cyber.block_applied / cyber.block_refused
         self.blocks: dict[str, Block] = {}
         self._seen: OrderedDict[str, None] = OrderedDict()
 
@@ -67,10 +76,12 @@ class BlockManager:
                 expires = finite_number(item["expires_at"])
                 if ip is None or expires is None or expires <= now or not self._allowed(ip):
                     continue
-                self.fw.block(ip)
+                both = item.get("both") is True
+                self.fw.block(ip, expires - now, both)
                 self.blocks[ip] = Block(ip, clean_text(item.get("reason", "restored"), 64),
                                         float(item.get("blocked_at", now)), expires,
-                                        clean_text(item.get("by", "restored"), 32))
+                                        clean_text(item.get("by", "restored"), 32), both,
+                                        _device(item.get("device_id")))
             except (KeyError, TypeError, ValueError, AttributeError, FirewallError) as exc:
                 log.warning("skipped an unusable saved block: %s", exc)
         if len(self.blocks) > self.max_blocks:
@@ -111,18 +122,31 @@ class BlockManager:
         else:
             seconds = finite_number(body.get("window_seconds"))
             reason = clean_text(body.get("reason") or "unspecified", 64)
-            ok = self.block(ip, self.default_s if seconds is None else seconds, reason, "engine")
+            direction = body.get("direction", "in")
+            if direction not in ("in", "both"):
+                log.warning("dropped a block command with an invalid direction")
+                return False
+            ok = self.block(ip, self.default_s if seconds is None else seconds, reason, "engine",
+                            both=direction == "both", device_id=_device(body.get("device_id")),
+                            windowed=seconds is not None)
         if ok and cid is not None:                 # only a command that worked is "seen"
             self._seen[cid] = None
             while len(self._seen) > SEEN_IDS:
                 self._seen.popitem(last=False)
         return ok
 
-    def block(self, ip: str, seconds: float, reason: str, by: str) -> bool:
+    def block(self, ip: str, seconds: float, reason: str, by: str, *, both: bool = False,
+              device_id: str = "unknown", windowed: bool = True) -> bool:
+        """Block `ip` (both=True: isolate a device, so nothing reaches it either). Re-checks every safety rule here."""
         addr = valid_ip(ip)
-        if addr is None or not self._allowed(addr):
-            log.warning("refused to block %r (invalid, special-purpose or protected)",
-                        clean_text(ip, 45))
+        action = "isolate_device" if both else ("temporary_block" if windowed else "block_source")
+        if addr is None:
+            log.warning("refused to block %r (not an IP address)", clean_text(ip, 45))
+            return False
+        why = self._refusal(addr, both)
+        if why:
+            log.warning("refused to block %s (%s)", addr, why)
+            self._result("cyber.block_refused", addr, action, device_id, why)
             return False
         now = self.clock()
         seconds = min(max(seconds, self.min_s), self.max_s)
@@ -130,23 +154,51 @@ class BlockManager:
         current = self.blocks.get(addr)
         if current is not None:                                   # already blocked: only extend
             current.expires_at = max(current.expires_at, expires)
+            current.both = current.both or both
+            try:
+                self.fw.block(addr, current.expires_at - now, current.both)    # renews a kernel timeout
+            except FirewallError as exc:
+                log.warning("could not renew the block of %s: %s", addr, exc)
             self._save()
             return True
         if len(self.blocks) >= self.max_blocks:
             log.error("refused to block %s: MAX_BLOCKS (%d) reached", addr, self.max_blocks)
+            self._result("cyber.block_refused", addr, action, device_id, "max_blocks_reached")
             return False
         try:
-            self.fw.block(addr)
+            self.fw.block(addr, seconds, both)
         except FirewallError as exc:
             log.error("could not block %s: %s", addr, exc)
+            self._result("cyber.block_refused", addr, action, device_id, "firewall_error")
             return False
-        self.blocks[addr] = Block(addr, reason, now, expires, by)
+        self.blocks[addr] = Block(addr, reason, now, expires, by, both, device_id)
         self._save()
-        log.warning("BLOCKED %s until %s (%s, by %s)", addr, iso(expires), reason, by)
+        log.warning("%s %s until %s (%s, by %s)", "ISOLATED" if both else "BLOCKED", addr, iso(expires), reason, by)
         self.emit("cyber.ip_blocked", "high", {
             "ip": addr, "reason": reason, "expires_at": iso(expires), "blocked_by": by,
             "window_s": int(seconds)})
+        self._result("cyber.block_applied", addr, action, device_id, reason, expires)
         return True
+
+    def _refusal(self, addr: str, both: bool) -> str | None:
+        """Why this address must not be blocked, as a code, or None."""
+        if not self._allowed(addr):
+            return "source_never_block"
+        if both and not ipaddress.ip_address(addr).is_private:
+            return "device_ip_not_private"          # only a device inside the home is ever isolated
+        return None
+
+    def _result(self, type_: str, ip: str, action: str, device_id: str, reason: str,
+                expires: float | None = None) -> None:
+        """The IPS block result of contract 3.1 (never scored, never re-blocked: it uses `ip`, not `src_ip`)."""
+        if not self.report_results:
+            return
+        data = {"ip": ip, "action": action, "device_id": device_id,
+                "reason": re.sub(r"[^a-z0-9]+", "_", reason.lower()).strip("_")[:64] or "unspecified",
+                "dry_run": bool(getattr(self.fw, "dry_run", False))}
+        if expires is not None:
+            data["expires_at"] = iso(expires)
+        self.emit(type_, "info", data)
 
     def unblock(self, ip: str, why: str) -> bool:
         addr = valid_ip(ip)
