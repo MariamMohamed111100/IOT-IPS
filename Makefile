@@ -3,7 +3,7 @@
 setup:        ## Generate .env secrets, TLS certs, MQTT users (safe to re-run)
 	./scripts/setup.sh
 
-up:           ## Build and start everything
+up:           ## Build and start everything (includes ips_cyber sample replay, then idle)
 	@test -f .env || ./scripts/setup.sh
 	docker compose up --build -d
 

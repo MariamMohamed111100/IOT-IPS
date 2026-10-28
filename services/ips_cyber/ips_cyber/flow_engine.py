@@ -52,6 +52,7 @@ DEFAULTS = {
     "aggregate_min_sources": 20,    # this many different sources hitting one device: also emit one event for all of them
     "max_packets": 5000000,         # a capture with more packets is refused (memory)
     "max_flows": 500000,            # a capture with more flows is refused (memory)
+    "max_capture_seconds": 21600.0,  # a capture spanning longer is refused (replay cost is span/step)
 }
 
 
@@ -107,7 +108,8 @@ class FlowEngine:
             if key not in DEFAULTS:
                 raise FlowEngineError("unknown flow_engine setting '%s' (known: %s)" % (key, ", ".join(DEFAULTS)))
             cfg[key] = value
-        for key in ("window_seconds", "step_seconds", "idle_timeout_seconds", "short_flow_seconds"):
+        for key in ("window_seconds", "step_seconds", "idle_timeout_seconds", "short_flow_seconds",
+                    "max_capture_seconds"):
             if not isinstance(cfg[key], (int, float)) or isinstance(cfg[key], bool) or cfg[key] <= 0:
                 raise FlowEngineError("flow_engine.%s must be a number > 0" % key)
         for key in ("aggregate_min_sources", "max_packets", "max_flows", "short_flow_max_packets"):
@@ -344,6 +346,13 @@ class FlowEngine:
             return []
         step = self.cfg["step_seconds"]
         t0, t_end = flows[0].start, flows[-1].start
+        # The replay cost is (last - first) / step, so a capture whose timestamps are far apart
+        # would spin for hours on a few bytes of input. Refuse it instead of grinding.
+        span = t_end - t0
+        if span > self.cfg["max_capture_seconds"]:
+            raise FlowEngineError(
+                "capture spans %.0f s (max %.0f s, flow_engine.max_capture_seconds): refusing to "
+                "replay it" % (span, self.cfg["max_capture_seconds"]))
         self._flows, self._last_tick = [], t0 - 1e-6
         self.add_flows(flows)
         events, k = [], 1

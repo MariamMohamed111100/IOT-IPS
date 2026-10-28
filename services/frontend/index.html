@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Warden — Active IoT IPS Security Console</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- No third-party assets: the gateway must work with no internet access, and a font CDN would
+     leak every dashboard visit to a third party. The font stacks fall back to system fonts. -->
 <style>
   :root{
     --bg:#0a0f1c;
@@ -797,7 +797,7 @@
       <!-- ===== API BRIDGE ===== -->
       <section class="view" id="view-api">
         <div class="view-toolbar"><div><div class="eyebrow">INTEGRATION LAYER</div><div class="section-title">Frontend API Bridge</div><div class="section-copy">Connected to Person 2's actual API contract: JWT login, REST snapshots, device commands, and authenticated WebSocket events.</div></div><span class="live-pill" id="apiModePill"><i></i> API LOGIN REQUIRED</span></div>
-        <div class="grid-2"><div class="panel api-card"><div class="panel-header"><h3>Person 2 API Contract</h3><span class="hint">v1</span></div><div class="panel-body"><div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/devices</span><span class="api-status">READY</span></div><div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/incidents</span><span class="api-status">READY</span></div><div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/risk</span><span class="api-status">READY</span></div><div class="api-row"><span class="api-method">POST</span><span class="api-path">/api/devices/{id}/command</span><span class="api-status">READY</span></div><div class="api-row"><span class="api-method">WS</span><span class="api-path">/ws/events?token=JWT</span><span class="api-status">READY</span></div><div style="margin-top:14px;font-size:11px;color:var(--text-secondary)">REST calls use the same-origin /api proxy; the browser never connects to MQTT directly.</div></div></div><div class="panel"><div class="panel-header"><h3>Integration Diagnostics</h3><span class="hint">frontend adapter</span></div><div class="panel-body"><div style="display:grid;gap:8px;margin-bottom:16px"><label class="hint" for="apiUsername">Backend username</label><input id="apiUsername" autocomplete="username" placeholder="username" style="background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:10px"><label class="hint" for="apiPassword">Backend password</label><input id="apiPassword" type="password" autocomplete="current-password" placeholder="password" style="background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:10px"><button class="primary-btn" id="apiLoginBtn">Connect to backend</button><small id="apiLoginMessage" class="hint">Token is kept in memory only.</small></div><div class="state-list"><div class="state-row"><div class="state-icon">↔</div><div><b>REST transport</b><small id="restState">Mock repository</small></div><div class="meta"><span class="badge badge-resolved">READY</span></div></div><div class="state-row"><div class="state-icon">⚡</div><div><b>WebSocket</b><small id="socketState">Local event bus</small></div><div class="meta"><span class="badge badge-resolved">READY</span></div></div><div class="state-row"><div class="state-icon">◇</div><div><b>Event schema</b><small>security.alert.v1</small></div><div class="meta"><span class="badge badge-neutral">v1</span></div></div></div></div></div></div>
+          <div class="grid-2"><div class="panel api-card"><div class="panel-header"><h3>Person 2 API Contract</h3><span class="hint">v1</span></div><div class="panel-body"><div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/devices</span><span class="api-status">READY</span></div><div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/incidents</span><span class="api-status">READY</span></div><div class="api-row"><span class="api-method">GET</span><span class="api-path">/api/risk</span><span class="api-status">READY</span></div><div class="api-row"><span class="api-method">POST</span><span class="api-path">/api/devices/{id}/command</span><span class="api-status">READY</span></div><div class="api-row"><span class="api-method">WS</span><span class="api-path">/ws/events (bearer subprotocol)</span><span class="api-status">READY</span></div><div style="margin-top:14px;font-size:11px;color:var(--text-secondary)">REST calls use the same-origin /api proxy; the browser never connects to MQTT directly.</div></div></div><div class="panel"><div class="panel-header"><h3>Integration Diagnostics</h3><span class="hint">frontend adapter</span></div><div class="panel-body"><div style="display:grid;gap:8px;margin-bottom:16px"><label class="hint" for="apiUsername">Backend username</label><input id="apiUsername" autocomplete="username" placeholder="username" style="background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:10px"><label class="hint" for="apiPassword">Backend password</label><input id="apiPassword" type="password" autocomplete="current-password" placeholder="password" style="background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:10px"><button class="primary-btn" id="apiLoginBtn">Connect to backend</button><small id="apiLoginMessage" class="hint">Token is kept in memory only.</small></div><div class="state-list"><div class="state-row"><div class="state-icon">↔</div><div><b>REST transport</b><small id="restState">Mock repository</small></div><div class="meta"><span class="badge badge-resolved">READY</span></div></div><div class="state-row"><div class="state-icon">⚡</div><div><b>WebSocket</b><small id="socketState">Local event bus</small></div><div class="meta"><span class="badge badge-resolved">READY</span></div></div><div class="state-row"><div class="state-icon">◇</div><div><b>Event schema</b><small>security.alert.v1</small></div><div class="meta"><span class="badge badge-neutral">v1</span></div></div></div></div></div></div>
       </section>
 
       <!-- ===== INTERACTIVE ENTITY DETAIL PANEL ===== -->
@@ -879,9 +879,18 @@
     document.getElementById('riskScore').textContent = score;
     document.getElementById('riskLevel').textContent = level;
     document.getElementById('riskStatus').textContent = 'updated just now';
-    document.getElementById('riskFactors').innerHTML = Object.entries(factors).map(([key,value]) => `
-      <div class="factor"><div class="factor-top"><b>${riskFactorLabels[key]}</b><span>${value}</span></div><div class="factor-bar"><i style="width:${value}%"></i></div></div>
-    `).join('');
+    const factorBox = document.getElementById('riskFactors');
+    factorBox.replaceChildren();
+    Object.entries(factors).forEach(([key,value]) => {
+      const row = document.createElement('div'); row.className = 'factor';
+      const top = document.createElement('div'); top.className = 'factor-top';
+      const label = document.createElement('b'); label.textContent = riskFactorLabels[key] || key;
+      const num = document.createElement('span'); num.textContent = String(value);
+      top.append(label, num);
+      const bar = document.createElement('div'); bar.className = 'factor-bar';
+      const fill = document.createElement('i'); fill.style.width = Number(value) + '%';
+      bar.appendChild(fill); row.append(top, bar); factorBox.appendChild(row);
+    });
   }
 
   renderRisk(prototypeRisk, 87, 'Critical');
@@ -934,16 +943,21 @@
     return '<span class="badge badge-critical"><i class="badge-dot"></i>Isolated</span>';
   }
 
-  document.getElementById('devicesTbody').innerHTML = devices.map(d => `
-    <tr>
-      <td class="dev-name">${d.name}</td>
-      <td class="dev-ip">${d.ip}</td>
-      <td><span class="proto-chip">${d.proto}</span></td>
-      <td><div class="trust-cell"><div class="trust-bar"><div class="trust-fill" style="width:${d.trust}%; background:${trustColor(d.trust)}"></div></div><span class="trust-num">${d.trust}</span></div></td>
-      <td>${statusBadge(d.status)}</td>
-      <td class="dev-ip">${d.seen}</td>
-    </tr>
-  `).join('');
+  const tbody = document.getElementById('devicesTbody');
+  tbody.replaceChildren();
+  devices.forEach(d => {
+    const cell = (tag, cls, text) => { const n = document.createElement(tag); if(cls) n.className = cls; if(text != null) n.textContent = text; return n; };
+    const tr = document.createElement('tr');
+    const proto = cell('td'); proto.appendChild(cell('span', 'proto-chip', d.proto));
+    const trustTd = cell('td');
+    const trustCell = cell('div', 'trust-cell');
+    const bar = cell('div', 'trust-bar');
+    const fill = cell('div', 'trust-fill'); fill.style.width = d.trust + '%'; fill.style.background = trustColor(d.trust);
+    bar.appendChild(fill); trustCell.append(bar, cell('span', 'trust-num', String(d.trust))); trustTd.appendChild(trustCell);
+    const statusTd = cell('td'); statusTd.innerHTML = statusBadge(d.status);
+    tr.append(cell('td', 'dev-name', d.name), cell('td', 'dev-ip', d.ip), proto, trustTd, statusTd, cell('td', 'dev-ip', d.seen));
+    tbody.appendChild(tr);
+  });
 
   // ---------- Incidents data ----------
   const incidents = [];            // filled by loadBackendState() from /api/incidents
@@ -1075,21 +1089,22 @@
 
   // ---------- Live feed ----------
   const feedEvents = [
-    {sev:'sev-critical', html:'<b>DDoS Traffic Surge</b> detected on Smart TV', time:'14:02:07'},
-    {sev:'sev-warning', html:'Trust score dropped to <b>41</b> on Baby Monitor', time:'13:58:12'},
-    {sev:'sev-info', html:'<b>37 packets</b> blocked from unknown IP range', time:'13:51:40'},
-    {sev:'sev-critical', html:'Botnet C2 pattern matched on Health Monitor — Ward 3', time:'13:44:02'},
-    {sev:'sev-info', html:'Baseline retrained on 128 device profiles', time:'13:30:00'},
-    {sev:'sev-warning', html:'Brute-force attempt on Smart Lock — Front Door', time:'13:02:55'},
-    {sev:'sev-info', html:'Firmware fingerprint updated for 6 devices', time:'12:47:19'}
+    {sev:'sev-critical', text:'DDoS Traffic Surge detected on Smart TV', time:'14:02:07'},
+    {sev:'sev-warning', text:'Trust score dropped to 41 on Baby Monitor', time:'13:58:12'},
+    {sev:'sev-info', text:'37 packets blocked from unknown IP range', time:'13:51:40'},
+    {sev:'sev-critical', text:'Botnet C2 pattern matched on Health Monitor — Ward 3', time:'13:44:02'},
+    {sev:'sev-info', text:'Baseline retrained on 128 device profiles', time:'13:30:00'},
+    {sev:'sev-warning', text:'Brute-force attempt on Smart Lock — Front Door', time:'13:02:55'},
+    {sev:'sev-info', text:'Firmware fingerprint updated for 6 devices', time:'12:47:19'}
   ];
-  document.getElementById('feedList').innerHTML = feedEvents.map(e => `
-    <div class="feed-item">
-      <span class="feed-dot ${e.sev}"></span>
-      <span class="feed-text">${e.html}</span>
-      <span class="feed-time">${e.time}</span>
-    </div>
-  `).join('');
+  const feedList = document.getElementById('feedList');
+  feedList.replaceChildren();
+  feedEvents.forEach(e => {
+    const cell = (tag, cls, text) => { const n = document.createElement(tag); if(cls) n.className = cls; if(text != null) n.textContent = text; return n; };
+    const row = cell('div', 'feed-item');
+    row.append(cell('span', 'feed-dot ' + e.sev), cell('span', 'feed-text', e.text), cell('span', 'feed-time', e.time));
+    feedList.appendChild(row);
+  });
 
   // ---------- Network topology graph ----------
   (function buildTopology(){
@@ -1273,6 +1288,7 @@
   let mockStreamRunning = true;
   let alertReceived = 0;
   let accessToken = null; // intentionally memory-only; never persist JWT in localStorage
+  let sessionRole = 'viewer';
   const API_PATHS = {zones:'/api/zones', devices:'/api/devices', events:'/api/events?limit=50', incidents:'/api/incidents?limit=20', risk:'/api/risk'};
 
   function emitSecurityEvent(event){
@@ -1313,14 +1329,16 @@
     try{
       const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
       if(!r.ok)throw new Error(r.status===429?'Too many attempts. Wait 60 seconds.':r.status===401?'Invalid username or password.':`Login failed (${r.status}).`);
-      accessToken=(await r.json()).access_token;
-      API_CONFIG.wsURL=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/events?token='+encodeURIComponent(accessToken);
+      const body=await r.json();
+      accessToken=body.access_token;
+      sessionRole=body.role||'viewer';
+      API_CONFIG.wsURL=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/events';
       msg.textContent='Authenticated. Loading live system state…';
       await loadBackendState();connectSecuritySocket();
       document.getElementById('apiModePill').innerHTML='<i></i> API CONNECTED';
       document.getElementById('restState').textContent='Authenticated FastAPI';
       document.getElementById('socketState').textContent='Connecting authenticated WebSocket…';
-      msg.textContent='Connected as '+username+'.';
+      msg.textContent='Connected as '+username+' ('+sessionRole+').';
     }catch(e){msg.textContent=e.message;logWs('sys',{login_error:e.message});}
     finally{btn.disabled=false;}
   }
@@ -1420,17 +1438,25 @@
     document.getElementById('entityStatus').textContent=String(status).toUpperCase();
     const risk=isZone?(zone?.risk??0):(device.risk??(device.trust<30?87:device.trust<65?62:18));
     const trust=isZone?Math.max(0,100-risk):(device.trust??'—');
-    document.getElementById('entityMetrics').innerHTML=[['RISK SCORE',risk+'/100'],['DEVICE TRUST',trust+(typeof trust==='number'?'%':'')],['ZONE',zone?.name||device.zone||'Unknown'],['STATE',status]].map(([k,v])=>`<div class="entity-metric"><small>${k}</small><b>${v}</b></div>`).join('');
+    const metrics=document.getElementById('entityMetrics'); metrics.replaceChildren();
+    [['RISK SCORE',risk+'/100'],['DEVICE TRUST',trust+(typeof trust==='number'?'%':'')],['ZONE',zone?.name||device.zone||'Unknown'],['STATE',status]].forEach(([k,v])=>{const d=el('div','entity-metric');d.append(el('small',null,k),el('b',null,String(v)));metrics.appendChild(d);});
     const rows=isZone?[
       ['Zone ID',zone?.id||item.id],['Risk state',zone?.state||'unknown'],['Risk score',(zone?.risk??0)+'/100'],['Devices in zone',MOCK_DB.devices.filter(d=>zoneKey(d.zone)===zone?.id).length],['Doors',MOCK_DB.doors.filter(d=>zoneKey(d.zone)===zone?.id).map(d=>d.name+': '+d.state).join(', ')||'No door mapped'],['Response posture',risk>=80?'Critical — review policy':risk>=50?'Elevated — monitor':'Normal monitoring']
     ]:[['Device ID',device.id],['Device type',device.type||'IoT sensor / actuator'],['Zone',zone?.name||prettyZone(device.zone)||'Unassigned'],['Connection',device.status||'unknown'],['Trust score',trust+'/100'],['IPS alerts',ipsAlertsText(device.id)],['Live state',Object.entries(device.state||{}).filter(([k])=>k!=='ip'&&k!=='trust_score').map(([k,v])=>k+': '+v).join(', ')||'—'],['Network identity',device.ip||'Not reported'],['Last telemetry',device.last_seen||'Awaiting backend timestamp'],['Prevention mode',device.status==='isolated'?'Isolated (mock state)':'Monitor / policy-controlled']];
     const telemetry=document.getElementById('entityTelemetry');telemetry.replaceChildren();rows.forEach(([k,v])=>{const row=document.createElement('div');row.className='entity-kv';const key=document.createElement('span'),value=document.createElement('b');key.textContent=k;value.textContent=String(v??'—');row.append(key,value);telemetry.append(row);});
-    document.getElementById('entityActivity').innerHTML=`<div class="entity-activity-row"><b>${isZone?'Zone opened in Digital Twin':'Device selected for inspection'}</b><small>${new Date().toLocaleString()} · UI interaction</small></div><div class="entity-activity-row"><b>${risk>=80?'Critical risk requires policy review':risk>=50?'Elevated risk under monitoring':'No critical risk currently recorded'}</b><small>Derived from the live risk engine state.</small></div>`;
+    const activity=document.getElementById('entityActivity'); activity.replaceChildren();
+    const actRow=(title,sub)=>{const r=el('div','entity-activity-row');r.append(el('b',null,title),el('small',null,sub));return r;};
+    activity.append(
+      actRow(isZone?'Zone opened in Digital Twin':'Device selected for inspection', new Date().toLocaleString()+' · UI interaction'),
+      actRow(risk>=80?'Critical risk requires policy review':risk>=50?'Elevated risk under monitoring':'No critical risk currently recorded','Derived from the live risk engine state.')
+    );
     document.getElementById('entityActionResult').textContent='No action requested.';
     document.getElementById('entityInspectAction').onclick=async()=>{try{if(API_CONFIG.mode==='api'&&accessToken){await loadBackendState();document.getElementById('entityActionResult').textContent='Details refreshed from backend.';}else document.getElementById('entityActionResult').textContent='Mock details refreshed.';}catch(e){document.getElementById('entityActionResult').textContent=e.message;}};
     const commandRow=document.getElementById('realCommandRow');const select=document.getElementById('deviceCommand');const actions=({bulb:['on','off'],siren:['on','off'],lock:['lock','unlock'],valve:['open','close']})[device?.type]||[];
-    commandRow.style.display=(!isZone&&API_CONFIG.mode==='api'&&accessToken&&actions.length)?'flex':'none';
-    select.innerHTML=actions.map(a=>`<option value="${a}">${a.toUpperCase()}</option>`).join('');
+    const canCommand=['operator','admin'].includes(sessionRole);
+    commandRow.style.display=(!isZone&&API_CONFIG.mode==='api'&&accessToken&&canCommand&&actions.length)?'flex':'none';
+    select.replaceChildren();
+    actions.forEach(a=>{const opt=document.createElement('option');opt.value=a;opt.textContent=a.toUpperCase();select.appendChild(opt);});
     document.getElementById('sendDeviceCommand').onclick=async()=>{try{const action=select.value;const r=await securityApi.command(device.id,action,`Warden dashboard command for ${device.name}`);document.getElementById('entityActionResult').textContent=`Backend accepted command: ${r.status}. Waiting for device_status confirmation.`;logWs('out',{command:r});}catch(e){document.getElementById('entityActionResult').textContent='Command failed: '+e.message;}};
     document.getElementById('entitySimulateAction').onclick=async()=>{const payload={device_id:isZone?null:device.id,zone_id:isZone?(zone?.id||item.id):null,action:risk>=80?'BLOCK_SOURCE':'MONITOR',simulation_only:true};logWs('out',{type:'response.simulation_requested',...payload});document.getElementById('entityActionResult').textContent=`Simulation requested: ${payload.action}. No real device or firewall was changed.`};
     entityOverlay.classList.add('open');entityOverlay.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
@@ -1441,9 +1467,22 @@
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeEntity()});
 
   function renderTwinSide(){
-    const zs=document.getElementById('zoneStateList');if(zs)zs.innerHTML=MOCK_DB.zones.map(z=>`<div class="state-row"><span class="state-dot ${okLevel(z.state)?'ok':'warn'}"></span><div><b>${z.name}</b><small>risk ${z.risk}/100</small></div><div class="meta"><b>${String(z.state).toUpperCase()}</b><small>${z.risk>=50?'monitor':'normal'}</small></div></div>`).join('')||'<div class="state-row"><small>Waiting for live data…</small></div>';
-    const ds=document.getElementById('doorStateList');if(ds)ds.innerHTML=MOCK_DB.doors.map(d=>`<div class="state-row"><div class="state-icon">▣</div><div><b>${d.name}</b><small>${d.zone}</small></div><div class="meta"><b>${String(d.state).toUpperCase()}</b></div></div>`).join('')||'<div class="state-row"><small>No doors, windows or locks reported.</small></div>';
-    const cs=document.getElementById('cameraGrid');if(cs)cs.innerHTML=MOCK_DB.cameras.map(c=>`<div class="camera-tile"><div class="camera-top"><span>${c.name}</span><span class="${c.state==='online'?'camera-online':'camera-alert'}">● ${c.state}</span></div><div class="camera-bottom"><span>${c.label}</span><span>${c.state==='alert'?'MOTION / ALERT':c.state==='offline'?'NO SIGNAL':'REC'}</span></div></div>`).join('')||'<div class="state-row"><small>No cameras reported.</small></div>';
+    const empty=(host,msg)=>{host.replaceChildren();const row=el('div','state-row');row.appendChild(el('small',null,msg));host.appendChild(row);};
+    const zs=document.getElementById('zoneStateList');
+    if(zs){
+      if(!MOCK_DB.zones.length) empty(zs,'Waiting for live data…');
+      else{zs.replaceChildren();MOCK_DB.zones.forEach(z=>{const row=el('div','state-row');const mid=document.createElement('div');mid.append(el('b',null,z.name),el('small',null,'risk '+z.risk+'/100'));const meta=el('div','meta');meta.append(el('b',null,String(z.state).toUpperCase()),el('small',null,z.risk>=50?'monitor':'normal'));row.append(el('span','state-dot '+(okLevel(z.state)?'ok':'warn')),mid,meta);zs.appendChild(row);});}
+    }
+    const ds=document.getElementById('doorStateList');
+    if(ds){
+      if(!MOCK_DB.doors.length) empty(ds,'No doors, windows or locks reported.');
+      else{ds.replaceChildren();MOCK_DB.doors.forEach(d=>{const row=el('div','state-row');const mid=document.createElement('div');mid.append(el('b',null,d.name),el('small',null,d.zone));const meta=el('div','meta');meta.appendChild(el('b',null,String(d.state).toUpperCase()));row.append(el('div','state-icon','▣'),mid,meta);ds.appendChild(row);});}
+    }
+    const cs=document.getElementById('cameraGrid');
+    if(cs){
+      if(!MOCK_DB.cameras.length) empty(cs,'No cameras reported.');
+      else{cs.replaceChildren();MOCK_DB.cameras.forEach(c=>{const tile=el('div','camera-tile');const top=el('div','camera-top');top.append(el('span',null,c.name),el('span',c.state==='online'?'camera-online':'camera-alert','● '+c.state));const bottom=el('div','camera-bottom');bottom.append(el('span',null,c.label),el('span',null,c.state==='alert'?'MOTION / ALERT':c.state==='offline'?'NO SIGNAL':'REC'));tile.append(top,bottom);cs.appendChild(tile);});}
+    }
   }
   document.getElementById('twinReset')?.addEventListener('click',()=>{if(API_CONFIG.mode==='api'){if(accessToken)loadBackendState().catch(e=>logWs('sys',{error:e.message}));return;}MOCK_DB.zones.find(z=>z.id==='garage').risk=68;MOCK_DB.devices.find(d=>d.id==='CAM-002').status='isolated';buildFloorPlan();});
 
@@ -1463,7 +1502,7 @@
     {time:'14:02:06',title:'Prevention action queued',detail:'Source isolation requested. Prototype mode prevents real firewall execution.',kind:'critical',tags:['IPS','SAFE MODE']},
     {time:'14:02:07',title:'Incident created + AI explanation',detail:'INC-1042 stored and summarized for the administrator.',kind:'warning',tags:['INC-1042','AI']}
   ];
-  function renderTimeline(list){const el=document.getElementById('largeTimeline');if(!el)return;const rows=list||timelineEvents;el.innerHTML=rows.length?rows.map(e=>`<div class="tl-event"><span class="tl-dot ${e.kind}"></span><div class="tl-time">${e.time}</div><div class="tl-title">${e.title}</div><div class="tl-detail">${e.detail}</div><div class="tl-tags">${e.tags.map(t=>`<span class="tl-tag">${t}</span>`).join('')}</div></div>`).join(''):'<div class="tl-event"><div class="tl-detail">No incident recorded yet. Run python scripts/demo_incident.py to generate one.</div></div>';document.getElementById('timelineCount').textContent=`${rows.length} events`}
+  function renderTimeline(list){const host=document.getElementById('largeTimeline');if(!host)return;const rows=list||timelineEvents;host.replaceChildren();if(!rows.length){const empty=el('div','tl-event');empty.appendChild(el('div','tl-detail','No incident recorded yet. Run python scripts/demo_incident.py to generate one.'));host.appendChild(empty);}else rows.forEach(e=>{const item=el('div','tl-event');item.append(el('span','tl-dot '+e.kind),el('div','tl-time',e.time),el('div','tl-title',e.title),el('div','tl-detail',e.detail));const tags=el('div','tl-tags');(e.tags||[]).forEach(t=>tags.appendChild(el('span','tl-tag',t)));item.appendChild(tags);host.appendChild(item);});document.getElementById('timelineCount').textContent=`${rows.length} events`}
   async function loadIncidentTimeline(){
     if(API_CONFIG.mode!=='api')return;
     const top=incidents[0];if(!top){renderTimeline([]);return;}
@@ -1529,8 +1568,8 @@
     if(API_CONFIG.mode==='mock'){document.getElementById('socketState').textContent='Local event bus (mock)';return;}
     try{
       if(!accessToken){document.getElementById('socketState').textContent='Login required';return;}
-      socket=new WebSocket(API_CONFIG.wsURL);socket.addEventListener('open',()=>{wsRetry=0;});
-      socket.onopen=()=>{document.getElementById('socketState').textContent='Connected to '+API_CONFIG.wsURL;document.getElementById('wsStatus').innerHTML='<i></i> WS CONNECTED';logWs('sys',{message:'WebSocket connected'});};
+      socket=new WebSocket(API_CONFIG.wsURL,['bearer.'+accessToken]);socket.addEventListener('open',()=>{wsRetry=0;});
+      socket.onopen=()=>{document.getElementById('socketState').textContent='Connected to /ws/events';document.getElementById('wsStatus').innerHTML='<i></i> WS CONNECTED';logWs('sys',{message:'WebSocket connected'});};
       socket.onmessage=e=>{try{const frame=JSON.parse(e.data);logWs('in',frame);const normalized=normalizeBackendFrame(frame);if(normalized)emitSecurityEvent(normalized);if(frame.kind==='incident'){loadBackendState().catch(err=>logWs('sys',{refresh_error:err.message}));}}catch(err){logWs('sys',{message:'Invalid JSON event',error:String(err)})}};
       socket.onerror=()=>logWs('sys',{message:'WebSocket error'});
       socket.onclose=e=>{document.getElementById('socketState').textContent='Disconnected ('+e.code+')';document.getElementById('wsStatus').innerHTML='<i></i> WS OFFLINE';if(e.code===1008){accessToken=null;document.getElementById('apiLoginMessage').textContent='Session expired. Please log in again.';return;}const delay=Math.min(30000,1000*Math.pow(2,wsRetry++));setTimeout(async()=>{if(!accessToken)return;if(e.code===1011||wsRetry>4){try{await loadBackendState();}catch(err){logWs('sys',{reload_error:err.message});}}connectSecuritySocket();},delay);};
@@ -1539,7 +1578,7 @@
 
   // Initial integration render.
   buildFloorPlan();renderTimeline(API_CONFIG.mode==='api'?[]:null);renderNetworkGraph();
-  logWs('sys',{mode:API_CONFIG.mode,rest:'/api/*',websocket:'/ws/events?token=JWT',schema:'Person 2 event contract'});
+  logWs('sys',{mode:API_CONFIG.mode,rest:'/api/*',websocket:'/ws/events',schema:'Person 2 event contract'});
   document.getElementById('socketState').textContent='Login required';
   document.getElementById('restState').textContent='Waiting for authenticated login';
 

@@ -20,8 +20,8 @@ class WebSocketManager:
         self.connections: set[WebSocket] = set()
         self.loop: asyncio.AbstractEventLoop | None = None
 
-    async def connect(self, websocket: WebSocket) -> None:
-        await websocket.accept()
+    async def connect(self, websocket: WebSocket, subprotocol: str | None = None) -> None:
+        await websocket.accept(subprotocol=subprotocol)
         self.connections.add(websocket)
         self.loop = asyncio.get_running_loop()
         logger.info("WebSocket connected. clients=%d", len(self.connections))

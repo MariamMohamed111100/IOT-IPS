@@ -73,7 +73,6 @@ services:
       MQTT_CLIENT_KEY: /run/app-secrets/api_client_key
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
-      JWT_ALGORITHM: ${JWT_ALGORITHM}
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES}
       API_USERS: ${API_USERS}
       API_DOCS_ENABLED: ${API_DOCS_ENABLED:-false}   # dev .env sets true; never in production
@@ -158,13 +157,43 @@ services:
       {<<: *mqtt, MQTT_USER: engine, MQTT_PASSWORD: "${MQTT_PASSWORD_ENGINE}",
        MQTT_CLIENT_CERT: /certs/clients/engine.crt, MQTT_CLIENT_KEY: /run/app-secrets/engine_client_key,
        RISK_SCORES_FILE: /config/risk_scores.yaml, IPS_DEVICES_FILE: /config/ips_devices.json,
-       NTFY_TOPIC: "${NTFY_TOPIC:-}", NTFY_SERVER: "${NTFY_SERVER:-https://ntfy.sh}",
+       NTFY_TOPIC: "${NTFY_TOPIC:-}", NTFY_SERVER: "${NTFY_SERVER:-}",
        TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}", TELEGRAM_CHAT_ID: "${TELEGRAM_CHAT_ID:-}"}
     volumes:
       - ./infra/certs/ca.crt:/certs/ca.crt:ro
       - ./infra/certs/clients/engine.crt:/certs/clients/engine.crt:ro
       - ./config:/config:ro
     secrets: [engine_client_key]
+    depends_on: [mosquitto]
+    restart: unless-stopped
+
+  # Network IPS sensor: same MQTT identity as cyber (security/alerts/cyber).
+  # Default is a one-shot sample CSV, then idle so unless-stopped does not replay.
+  # Live capture: IPS_CYBER_SOURCE=live IPS_CYBER_IFACE=eth0 (needs NET_ADMIN / host net).
+  ips_cyber:
+    build: {context: ., dockerfile: docker/python-service.Dockerfile, args: {SERVICE: ips_cyber, WITH_IPS: "1"}}
+    command:
+      - python
+      - main.py
+      - --source
+      - ${IPS_CYBER_SOURCE:-csv}
+      - --file
+      - ${IPS_CYBER_FILE:-/ips-data/sample_events.csv}
+      - --devices
+      - /config/ips_devices.json
+      - --publisher
+      - mqtt
+      - --idle
+    environment:
+      {<<: *mqtt, MQTT_USER: cyber, MQTT_PASSWORD: "${MQTT_PASSWORD_CYBER}",
+       MQTT_CLIENT_CERT: /certs/clients/cyber.crt, MQTT_CLIENT_KEY: /run/app-secrets/cyber_client_key}
+    volumes:
+      - ./infra/certs/ca.crt:/certs/ca.crt:ro
+      - ./infra/certs/clients/cyber.crt:/certs/clients/cyber.crt:ro
+      - ./config:/config:ro
+      - ./ips/data:/ips-data:ro
+      - ./ips/config:/ips/config:ro
+    secrets: [cyber_client_key]
     depends_on: [mosquitto]
     restart: unless-stopped
 

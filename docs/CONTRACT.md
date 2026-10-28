@@ -129,7 +129,9 @@ Events still sent by the Suricata path without the new fields are valid until Pe
 | `connection_attempts` | integer >= 0 | connection attempts seen from the source in the window |
 | `duration` | number >= 0 | seconds covered by the window |
 
-Optional: `details` (same object as in 4.4). `severity_hint` follows the IPS level (`low` to `critical`).
+Optional: `details` (same object as in 4.4). `severity_hint` is the detector's confidence band
+(`low` to `high`); the IPS sensor does not compute a risk level, so the `low`→`critical` level in
+the incident comes from the engine.
 
 `cyber.block_applied` and `cyber.block_refused` report what the IPS did with a block decision. They use
 `ip` (never `src_ip`), so, like `cyber.ip_blocked`, they are never scored and never re-blocked.
@@ -208,10 +210,13 @@ through the same origin.
 | `http://localhost:8080/ws/**` | `https://api:8443/ws/**` |
 | `http://localhost:8080/snapshots/**` | shared `data` volume |
 
-Auth: JWT bearer. Login with `POST /api/auth/login {"username","password"}` (users come from
-`API_USERS`) to get a token, then send `Authorization: Bearer <token>`. Use the `require_token`
-dependency in `services/api/security.py`; `/api/health` stays public. Swagger stays on the direct
-API (`https://localhost:8443/docs`) and only while `API_DOCS_ENABLED=true`.
+Auth: JWT bearer (HS256, `iss`/`aud` required). Login with `POST /api/auth/login
+{"username","password"}` (users from `API_USERS`, scrypt hashes plus `viewer|operator|admin`
+roles) to get a token, then send `Authorization: Bearer <token>`. Device commands and audit
+require an operator role. Use `require_token` / `require_operator` in `services/api/security.py`;
+`/api/health` stays public. The dashboard WebSocket uses `Sec-WebSocket-Protocol: bearer.<JWT>`.
+Swagger stays on the direct API (`https://localhost:8443/docs`) and only while
+`API_DOCS_ENABLED=true`.
 
 ### 5.1 Endpoints (all need a JWT except `/health` and `/auth/login`)
 

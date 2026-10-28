@@ -15,10 +15,23 @@ if [ ! -f .env ]; then
     echo "JWT_SECRET=$(rand)"
     echo "JWT_ALGORITHM=HS256"
     echo "JWT_EXPIRE_MINUTES=60"
-    echo "API_USERS=admin:$(rand)"
-    echo "API_DOCS_ENABLED=true   # dev only; NEVER true in production"
+    admin_pw=$(rand)
+    viewer_pw=$(rand)
+    hash_py="scripts/hash_api_password.py"
+    if command -v python >/dev/null 2>&1; then py=python
+    elif command -v python3 >/dev/null 2>&1; then py=python3
+    else echo "python is required to hash API_USERS"; exit 1
+    fi
+    admin_hash=$("$py" "$hash_py" "$admin_pw")
+    viewer_hash=$("$py" "$hash_py" "$viewer_pw")
+    echo "API_USERS=admin:${admin_hash}:admin,viewer:${viewer_hash}:viewer"
+    echo "API_ADMIN_PASSWORD=${admin_pw}"
+    echo "API_VIEWER_PASSWORD=${viewer_pw}"
+    echo "API_DOCS_ENABLED=true   # lab only; NEVER true on a gateway"
     echo "DASHBOARD_PORT=8080"
     echo "STORAGE_KEY=$(rand)"
+    echo "NTFY_SERVER="
+    echo "SIM_ALLOW_INJECT=true   # MUST be false on real hardware"
     for s in ADMIN API SIMULATORS VISION CYBER ENGINE; do echo "MQTT_PASSWORD_$s=$(rand)"; done
   } > .env
   chmod 600 .env

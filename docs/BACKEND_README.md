@@ -114,8 +114,9 @@ suites also act as a contract test between those two modules (the API is fed rea
 - **Input validation + audit (API)**: every MQTT message is validated (event envelope, topic and
   zone must match, size limits, strict types) before it is stored. Events and incidents cannot be
   written over REST. Logins and device commands are recorded in an encrypted audit trail.
-- **WebSocket**: authenticates with `?token=<JWT>`; the reverse proxy does not access-log `/ws/`,
-  so the token never lands in a log file.
+- **WebSocket**: authenticates with `Sec-WebSocket-Protocol: bearer.<JWT>` (never a query string).
+- **Passwords / RBAC**: `API_USERS` stores scrypt hashes (`name:scrypt....:role`). `viewer` can
+  read; `operator` and `admin` may send device commands and read the audit trail.
 - **Fire safety policy**: `block_ip` fires from level **High** (so the demo pans out), and at
   **Critical** doors are *unlocked*, never locked (`config/risk_scores.yaml`).
 - **Secrets never in git**: `.env`, certificates and MQTT passwords are git-ignored and
@@ -162,8 +163,9 @@ are stored automatically), publish `security/risk` / `security/incidents`, read 
 | Variable | Used by | Meaning |
 |---|---|---|
 | `POSTGRES_USER` / `POSTGRES_DB` / `POSTGRES_PASSWORD` | postgres, api | database credentials |
-| `JWT_SECRET`, `JWT_ALGORITHM`, `JWT_EXPIRE_MINUTES` | api | token signing and lifetime |
-| `API_USERS` | api | `name:password,name:password` login users |
+| `JWT_SECRET`, `JWT_EXPIRE_MINUTES` | api | token signing (HS256 is fixed in code) and lifetime |
+| `API_USERS` | api | `name:scrypt.hash:role` login users |
+| `API_ADMIN_PASSWORD` | host scripts only | plaintext for `ws_listen`; not passed into containers |
 | `API_DOCS_ENABLED` | api | Swagger on/off (**off in production**) |
 | `STORAGE_KEY` | api | key material for at-rest encryption. **Losing it makes stored records unreadable** (they show `integrity_ok: false`) |
 | `MQTT_PASSWORD_<SERVICE>` | each service | MQTT credentials (with the client certificate) |

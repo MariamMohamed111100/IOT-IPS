@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import text
 
@@ -20,6 +21,7 @@ from zones_seed import seed_zones
 logger = logging.getLogger("api.auth")
 
 _DOCS_ENABLED = os.getenv("API_DOCS_ENABLED", "false").lower() in {"1", "true", "yes"}
+MAX_REQUEST_BYTES = 64 * 1024      # every endpoint takes a small JSON body; nothing uploads
 
 
 def _prepare_database() -> None:
@@ -62,6 +64,19 @@ class LoginRequest(BaseModel):
     password: str
 
 
+@app.middleware("http")
+async def limit_body_size(request: Request, call_next):
+    """Refuse an oversized request before FastAPI buffers it.
+
+    The API port is published directly, so nginx's `client_max_body_size` is not the only way in;
+    no endpoint takes a large body, so a small cap is safe and stops a memory-exhaustion post.
+    """
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > MAX_REQUEST_BYTES:
+        return JSONResponse({"detail": "request body too large"}, status_code=413)
+    return await call_next(request)
+
+
 @app.get("/health")
 def health():
     try:
@@ -78,14 +93,17 @@ def login(body: LoginRequest, request: Request):
     client_host = request.client.host if request.client else "unknown"
     key = f"{client_host}:{body.username}"
 
-    if not limiter.allow(key):
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            "Too many failed attempts, try again later",
-            headers={"Retry-After": "60"},
-        )
-
-    if not verify_user(body.username, body.password):
+    # Verify first, throttle after: checking the limiter before the password lets anyone lock a
+    # real user out for 60 s with five wrong attempts (the API sits behind nginx, so every request
+    # shares the proxy's client address and the key degenerates to "per username").
+    user = verify_user(body.username, body.password)
+    if user is None:
+        if not limiter.allow(key):
+            raise HTTPException(
+                status.HTTP_429_TOO_MANY_REQUESTS,
+                "Too many failed attempts, try again later",
+                headers={"Retry-After": "60"},
+            )
         limiter.record_failure(key)
         logger.warning("failed login for user=%r from %s", body.username, client_host)
         audit.record(body.username, "login.failed", "-", {"ip": client_host})
@@ -95,10 +113,15 @@ def login(body: LoginRequest, request: Request):
         )
 
     limiter.reset(key)
-    audit.record(body.username, "login.ok", "-", {"ip": client_host})
-    return {"access_token": create_token(body.username), "token_type": "bearer"}
+    audit.record(body.username, "login.ok", "-", {"ip": client_host, "role": user.role})
+    return {
+        "access_token": create_token(user.name, user.role),
+        "token_type": "bearer",
+        "role": user.role,
+        "username": user.name,
+    }
 
 
 @app.get("/auth/me", tags=["auth"])
 def me(claims: Annotated[dict, Depends(require_token)]):
-    return {"username": claims["sub"], "expires_at": claims["exp"]}
+    return {"username": claims["sub"], "role": claims["role"], "expires_at": claims["exp"]}

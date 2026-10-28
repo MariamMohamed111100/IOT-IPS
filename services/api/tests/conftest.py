@@ -26,7 +26,7 @@ _tmp = tempfile.mkdtemp(prefix="api-tests-")
 os.environ.update(
     DATABASE_URL=f"sqlite:///{_tmp}/test.db",
     JWT_SECRET="j" * 48,
-    API_USERS="admin:correct-horse,viewer:other-pass",
+    API_USERS="admin:correct-horse:admin,viewer:other-pass:viewer",
     STORAGE_KEY="s" * 48,
     API_DOCS_ENABLED="false",
     ZONES_FILE=str(REPO / "config/zones.yaml"),

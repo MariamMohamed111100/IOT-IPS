@@ -185,7 +185,7 @@ make smoke
 **Get login credentials:**
 
 ```bash
-grep '^API_USERS=' .env
+grep '^API_ADMIN_PASSWORD=' .env   # dashboard login; API_USERS holds scrypt hashes
 ```
 
 ### 6) Download vision models (required for real vision inference)

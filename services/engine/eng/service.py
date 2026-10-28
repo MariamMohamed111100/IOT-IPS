@@ -26,7 +26,23 @@ TICK_S = 5
 def build(client) -> Engine:
     def publish(topic: str, payload: dict, retain: bool) -> None:
         client.publish(topic, json.dumps(payload), qos=1, retain=retain)
-    return Engine(load_policy(), publish, ips=IpsEnricher.load())
+    return Engine(load_policy(), publish, ips=IpsEnricher.load(),
+                  protected_ips=device_ips())
+
+
+def device_ips(path: str | Path | None = None) -> set[str]:
+    """IPs of our own devices, from the IPS device profiles.
+
+    Read here (not only through IpsEnricher) so the guard works even when the iot_ips package is
+    not installed: a spoofed source address must never get one of our devices firewall-blocked.
+    """
+    path = Path(path or os.getenv("IPS_DEVICES_FILE", "/config/ips_devices.json"))
+    try:
+        devices = json.loads(path.read_text(encoding="utf-8"))["devices"]
+    except (OSError, ValueError, KeyError, TypeError):
+        log.warning("could not read %s: no device IPs are protected from blocking", path)
+        return set()
+    return {d["ip"] for d in devices if isinstance(d, dict) and isinstance(d.get("ip"), str)}
 
 
 def load_zones() -> list[str]:

@@ -19,12 +19,12 @@ CYB_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class Runner:
-    def __init__(self, fail_on=""):
-        self.calls, self.fail_on = [], fail_on
+    def __init__(self, fail_on="", err="boom"):
+        self.calls, self.fail_on, self.err = [], fail_on, err
 
     def __call__(self, cmd):
         self.calls.append(cmd)
-        return (1, "boom") if self.fail_on and self.fail_on in " ".join(cmd) else (0, "")
+        return (1, self.err) if self.fail_on and self.fail_on in " ".join(cmd) else (0, "")
 
     def text(self):
         return [" ".join(c) for c in self.calls]
@@ -87,9 +87,21 @@ def test_a_bad_address_never_reaches_nft():
 
 
 def test_unblock_ignores_a_missing_element_and_a_failing_add_raises():
-    assert NftablesFirewall(Runner(fail_on="delete element")).unblock("203.0.113.9") is None
+    # "the element was not there" is a no-op ...
+    missing = Runner(fail_on="delete element", err="Error: No such file or directory")
+    assert NftablesFirewall(missing).unblock("203.0.113.9") is None
+    # ... but any other delete failure must surface: the caller drops its state right after, and a
+    # swallowed error would leave the kernel dropping traffic with nothing left to lift it.
+    with pytest.raises(FirewallError, match="could not remove 203.0.113.9"):
+        NftablesFirewall(Runner(fail_on="delete element")).unblock("203.0.113.9")
     with pytest.raises(FirewallError):
         NftablesFirewall(Runner(fail_on="add element")).block("203.0.113.9", 60)
+
+
+def test_unblock_reports_a_dead_nft_as_a_firewall_error():
+    with pytest.raises(FirewallError):
+        NftablesFirewall(Runner(fail_on="nft delete element", err="nft: command not found")) \
+            .unblock("203.0.113.9")
 
 
 def test_make_firewall_knows_the_new_backends():
@@ -178,6 +190,19 @@ def test_a_firewall_failure_is_reported_and_nothing_is_recorded(tmp_path):
     mgr, rec = manager(tmp_path, NftablesFirewall(Runner(fail_on="add element")))
     assert not mgr.block("203.0.113.9", 60, "x", "engine")
     assert mgr.blocks == {} and rec.items[-1][2]["reason"] == "firewall_error"
+
+
+def test_a_failed_renewal_is_reported_and_does_not_extend_the_recorded_block(tmp_path):
+    """The backend deletes the element before re-adding it, so a failed renewal means the block is
+    gone. It must be reported as refused instead of silently extending a state that lies."""
+    mgr, rec = manager(tmp_path, NftablesFirewall(Runner()))
+    assert mgr.block("203.0.113.9", 60, "x", "engine")
+    recorded = mgr.blocks["203.0.113.9"].expires_at
+    mgr.fw.run = Runner(fail_on="add element")          # the renewal's add now fails
+    assert mgr.block("203.0.113.9", 600, "x", "engine") is False
+    assert mgr.blocks["203.0.113.9"].expires_at == recorded        # state did not lie
+    assert rec.items[-1][0] == "cyber.block_refused" and rec.items[-1][2]["reason"] == "firewall_error"
+    assert types(rec).count("cyber.block_applied") == 1            # the first block, not the renewal
 
 
 def test_renewing_a_block_refreshes_the_kernel_timeout(tmp_path):
