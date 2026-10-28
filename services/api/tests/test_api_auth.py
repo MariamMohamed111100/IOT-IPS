@@ -3,6 +3,8 @@ import main
 import pytest
 from fastapi.routing import APIRoute
 
+from security import hash_password
+
 PUBLIC = {("GET", "/health"), ("POST", "/auth/login")}
 
 
@@ -69,7 +71,9 @@ def test_a_user_without_a_role_label_only_reads(client, monkeypatch):
     """Least privilege: `bob:secret` must not become an operator just because it is not "viewer"."""
     monkeypatch.setenv("API_USERS", "bob:secret")
     r = client.post("/auth/login", json={"username": "bob", "password": "secret"})
-    assert r.status_code == 200 and r.json()["role"] == "viewer"
+    assert r.status_code == 401                            # plaintext secrets never authenticate
+    monkeypatch.setenv("API_USERS", f"bob:{hash_password('secret')}")
+    r = client.post("/auth/login", json={"username": "bob", "password": "secret"})
     headers = {"Authorization": f"Bearer {r.json()['access_token']}"}
     assert client.get("/devices", headers=headers).status_code == 200       # reading is allowed
     new_device = {"device_id": "d1", "name": "x", "device_type": "bulb", "zone": "kitchen"}

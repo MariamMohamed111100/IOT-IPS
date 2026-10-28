@@ -165,7 +165,7 @@ are stored automatically), publish `security/risk` / `security/incidents`, read 
 | `POSTGRES_USER` / `POSTGRES_DB` / `POSTGRES_PASSWORD` | postgres, api | database credentials |
 | `JWT_SECRET`, `JWT_EXPIRE_MINUTES` | api | token signing (HS256 is fixed in code) and lifetime |
 | `API_USERS` | api | `name:scrypt.hash:role` login users |
-| `API_ADMIN_PASSWORD` | host scripts only | plaintext for `ws_listen`; not passed into containers |
+| `API_ADMIN_PASSWORD` | host scripts | plaintext for `ws_listen` and the smoke test (passed into the api container only for that one exec, never as a service env var) |
 | `API_DOCS_ENABLED` | api | Swagger on/off (**off in production**) |
 | `STORAGE_KEY` | api | key material for at-rest encryption. **Losing it makes stored records unreadable** (they show `integrity_ok: false`) |
 | `MQTT_PASSWORD_<SERVICE>` | each service | MQTT credentials (with the client certificate) |

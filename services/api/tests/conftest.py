@@ -22,11 +22,14 @@ REPO = pathlib.Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "services/api"))
 sys.path.append(str(REPO / "services/simulators"))      # only for the realistic traffic fixture
 
+from security import hash_password  # noqa: E402  (the API's own hashing, so fixtures match)
+
 _tmp = tempfile.mkdtemp(prefix="api-tests-")
 os.environ.update(
     DATABASE_URL=f"sqlite:///{_tmp}/test.db",
     JWT_SECRET="j" * 48,
-    API_USERS="admin:correct-horse:admin,viewer:other-pass:viewer",
+    # Hashed like a real .env: plaintext secrets are refused by the API.
+    API_USERS=f"admin:{hash_password('correct-horse')}:admin,viewer:{hash_password('other-pass')}:viewer",
     STORAGE_KEY="s" * 48,
     API_DOCS_ENABLED="false",
     ZONES_FILE=str(REPO / "config/zones.yaml"),

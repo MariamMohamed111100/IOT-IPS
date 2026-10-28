@@ -1,8 +1,8 @@
 """JWT bearer auth for the API (contract section 5).
 
-Users come from ``API_USERS`` (``name:secret[:role],...``). Secrets are
-``scrypt.N.r.p.salt.dk`` hashes (see :func:`hash_password`); a leftover
-plaintext value is still accepted so existing test fixtures keep working.
+Users come from ``API_USERS`` (``name:scrypt.secret[:role],...``). Secrets are
+``scrypt.N.r.p.salt.dk`` hashes (see :func:`hash_password`); a plaintext value is refused, so a
+leaked ``.env`` does not hand over the passwords.
 Roles: ``viewer`` (read), ``operator`` / ``admin`` (commands and writes).
 """
 from __future__ import annotations
@@ -51,6 +51,7 @@ def hash_password(password: str) -> str:
 
 
 def _verify_scrypt(password: str, stored: str) -> bool:
+    """Constant-time check of a password against a ``scrypt.N.r.p.salt.dk`` hash."""
     try:
         kind, n_s, r_s, p_s, salt_s, dk_s = stored.split(".")
         if kind != "scrypt":
@@ -67,17 +68,12 @@ def _verify_scrypt(password: str, stored: str) -> bool:
     return hmac.compare_digest(got, expected)
 
 
-def _verify_legacy_plaintext(password: str, stored: str) -> bool:
-    """Constant-time compare that never raises on length mismatch."""
-    left = hashlib.sha256(password.encode()).digest()
-    right = hashlib.sha256(stored.encode()).digest()
-    return hmac.compare_digest(left, right)
-
-
 def verify_secret(password: str, stored: str) -> bool:
-    if stored.startswith("scrypt."):
-        return _verify_scrypt(password, stored)
-    return _verify_legacy_plaintext(password, stored)
+    """True only for a scrypt hash that matches. Plaintext secrets are not accepted: anything in
+    ``API_USERS`` that is not a ``scrypt.`` hash can never authenticate."""
+    if not stored.startswith("scrypt."):
+        return False
+    return _verify_scrypt(password, stored)
 
 
 @dataclass(frozen=True)

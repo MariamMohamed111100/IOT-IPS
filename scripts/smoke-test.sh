@@ -25,9 +25,16 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 set -a; . ./.env; set +a
 EXPECTED=(api simulators vision cyber engine)
+fail=0
+
+# API login credentials. `.env` keeps the scrypt hash in API_USERS and the plaintext only in
+# API_ADMIN_PASSWORD (a hash is not a password, and the API refuses plaintext secrets).
+API_PASSWORD="${API_ADMIN_PASSWORD:-}"
+if [ -z "$API_PASSWORD" ]; then
+  echo "  FAIL  API_ADMIN_PASSWORD is not set (re-run ./scripts/setup.sh)"; fail=1
+fi
 # admin client cert is copied into the mosquitto container by its entrypoint
 CERT="--cert /mosquitto/config/certs/admin.crt --key /mosquitto/config/certs/admin.key"
-fail=0
 
 echo ">> Listening for heartbeats (15s)..."
 OUT=$(docker compose exec -T mosquitto mosquitto_sub -h localhost -p 8883 \
@@ -112,7 +119,7 @@ fi
 
 echo ">> API auth: JWT must be required (contract section 5)..."
 if command -v python3 >/dev/null 2>&1; then PY=python3; else PY=python; fi
-$PY - <<'PYEOF' "${API_USERS#admin:}"
+$PY - <<'PYEOF' "$API_PASSWORD"
 import json
 import sys
 import urllib.error
@@ -180,7 +187,7 @@ if grep -q '"type":"water.leak"' "$EV"; then echo "  OK    water.leak event rece
 rm -f "$EV"
 
 echo ">> API pipeline: simulators -> mTLS broker -> API -> Postgres -> REST..."
-$PY - <<'PYEOF' "${API_USERS#admin:}"
+$PY - <<'PYEOF' "$API_PASSWORD"
 import json
 import ssl
 import sys
@@ -256,7 +263,8 @@ import sys
 import time
 import urllib.request
 
-user, _, password = os.environ["API_USERS"].split(",")[0].partition(":")
+user = os.environ.get("API_LOGIN_USER", "admin")
+password = os.environ["API_LOGIN_PASSWORD"]          # passed in: the container only holds the hash
 req = urllib.request.Request(
     "http://frontend:80/api/auth/login",
     data=_json.dumps({"username": user, "password": password}).encode(),
@@ -269,7 +277,9 @@ from websockets.sync.client import connect
 
 t0 = time.time()
 loops = 0
-with connect("ws://frontend:80/ws/events?token=" + token, open_timeout=10) as ws:
+# The JWT travels in the subprotocol, never in the query string (which leaks via logs/Referer).
+with connect("ws://frontend:80/ws/events", subprotocols=["bearer." + token],
+             open_timeout=10) as ws:
     while time.time() - t0 < 30:
         msg = _json.loads(ws.recv(timeout=30))
         loops += 1
@@ -280,7 +290,7 @@ with connect("ws://frontend:80/ws/events?token=" + token, open_timeout=10) as ws
 print("TIMEOUT no water.leak event over WS (frames=%d)" % loops, file=sys.stderr)
 sys.exit(1)
 PY
-docker compose exec -T api python - <"$WSB" >"$WSO" 2>&1 &
+docker compose exec -T -e API_LOGIN_USER=admin -e API_LOGIN_PASSWORD="$API_PASSWORD" api python - <"$WSB" >"$WSO" 2>&1 &
 WSPID=$!
 sleep 3
 docker compose exec -T simulators python scenario_runner.py water_leak >/dev/null 2>&1
