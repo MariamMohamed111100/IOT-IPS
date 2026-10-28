@@ -43,8 +43,14 @@ per-device LWT is not possible).
 ```
 
 `action` is optional (`"block"` by default; `"unblock"` lifts a block early, used by admin tooling,
-never sent by the engine). Cyber confirms every change on `security/alerts/cyber` as
-`cyber.ip_blocked` / `cyber.ip_unblocked` (not scored, section 3).
+never sent by the engine). Optional `direction` is `"in"` (default: drop traffic from the address) or
+`"both"` (isolate a device: also drop traffic to it; only a private address is accepted), and optional
+`device_id` (backend id, lowercase letters, digits, `_`) names the protected device in the reports.
+Cyber confirms every change on `security/alerts/cyber` as `cyber.ip_blocked` / `cyber.ip_unblocked`
+(not scored, section 3) and, since v1.3, also reports the outcome of every block as `cyber.block_applied`
+or `cyber.block_refused` (3.1): the refusal `reason` is one of `source_never_block`,
+`device_ip_not_private`, `max_blocks_reached`, `firewall_error`. The engine adds a note to the incident
+("block confirmed" / "block refused") so the loop is visible; it never reacts with a new block.
 
 ## 2. Event envelope (`contract/event.schema.json`)
 
@@ -382,7 +388,9 @@ All cyber events use zone `network`. Details and settings: `services/cyber/READM
   at once; duplicate command ids ignored) and also blocks a confirmed scan or brute force itself
   (`CYBER_AUTOBLOCK`, default both, for `CYBER_AUTOBLOCK_S`) so the attacker is cut off before the
   risk score is even computed. Backends: `blocklist` (state file read by the demo victim; default) and
-  `iptables` (real drops; needs root + NET_ADMIN, see the service README). Active blocks survive a
+  `iptables` and `nftables` (real drops; need root + NET_ADMIN, see the service README; nftables sets a
+  kernel timeout on every block, so it expires even if the service dies) and `shadow` (logs and reports
+  with `dry_run: true`, enforces nothing). Active blocks survive a
   restart (`/data/blocklist.json`) and expire on their own.
 - **Limits:** at most `CYBER_MAX_EVENTS_PER_MIN` events per minute leave the service, and every
   piece of detector state is bounded, so a spoofed-source flood cannot exhaust memory or the

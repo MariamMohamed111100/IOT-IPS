@@ -121,3 +121,6 @@ desktop.ini
 ehthumbs.db
 $RECYCLE.BIN/
 .history/
+
+# ML: the dataset's 27 MB capture is only needed to repeat the extractor check
+services/ml/pcap/

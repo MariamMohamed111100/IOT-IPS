@@ -72,22 +72,40 @@ jobs:
         run: npm ci && npm test
   ips-cyber:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements/ips-cyber-py312.txt
+          cache-dependency-path: requirements/ml-py312.txt
       - name: Install (hash-pinned lock, see scripts/lock-requirements.sh)
         run: |
-          pip install --require-hashes -r requirements/ips-cyber-py312.txt
-          pip install --no-deps -e ips
+          pip install --require-hashes -r requirements/ml-py312.txt
+          pip install --no-deps -e ips -e libs/common -e services/ml
       - name: Engine tests with the IPS chain (details, outbound rule, recorded ips_cyber alerts)
-        run: |
-          pip install --no-deps -e libs/common
-          cd services/engine && python -m pytest -q
+        run: cd services/engine && python -m pytest -q
       - name: Cyber service tests (flow engine, envelopes, contract schema)
+        working-directory: services/ips_cyber
+        run: python -m pytest tests
+  ml:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/ml-py312.txt
+      - name: Install (hash-pinned lock, see scripts/lock-requirements.sh)
+        run: |
+          pip install --require-hashes -r requirements/ml-py312.txt
+          pip install --no-deps -e ips -e libs/common -e services/ml
+      - name: ML tests (extractor, detector, integrity, rules + model)
+        working-directory: services/ml
+        run: python -m pytest
+      - name: IPS cyber service with the combined detector
         working-directory: services/ips_cyber
         run: python -m pytest tests

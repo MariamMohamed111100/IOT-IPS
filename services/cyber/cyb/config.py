@@ -15,7 +15,7 @@ SID_HTTP_LOGIN = 9000002
 SID_SSH_CONNECT = 9000003
 
 ZONE = "network"
-FIREWALLS = ("blocklist", "iptables")
+FIREWALLS = ("blocklist", "iptables", "nftables", "shadow")
 AUTOBLOCKABLE = ("cyber.port_scan", "cyber.brute_force", "cyber.rogue_device")
 ALWAYS_PROTECTED = "127.0.0.0/8,::1/128"
 
@@ -73,6 +73,7 @@ class Settings:
     block_min_s: float = 30.0
     block_max_s: float = 86400.0
     max_blocks: int = 256
+    report_block_results: bool = True    # publish cyber.block_applied / cyber.block_refused (CONTRACT 3.1)
     never_block: tuple[IPNetwork, ...] = ()
 
     max_sources: int = 2048              # bounded detector state (a spoofed flood cannot grow it)
@@ -113,6 +114,7 @@ class Settings:
             block_min_s=_number(env, "BLOCK_MIN_S", 30.0, 1),
             block_max_s=_number(env, "BLOCK_MAX_S", 86400.0, 1),
             max_blocks=int(_number(env, "MAX_BLOCKS", 256, 1, True)),
+            report_block_results=_flag(env, "CYBER_BLOCK_RESULTS", True),
             never_block=networks,
             max_sources=int(_number(env, "CYBER_MAX_SOURCES", 2048, 1, True)),
             max_events_per_min=int(_number(env, "CYBER_MAX_EVENTS_PER_MIN", 60, 1, True)),

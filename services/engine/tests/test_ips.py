@@ -124,3 +124,25 @@ def test_alerts_recorded_from_the_ips_cyber_service(ips_rig):
     jsonschema.validate(inc["details"], json.loads((REPO / "contract" / "incident_details.schema.json").read_text()))
     assert ips_rig.topic("home/") == []                      # a network attack switches on no light or siren
     assert {p["ip"] for _, p in ips_rig.topic("system/block")} == {"192.168.1.66", "203.0.113.45"}
+
+
+def test_block_results_close_the_loop_in_the_incident(rig):
+    for kind in ("cyber.dos", "cyber.brute_force", "cyber.port_scan"):
+        rig.send("cyber", kind, "network", **ATTACK)
+    assert "block_ip -> 203.0.113.45" in rig.last("security/incidents")["summary"]
+    rig.send("cyber", "cyber.block_applied", "network", ip="203.0.113.45", action="temporary_block",
+             device_id="unknown", reason="cyber_dos", dry_run=False)
+    assert "block confirmed -> 203.0.113.45" in rig.last("security/incidents")["summary"]
+    assert len(rig.topic("system/block")) == 1                              # the confirmation never causes a new block
+    rig.send("cyber", "cyber.block_refused", "network", ip="203.0.113.45", action="temporary_block",
+             device_id="unknown", reason="max_blocks_reached", dry_run=False)
+    assert "block refused -> 203.0.113.45 (max_blocks_reached)" in rig.last("security/incidents")["summary"]
+    assert len({p["id"] for _, p in rig.topic("security/incidents")}) == 1
+
+
+def test_a_result_for_an_ip_we_did_not_block_is_ignored(rig):
+    rig.send("cyber", "cyber.brute_force", "network", **ATTACK)
+    before = len(rig.topic("security/incidents"))
+    rig.send("cyber", "cyber.block_applied", "network", ip="198.51.100.7", action="block_source",
+             device_id="unknown", reason="x", dry_run=True)
+    assert len(rig.topic("security/incidents")) == before

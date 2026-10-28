@@ -31,6 +31,7 @@ cannot block loopback, multicast or link-local addresses, nor anything in `never
   package is installed (`WITH_IPS=1` in the Docker build, set for `engine` in compose). Without it the engine
   works as before and the incident has no details. The chain never runs an action; only `block_ip` blocks.
 - An alert with `direction: outbound` never puts its `src_ip` (our own device) on the block list.
-- `cyber.block_applied` / `cyber.block_refused` have no points, so they are never scored or blocked.
+- `cyber.block_applied` / `cyber.block_refused` have no points, so they are never scored or blocked. For an address the
+  engine asked to block they add a note to the incident ("block confirmed" / "block refused"), which closes the loop.
 - Not done here: storing IPS incidents in the IPS hash-chained database (the API already keeps the incident and
   its details), and using the IPS score to lift the incident level (section 8 of the integration file).

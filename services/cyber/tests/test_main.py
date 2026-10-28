@@ -74,9 +74,10 @@ def test_block_message_is_executed_and_confirmed_on_the_cyber_alert_topic(runnin
            "reason": "cyber.port_scan", "window_seconds": 3600}
     client.callbacks[topics.BLOCK](client, None, types.SimpleNamespace(
         payload=json.dumps(msg).encode()))
-    ((topic, body, qos),) = client.published
+    (topic, body, qos), (_, applied, _) = client.published
     assert topic == "security/alerts/cyber" and qos == 1
     assert body["type"] == "cyber.ip_blocked" and body["data"]["ip"] == "203.0.113.9"
+    assert applied["type"] == "cyber.block_applied" and applied["data"]["dry_run"] is False
     saved = json.loads((env / "bl.json").read_text())
     assert [b["ip"] for b in saved["blocks"]] == ["203.0.113.9"]
 
@@ -85,7 +86,8 @@ def test_a_hostile_block_message_changes_nothing(running):
     client, _ = running
     for payload in (b"\xff\xfe", b"{", b'{"ip": "127.0.0.1"}', b'{"ip": "-j ACCEPT"}', b"[]"):
         client.callbacks[topics.BLOCK](client, None, types.SimpleNamespace(payload=payload))
-    assert client.published == []
+    # only the loopback address was well-formed: it is refused and reported, nothing is ever applied
+    assert [b["type"] for _, b, _ in client.published] == ["cyber.block_refused"]
 
 
 def test_suricata_alerts_become_published_events(running):

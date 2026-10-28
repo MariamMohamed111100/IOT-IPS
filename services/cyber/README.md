@@ -19,7 +19,8 @@ suricata ──► eve.json ──► cyber ──► security/alerts/cyber ─�
 | `cyber.brute_force` | 5+ HTTP `POST /login` (or SSH connects) from one source in 60 s | yes, 10 min |
 | `cyber.rogue_device` | unknown MAC asks for DHCP (or shows in ARP with `ROGUE_ARP=true`) | no (only the engine decides) |
 
-Cyber also publishes `cyber.ip_blocked` / `cyber.ip_unblocked` (not scored). Payloads and the
+Cyber also publishes `cyber.ip_blocked` / `cyber.ip_unblocked` and, for every block decision,
+`cyber.block_applied` or `cyber.block_refused` (contract 3.1, never scored; `CYBER_BLOCK_RESULTS=false` turns them off). Payloads and the
 `data.src_ip` rule are in `docs/CONTRACT.md` section 11.
 
 ## Run the demo
@@ -45,13 +46,28 @@ Suricata stays attached to the old namespace and silently stops seeing traffic.
 Rogue-device detection is OFF until `known_devices.yaml` lists your devices (an empty allowlist
 would flag everything). The demo's DHCP probe only fires if the attacker MAC is not listed.
 
+## Firewall backends (`CYBER_FIREWALL`)
+
+| Value | What it does |
+|---|---|
+| `blocklist` (default) | only the shared state file; the demo victim refuses blocked sources |
+| `shadow` | logs "would block" and reports `dry_run: true`; enforces nothing. Run it first on a real network |
+| `nftables` | table `inet smartsecure_ips`, one set element per block **with a kernel timeout** (it expires even if this service dies); base chains on input, forward and output |
+| `iptables` | chain `SMARTSECURE_BLOCK` hooked into INPUT and FORWARD |
+
+Both real backends rebuild their own table or chain at start (startup flush) and the BlockManager re-applies the
+unexpired blocks from `BLOCKLIST_FILE`. A block can be undone early with `{"action": "unblock", "ip": ...}`.
+**Isolating a device** is a `system/block` command with `"direction": "both"` (drops traffic from and to the
+address; only a private address is accepted).
+
 ## Real IPS on the Pi / gateway
 
-Set `CYBER_FIREWALL=iptables` and `RUN_AS_ROOT=1` for the cyber service, add `cap_add: [NET_ADMIN]`
+Set `CYBER_FIREWALL=nftables` (or `iptables`) and `RUN_AS_ROOT=1` for the cyber service, add `cap_add: [NET_ADMIN]`
 and `network_mode: host` (rules must live in the namespace that carries the traffic). Cyber manages
-only its own chain `SMARTSECURE_BLOCK`, hooked into INPUT and FORWARD. Put the gateway, DNS and your
+only its own table or chain. Put the gateway, DNS and your
 admin laptop in `CYBER_NEVER_BLOCK` first. Never enable this on a machine you are not prepared to
-lock yourself out of.
+lock yourself out of. Test in a network namespace (`unshare -n`) or the lab container, never on your own
+firewall: `tests/test_nftables_shadow.py` does exactly that (root + `nft` needed, otherwise it is skipped).
 
 ## Safety rules (enforced and tested)
 
@@ -59,7 +75,7 @@ lock yourself out of.
 * Never blocked: loopback, multicast, link-local, reserved, `CYBER_NEVER_BLOCK`.
 * Block window clamped (30 s to 24 h), at most `MAX_BLOCKS`, duplicate command ids ignored.
 * At most `CYBER_MAX_EVENTS_PER_MIN` events leave the service; all detector state is bounded.
-* iptables is called with a fixed argument list, no shell.
+* iptables and nft are called with a fixed argument list, no shell; the address is parsed first.
 
 ## Settings (env, all optional)
 

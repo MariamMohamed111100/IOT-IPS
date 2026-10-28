@@ -1,0 +1,79 @@
+setting,feature,agree,matched_rows
+"cut in 10 MB pieces, as the dataset",Header_Length,1.0,3887
+"cut in 10 MB pieces, as the dataset",Protocol Type,1.0,3887
+"cut in 10 MB pieces, as the dataset",Time_To_Live,1.0,3887
+"cut in 10 MB pieces, as the dataset",Rate,1.0,3887
+"cut in 10 MB pieces, as the dataset",fin_flag_number,1.0,3887
+"cut in 10 MB pieces, as the dataset",syn_flag_number,1.0,3887
+"cut in 10 MB pieces, as the dataset",rst_flag_number,1.0,3887
+"cut in 10 MB pieces, as the dataset",psh_flag_number,1.0,3887
+"cut in 10 MB pieces, as the dataset",ack_flag_number,1.0,3887
+"cut in 10 MB pieces, as the dataset",ece_flag_number,1.0,3887
+"cut in 10 MB pieces, as the dataset",cwr_flag_number,1.0,3887
+"cut in 10 MB pieces, as the dataset",ack_count,1.0,3887
+"cut in 10 MB pieces, as the dataset",syn_count,1.0,3887
+"cut in 10 MB pieces, as the dataset",fin_count,1.0,3887
+"cut in 10 MB pieces, as the dataset",rst_count,1.0,3887
+"cut in 10 MB pieces, as the dataset",HTTP,1.0,3887
+"cut in 10 MB pieces, as the dataset",HTTPS,1.0,3887
+"cut in 10 MB pieces, as the dataset",DNS,1.0,3887
+"cut in 10 MB pieces, as the dataset",Telnet,1.0,3887
+"cut in 10 MB pieces, as the dataset",SMTP,1.0,3887
+"cut in 10 MB pieces, as the dataset",SSH,1.0,3887
+"cut in 10 MB pieces, as the dataset",IRC,1.0,3887
+"cut in 10 MB pieces, as the dataset",TCP,1.0,3887
+"cut in 10 MB pieces, as the dataset",UDP,1.0,3887
+"cut in 10 MB pieces, as the dataset",DHCP,1.0,3887
+"cut in 10 MB pieces, as the dataset",ARP,1.0,3887
+"cut in 10 MB pieces, as the dataset",ICMP,1.0,3887
+"cut in 10 MB pieces, as the dataset",IGMP,1.0,3887
+"cut in 10 MB pieces, as the dataset",IPv,1.0,3887
+"cut in 10 MB pieces, as the dataset",LLC,1.0,3887
+"cut in 10 MB pieces, as the dataset",Tot sum,1.0,3887
+"cut in 10 MB pieces, as the dataset",Min,1.0,3887
+"cut in 10 MB pieces, as the dataset",Max,1.0,3887
+"cut in 10 MB pieces, as the dataset",AVG,1.0,3887
+"cut in 10 MB pieces, as the dataset",Std,1.0,3887
+"cut in 10 MB pieces, as the dataset",Tot size,1.0,3887
+"cut in 10 MB pieces, as the dataset",IAT,1.0,3887
+"cut in 10 MB pieces, as the dataset",Number,1.0,3887
+"cut in 10 MB pieces, as the dataset",Variance,1.0,3887
+one stream (live),Header_Length,0.9959,2708
+one stream (live),Protocol Type,0.9996,2708
+one stream (live),Time_To_Live,0.993,2708
+one stream (live),Rate,0.9856,2708
+one stream (live),fin_flag_number,1.0,2708
+one stream (live),syn_flag_number,1.0,2708
+one stream (live),rst_flag_number,1.0,2708
+one stream (live),psh_flag_number,0.9967,2708
+one stream (live),ack_flag_number,1.0,2708
+one stream (live),ece_flag_number,0.9996,2708
+one stream (live),cwr_flag_number,0.9996,2708
+one stream (live),ack_count,1.0,2708
+one stream (live),syn_count,1.0,2708
+one stream (live),fin_count,1.0,2708
+one stream (live),rst_count,1.0,2708
+one stream (live),HTTP,0.9978,2708
+one stream (live),HTTPS,0.9959,2708
+one stream (live),DNS,0.9974,2708
+one stream (live),Telnet,1.0,2708
+one stream (live),SMTP,1.0,2708
+one stream (live),SSH,1.0,2708
+one stream (live),IRC,1.0,2708
+one stream (live),TCP,1.0,2708
+one stream (live),UDP,0.9978,2708
+one stream (live),DHCP,1.0,2708
+one stream (live),ARP,0.997,2708
+one stream (live),ICMP,0.9982,2708
+one stream (live),IGMP,1.0,2708
+one stream (live),IPv,0.997,2708
+one stream (live),LLC,0.997,2708
+one stream (live),Tot sum,1.0,2708
+one stream (live),Min,1.0,2708
+one stream (live),Max,1.0,2708
+one stream (live),AVG,1.0,2708
+one stream (live),Std,0.997,2708
+one stream (live),Tot size,1.0,2708
+one stream (live),IAT,0.9852,2708
+one stream (live),Number,1.0,2708
+one stream (live),Variance,0.997,2708

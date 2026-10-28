@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ids-ml"
+version = "0.1.0"
+description = "ML detector for the IoT-IPS: packets -> CICIoT2023 features -> BENIGN/ATTACK (Person 2, Task 6)"
+requires-python = ">=3.11"
+# Exact pins (see services/api/requirements.txt); the reproducible lock is
+# requirements/ml-py312.txt and the CI installs use it with --require-hashes.
+dependencies = ["pandas==3.1.0", "numpy==2.5.4", "scikit-learn==1.9.1", "joblib==1.6.0", "dpkt==1.9.8"]
+
+[tool.setuptools.packages.find]
+include = ["ids_ml*"]
+
+[tool.setuptools.package-data]
+ids_ml = ["models/*.joblib", "models/MODELS.sha256"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# The one test that replays the dataset's own 27 MB capture (pcap/CommandInjection.pcap,
+# not in git) opts in with `pytest -m dataset` instead of being skipped, so a normal run
+# is fully green.
+markers = ["dataset: needs the external CICIoT2023 capture under services/ml/pcap/"]
+addopts = "-q -m 'not dataset'"

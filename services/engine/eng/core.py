@@ -163,7 +163,23 @@ class Engine:
                 mine = event if event.zone == zone else None
                 self._respond(ep, level if inc else "low", mine,
                               inc.id if inc else f"event:{event.type}")
+            self._note_block_result(event)
             self._publish_state(now)
+
+    def _note_block_result(self, event: Event) -> None:
+        """Closes the loop: cyber says whether a block we asked for really happened (CONTRACT 3.1)."""
+        if event.type not in ("cyber.block_applied", "cyber.block_refused"):
+            return
+        ip = event.data.get("ip")
+        if ip not in self.attackers:
+            return
+        if event.type == "cyber.block_applied":
+            text = f"block confirmed -> {ip}" + (" (dry run, nothing enforced)" if event.data.get("dry_run") else "")
+        else:
+            text = f"block refused -> {ip} ({str(event.data.get('reason', 'unknown'))[:40]})"
+        for ep in self.episodes.values():
+            if ep.incident is not None and self._once(ep, "block_result", event.type, ip):
+                self._note(ep, "block_ip", text, record=False)
 
     def _remember_details(self, event: Event) -> None:
         """Keep the IPS details of an alert (sent by the adapter, or built here) until its incident is published."""
@@ -339,7 +355,7 @@ class Engine:
     def _publish_incident(self, ep: Episode, inc: Incident, now: float) -> None:
         level = self.policy.level_for(inc.peak)
         inc.details = self._incident_details(inc)
-        state = (inc.peak, tuple(inc.event_ids), tuple(inc.actions), inc.closed,
+        state = (inc.peak, tuple(inc.event_ids), tuple(inc.actions), inc.closed, len(inc.notes),
                  json.dumps(inc.details, sort_keys=True) if inc.details else None)
         if state == inc.published:
             return

@@ -18,8 +18,10 @@ class FirewallError(RuntimeError):
 class Firewall(Protocol):
     name: str
 
+    dry_run: bool
+
     def setup(self) -> None: ...
-    def block(self, ip: str) -> None: ...
+    def block(self, ip: str, seconds: float | None = None, both: bool = False) -> None: ...
     def unblock(self, ip: str) -> None: ...
 
 
@@ -28,6 +30,7 @@ class BlocklistFirewall:
     (services/cyber/demo/smartlock reads it and refuses blocked sources). Nothing to execute."""
 
     name = "blocklist"
+    dry_run = False
 
     def __init__(self) -> None:
         self.blocked: set[str] = set()
@@ -35,7 +38,7 @@ class BlocklistFirewall:
     def setup(self) -> None:
         self.blocked.clear()
 
-    def block(self, ip: str) -> None:
+    def block(self, ip: str, seconds: float | None = None, both: bool = False) -> None:
         self.blocked.add(ip)
 
     def unblock(self, ip: str) -> None:
@@ -62,6 +65,7 @@ class IptablesFirewall:
     """
 
     name = "iptables"
+    dry_run = False
 
     def __init__(self, run: Runner = run_command) -> None:
         self.run = run
@@ -92,17 +96,23 @@ class IptablesFirewall:
             if self.run([binary, "-C", hook, "-j", CHAIN])[0] != 0:
                 self._must([binary, "-I", hook, "1", "-j", CHAIN])
 
-    def block(self, ip: str) -> None:
+    def block(self, ip: str, seconds: float | None = None, both: bool = False) -> None:
         binary, addr = self._checked(ip)
         if self.run([binary, "-C", CHAIN, "-s", addr, "-j", "DROP"])[0] != 0:
             self._must([binary, "-A", CHAIN, "-s", addr, "-j", "DROP"])
+        if both and self.run([binary, "-C", CHAIN, "-d", addr, "-j", "DROP"])[0] != 0:
+            self._must([binary, "-A", CHAIN, "-d", addr, "-j", "DROP"])      # isolation: nothing goes TO it either
 
     def unblock(self, ip: str) -> None:
         binary, addr = self._checked(ip)
         for _ in range(10):                                   # duplicates are possible: remove all
-            if self.run([binary, "-C", CHAIN, "-s", addr, "-j", "DROP"])[0] != 0:
+            gone = True
+            for flag in ("-s", "-d"):
+                if self.run([binary, "-C", CHAIN, flag, addr, "-j", "DROP"])[0] == 0:
+                    self._must([binary, "-D", CHAIN, flag, addr, "-j", "DROP"])
+                    gone = False
+            if gone:
                 return
-            self._must([binary, "-D", CHAIN, "-s", addr, "-j", "DROP"])
 
     def _must(self, cmd: list[str]) -> None:
         rc, out = self.run(cmd)
@@ -110,9 +120,93 @@ class IptablesFirewall:
             raise FirewallError(f"{' '.join(cmd)}: {out or 'exit ' + str(rc)}")
 
 
+TABLE = "smartsecure_ips"
+
+
+class NftablesFirewall:
+    """Drops blocked sources with nftables. Every block is a set element WITH A TIMEOUT, so the kernel removes
+    it by itself even if this service dies (the BlockManager still unblocks earlier on request).
+
+    One table of our own (`inet smartsecure_ips`), deleted and rebuilt at start (startup flush). It has base
+    chains on input, forward and output with priority -10 (before other rules). A plain block drops traffic FROM
+    the address; isolation (`both=True`) also drops traffic TO it, i.e. both directions of a device.
+    Needs root + NET_ADMIN in the network namespace that carries the traffic.
+    """
+
+    name = "nftables"
+    dry_run = False
+    SETS = ("src4", "src6", "iso4", "iso6")
+
+    def __init__(self, run: Runner = run_command) -> None:
+        self.run = run
+
+    @staticmethod
+    def _checked(ip: str) -> tuple[int, str]:
+        try:
+            addr = ipaddress.ip_address(ip)
+        except ValueError:
+            raise FirewallError(f"not an IP address: {ip!r}") from None
+        return addr.version, str(addr)
+
+    def _must(self, cmd: list[str]) -> None:
+        rc, out = self.run(cmd)
+        if rc != 0:
+            raise FirewallError(f"{' '.join(cmd)}: {out or 'exit ' + str(rc)}")
+
+    def setup(self) -> None:
+        self.run(["nft", "delete", "table", "inet", TABLE])          # startup flush; fails when absent: fine
+        self._must(["nft", "add", "table", "inet", TABLE])
+        for name in self.SETS:
+            kind = "ipv6_addr" if name.endswith("6") else "ipv4_addr"
+            self._must(["nft", "add", "set", "inet", TABLE, name, "{", "type", kind, ";", "flags", "timeout", ";", "}"])
+        rules = {
+            "input": ["ip saddr @src4 drop", "ip6 saddr @src6 drop", "ip saddr @iso4 drop", "ip6 saddr @iso6 drop"],
+            "forward": ["ip saddr @src4 drop", "ip6 saddr @src6 drop", "ip saddr @iso4 drop", "ip6 saddr @iso6 drop",
+                        "ip daddr @iso4 drop", "ip6 daddr @iso6 drop"],
+            "output": ["ip daddr @iso4 drop", "ip6 daddr @iso6 drop"],
+        }
+        for hook, items in rules.items():
+            self._must(["nft", "add", "chain", "inet", TABLE, hook, "{", "type", "filter", "hook", hook,
+                        "priority", "-10", ";", "policy", "accept", ";", "}"])
+            for rule in items:
+                self._must(["nft", "add", "rule", "inet", TABLE, hook, *rule.split()])
+
+    def block(self, ip: str, seconds: float | None = None, both: bool = False) -> None:
+        version, addr = self._checked(ip)
+        name = ("iso" if both else "src") + str(version)
+        self.unblock(ip)                                            # re-adding must also renew the timeout
+        element = [addr] if seconds is None else [addr, "timeout", "%ds" % max(1, int(seconds + 0.999))]
+        self._must(["nft", "add", "element", "inet", TABLE, name, "{", *element, "}"])
+
+    def unblock(self, ip: str) -> None:
+        version, addr = self._checked(ip)
+        for prefix in ("src", "iso"):                               # a missing element is not an error
+            self.run(["nft", "delete", "element", "inet", TABLE, prefix + str(version), "{", addr, "}"])
+
+
+class ShadowFirewall:
+    """Shadow mode: logs what it WOULD block and enforces nothing. The events it causes say dry_run = true."""
+
+    name = "shadow"
+    dry_run = True
+
+    def setup(self) -> None:
+        log.warning("SHADOW MODE: blocks are logged and reported but nothing is enforced")
+
+    def block(self, ip: str, seconds: float | None = None, both: bool = False) -> None:
+        log.warning("shadow: would %s %s for %s s", "isolate" if both else "block", ip, seconds)
+
+    def unblock(self, ip: str) -> None:
+        log.warning("shadow: would unblock %s", ip)
+
+
 def make_firewall(name: str) -> Firewall:
     if name == "iptables":
         return IptablesFirewall()
+    if name == "nftables":
+        return NftablesFirewall()
+    if name == "shadow":
+        return ShadowFirewall()
     if name == "blocklist":
         return BlocklistFirewall()
     raise ValueError(f"unknown firewall backend {name!r}")

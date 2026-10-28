@@ -1,0 +1,91 @@
+{
+  "models": {
+    "Random Forest": {
+      "precision": 0.9360843238394259,
+      "recall": 0.8348,
+      "f1": 0.8825457236494344,
+      "fpr": 0.057,
+      "fnr": 0.1652,
+      "tn": 18860,
+      "fp": 1140,
+      "fn": 3304,
+      "tp": 16696,
+      "seconds": 12.5
+    },
+    "Gradient Boosting": {
+      "precision": 0.9352671071788554,
+      "recall": 0.8351,
+      "f1": 0.8823498335886735,
+      "fpr": 0.0578,
+      "fnr": 0.1649,
+      "tn": 18844,
+      "fp": 1156,
+      "fn": 3298,
+      "tp": 16702,
+      "seconds": 22.9
+    }
+  },
+  "chosen": "Random Forest",
+  "final": {
+    "precision": 0.9360843238394259,
+    "recall": 0.8348,
+    "f1": 0.8825457236494344,
+    "fpr": 0.057,
+    "fnr": 0.1652,
+    "tn": 18860,
+    "fp": 1140,
+    "fn": 3304,
+    "tp": 16696,
+    "seconds": 12.5
+  },
+  "without_iat": {
+    "precision": 0.9366626760161907,
+    "recall": 0.8215,
+    "f1": 0.8753096614368291,
+    "fpr": 0.05555,
+    "fnr": 0.1785,
+    "tn": 18889,
+    "fp": 1111,
+    "fn": 3570,
+    "tp": 16430
+  },
+  "per_group": {
+    "Benign": 0.943,
+    "BruteForce": 0.6680720582598697,
+    "DDoS": 0.9981024667931688,
+    "DoS": 0.9986446191379778,
+    "Mirai": 0.9993686868686869,
+    "Recon": 0.50121984277582,
+    "Spoofing": 0.9259962049335864,
+    "Web": 0.70313986679353
+  },
+  "unseen_group_flagged": {
+    "BruteForce": 0.40436949022614027,
+    "DDoS": 0.9972892382759555,
+    "DoS": 0.9967470859311467,
+    "Mirai": 0.9993686868686869,
+    "Recon": 0.2965573326104635,
+    "Spoofing": 0.5811873136351314,
+    "Web": 0.5356803044719315
+  },
+  "attack_type_accuracy": 0.7947,
+  "attack_type_macro_f1": 0.7901501606165605,
+  "features": [
+    "Max",
+    "Variance",
+    "AVG",
+    "HTTPS",
+    "Time_To_Live",
+    "IAT",
+    "ack_flag_number",
+    "Header_Length",
+    "Min",
+    "psh_flag_number",
+    "TCP",
+    "UDP",
+    "DNS",
+    "syn_flag_number",
+    "HTTP",
+    "SSH"
+  ]
+}

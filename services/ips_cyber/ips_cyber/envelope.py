@@ -29,6 +29,11 @@ ATTACK_EVENT_TYPES = {
     "unexpected_protocol": "cyber.unexpected_traffic",
     "unexpected_protocol_port": "cyber.unexpected_traffic",
     "unexpected_traffic": "cyber.unexpected_traffic",
+    # the ML model's attack groups (services/ml) onto the four IPS event types of the contract (3.1):
+    "recon": "cyber.port_scan", "reconnaissance": "cyber.port_scan",
+    "bruteforce": "cyber.brute_force",
+    "ddos": "cyber.dos", "mirai": "cyber.dos",                       # floods, as the engine scores them (40)
+    "spoofing": "cyber.unexpected_traffic", "web": "cyber.unexpected_traffic", "web_based": "cyber.unexpected_traffic",
 }
 
 

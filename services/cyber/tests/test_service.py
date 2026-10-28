@@ -34,7 +34,7 @@ def test_port_scan_end_to_end_is_one_network_event(service, sink, clock):
 
 def test_a_confirmed_scan_is_blocked_and_confirmed_in_the_same_flow(service, sink, clock):
     feed_scan(service, clock)
-    assert sink.types() == ["cyber.port_scan", "cyber.ip_blocked"]
+    assert sink.types() == ["cyber.port_scan", "cyber.ip_blocked", "cyber.block_applied"]
     blocked = sink.events[1].data
     assert blocked["ip"] == "192.168.1.15" and blocked["blocked_by"] == "cyber"
     assert blocked["reason"] == "cyber.port_scan" and blocked["window_s"] == 600
@@ -54,7 +54,7 @@ def test_the_engines_block_command_for_an_already_blocked_ip_adds_no_noise(servi
 def test_the_engines_block_command_for_a_fresh_ip_is_executed(service, sink):
     cmd = {"id": "9f" * 16, "ip": "203.0.113.9", "reason": "cyber.rogue_device"}
     assert service.handle_block(json.dumps(cmd))
-    assert sink.types() == ["cyber.ip_blocked"] and sink.events[0].data["blocked_by"] == "engine"
+    assert sink.types() == ["cyber.ip_blocked", "cyber.block_applied"] and sink.events[0].data["blocked_by"] == "engine"
 
 
 def test_http_brute_force_end_to_end(service, sink, clock):
@@ -110,7 +110,8 @@ def test_never_block_networks_are_reported_but_not_blocked(settings, sink, clock
     svc = CyberService(replace(settings, never_block=never), sink, clock=clock)
     svc.restore()
     feed_scan(svc, clock)
-    assert sink.types() == ["cyber.port_scan"] and svc.blocks.blocks == {}
+    assert sink.types() == ["cyber.port_scan", "cyber.block_refused"] and svc.blocks.blocks == {}
+    assert sink.events[1].data["reason"] == "source_never_block"
 
 
 def test_autoblock_can_be_switched_off(settings, sink, clock):
@@ -183,11 +184,13 @@ def test_every_event_matches_the_envelope_and_the_contract_registry(service, sin
     clock.advance(10**5)
     service.tick(clock())
     assert set(sink.types()) == {"cyber.port_scan", "cyber.brute_force", "cyber.rogue_device",
-                                 "cyber.ip_blocked", "cyber.ip_unblocked"}
+                                 "cyber.ip_blocked", "cyber.ip_unblocked", "cyber.block_applied"}
     for ev in sink.events:
         doc = json.loads(ev.model_dump_json())
         assert set(doc) == ENVELOPE and doc["zone"] == "network" and doc["data"]
         assert re.match(r"^[a-z0-9_]+\.[a-z0-9_]+$", doc["type"])
+        if ev.type == "cyber.block_applied":                # the IPS block result: checked by its own schema below
+            continue
         for key in required[ev.type]:
             assert key in doc["data"], f"{ev.type} is missing required data.{key}"
         # the engine reads data.src_ip to pick the IP to block: only attackers may carry it
@@ -210,3 +213,18 @@ def test_the_rules_file_defines_exactly_the_sids_the_service_reads():
     for line in rules.splitlines():
         if line.startswith("alert"):
             assert line.count("(") == 1 and line.rstrip().endswith(";)")
+
+
+def test_block_results_follow_the_contract_schema(service, sink, clock):
+    import jsonschema
+    schema = json.loads((REPO / "contract" / "ips_block_data.schema.json").read_text())
+    feed_scan(service, clock)
+    service.handle_block(json.dumps({"id": "cmd-12345", "ip": "203.0.113.9", "device_id": "cam_001"}))
+    service.handle_block(json.dumps({"id": "cmd-22222", "ip": "127.0.0.1"}))
+    results = [e for e in sink.events if e.type in ("cyber.block_applied", "cyber.block_refused")]
+    assert [e.type for e in results] == ["cyber.block_applied", "cyber.block_applied", "cyber.block_refused"]
+    for ev in results:
+        jsonschema.validate(ev.data, schema)
+        assert "src_ip" not in ev.data and ev.data["dry_run"] is False      # never scored, never re-blocked
+    assert results[1].data["device_id"] == "cam_001" and results[1].data["action"] == "block_source"
+    assert results[2].data["reason"] == "source_never_block"

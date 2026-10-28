@@ -64,8 +64,11 @@ def export_yolo() -> None:
         subprocess.run(
             ["docker", "run", "--rm", "-v", f"{DEST}:/m", "-w", "/m", "python:3.12-slim",
              "sh", "-c",
-             "pip install -q ultralytics onnx && yolo export model=yolov8n.pt format=onnx "
-             "opset=12 imgsz=640"], check=True)
+             # opencv-python (pulled in by ultralytics) needs libGL/libxcb even for a
+             # headless export, and a bare python:3.12-slim image has neither.
+             "apt-get update -qq && apt-get install -y -qq libgl1 libglib2.0-0 libxcb1 > /dev/null "
+             "&& pip install -q ultralytics onnx "
+             "&& yolo export model=yolov8n.pt format=onnx opset=12 imgsz=640"], check=True)
 
 
 def main() -> None:

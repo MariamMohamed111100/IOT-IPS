@@ -1,0 +1,9 @@
+# Exact pins, aligned with ips/scripts/data/requirements.txt and the "data" extra of
+# ips/pyproject.toml (lock: requirements/ml-py312.txt). See the note in
+# services/api/requirements.txt for why these are exact.
+pandas==3.1.0
+numpy==2.5.4
+scikit-learn==1.9.1
+joblib==1.6.0
+dpkt==1.9.8
+pytest==9.2.0
