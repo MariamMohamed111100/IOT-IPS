@@ -8,7 +8,7 @@ python scripts/ips/seed_ips_devices.py                        # registers the 6 
 python scripts/ips/fake_ips_publisher.py --now                # 7 sample detections + dry-run block results
 python scripts/ips/ips_e2e_check.py                           # PASS/FAIL checks through the API
 python scripts/ips/test_ips.py                                # offline unit tests
-cd services/frontend/test && npm install && npm test         # dashboard test (real API fixtures)
+cd services/frontend/test && npm ci && npm test              # dashboard test (real API fixtures)
 ```
 Open the dashboard (http://localhost:8080), then Incidents. The engine opens one incident per zone (all IPS events are in zone `network`) and adds points per event type (`config/risk_scores.yaml`).
 

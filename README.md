@@ -202,7 +202,7 @@ The `ips/` directory is a fully self-contained package. You can use it independe
 
 ```bash
 cd ips
-pip install -e ".[dev]"
+pip install -e ".[dev]"        # or: pip install -r ../requirements/ips-dev-3.12.txt --require-hashes
 
 # Run unit + integration tests
 python -m pytest
@@ -306,6 +306,8 @@ Successful execution confirms that `ips_cyber` publishes scored `cyber.*` alerts
 - **API Exposure**: Swagger/OpenAPI docs at `/docs` are enabled for development only. In production, set `API_DOCS_ENABLED=false`.
 - **Network Hardening**: MQTT runs with TLS + per-user ACLs. Suricata is integrated for network inspection with IP blocking capabilities.
 - **Integrity**: Incidents are written to a hash-chained store to detect tampering.
+- **Supply chain**: every GitHub Action is pinned to a commit SHA, every Docker base image to a digest, and every `pip install` runs from a hash-pinned lock (`requirements/*.txt`, `docker/locks/*.txt`) with `--require-hashes`. Regenerate the locks with `scripts/lock-requirements.sh`.
+- **Vulnerability reporting**: see [`SECURITY.md`](SECURITY.md).
 
 ## Documentation
 
@@ -328,4 +330,4 @@ Successful execution confirms that `ips_cyber` publishes scored `cyber.*` alerts
 
 ## License
 
-This project was developed as a **Graduation Project** for academic purposes. All rights reserved by the project team unless otherwise stated.
+Released under the [MIT License](LICENSE). This project was developed as a **Graduation Project** for academic purposes.

@@ -1,0 +1,36 @@
+# CodeQL advanced setup (replaces GitHub's "Default setup", which cannot coexist
+# with a workflow). Scoring: OpenSSF Scorecard's SAST check only detects a SAST
+# tool through a workflow that runs github/codeql-action.
+name: CodeQL
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      actions: read          # CodeQL telemetry reads the workflow run
+      contents: read
+      security-events: write # upload the SARIF results to code scanning
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["python", "javascript-typescript"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        with:
+          languages: ${{ matrix.language }}
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        with:
+          category: "/language:${{ matrix.language }}"

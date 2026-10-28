@@ -1,7 +1,9 @@
 # Everything needed to run the pipeline, the demo and the test suite (Python 3.10 or newer).
 # pip install -r requirements.txt   (or: pip install -e ".[dev]")
-pyyaml>=6.0
-pytest>=7
+# Exact pins: see the note in services/api/requirements.txt (locks: requirements/ips-dev-*.txt).
+pyyaml==6.0.3
+pytest==9.2.0
+jsonschema==4.26.0
 
 # Only for rebuilding the dataset files in data/ (scripts/data/*, needs Python 3.11 or newer):
-#   pip install -e ".[data]"   or   pip install pandas numpy
+#   pip install -e ".[data]"   or   pip install pandas==3.1.0 numpy==2.5.4

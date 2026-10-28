@@ -14,14 +14,16 @@ jobs:
       run:
         working-directory: ips
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-          cache-dependency-path: ips/pyproject.toml
-      - name: Install
-        run: pip install -e ".[dev]"
+          cache-dependency-path: requirements/ips-dev-${{ matrix.python-version }}.txt
+      - name: Install (hash-pinned lock, see scripts/lock-requirements.sh)
+        run: |
+          pip install --require-hashes -r ../requirements/ips-dev-${{ matrix.python-version }}.txt
+          pip install --no-deps -e .
       - name: Unit tests
         run: python -m pytest
       - name: Demo (must use the real rule-based detector, never the placeholder)
@@ -50,38 +52,41 @@ jobs:
       - name: Dataset checks (needs Python 3.11+)
         if: matrix.python-version == '3.12'
         run: |
-          pip install -e ".[data]"
+          pip install --require-hashes -r ../requirements/ips-data-py312.txt
           python scripts/data/check_data.py
       - name: Link scripts (adapter, seed, publisher, notifier)
         working-directory: .
-        run: |
-          pip install jsonschema
-          python scripts/ips/test_ips.py
+        run: python scripts/ips/test_ips.py
   dashboard:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: services/frontend/test/package-lock.json
       - name: dashboard test (real API fixtures)
         working-directory: services/frontend/test
-        run: npm install && npm test
+        # `npm ci` installs exactly the locked tree and verifies every hash.
+        run: npm ci && npm test
   ips-cyber:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
-      - name: Install
+          cache: pip
+          cache-dependency-path: requirements/ips-cyber-py312.txt
+      - name: Install (hash-pinned lock, see scripts/lock-requirements.sh)
         run: |
-          pip install -e "ips[dev]"
-          pip install -r services/ips_cyber/requirements.txt jsonschema paho-mqtt pytest
+          pip install --require-hashes -r requirements/ips-cyber-py312.txt
+          pip install --no-deps -e ips
       - name: Engine tests with the IPS chain (details, outbound rule, recorded ips_cyber alerts)
         run: |
-          pip install -e libs/common pyyaml
+          pip install --no-deps -e libs/common
           cd services/engine && python -m pytest -q
       - name: Cyber service tests (flow engine, envelopes, contract schema)
         working-directory: services/ips_cyber

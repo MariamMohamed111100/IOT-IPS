@@ -1,5 +1,6 @@
 # smartsecure-common is installed automatically. OpenCV does video, YOLO (via its DNN module) and
 # faces (YuNet + SFace), so the image needs no PyTorch.
-opencv-python-headless>=4.10,<4.14
-numpy>=1.26,<3
-pyyaml>=6.0.3
+# Exact pins: see the note in services/api/requirements.txt (locks: docker/locks/vision.txt).
+opencv-python-headless==4.13.0.92
+numpy==2.5.4
+pyyaml==6.0.3

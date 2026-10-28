@@ -1,3 +1,4 @@
 # smartsecure-common (paho-mqtt, pydantic) is installed by the Dockerfile; the IPS package is installed from ips/
-pyyaml>=6.0
-scapy>=2.5          # PCAP and live capture (the CSV replay source does not need it)
+# Exact pins (lock: requirements/ips-cyber-py312.txt).
+pyyaml==6.0.3
+scapy==2.8.0        # PCAP and live capture (the CSV replay source does not need it); >=2.7.0 fixes GHSA-cq46-m9x9-j8w2

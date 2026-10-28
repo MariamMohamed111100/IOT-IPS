@@ -12,10 +12,19 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with: {python-version: "3.12", cache: pip}
-      - run: pip install ruff pytest jsonschema pyyaml gpiozero httpx -r services/api/requirements.txt -r services/vision/requirements.txt -r services/engine/requirements.txt -r services/cyber/requirements.txt -e libs/common
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/ci-py312.txt
+      # Every install uses a hash-pinned lock file (pip --require-hashes), so the
+      # build is reproducible and OpenSSF Scorecard's Pinned-Dependencies check
+      # passes. Regenerate the locks with scripts/lock-requirements.sh.
+      - name: Install (hash-pinned lock)
+        run: |
+          pip install --require-hashes -r requirements/ci-py312.txt
+          pip install --no-deps -e libs/common
       - run: ruff check .
       - run: pytest libs/common/tests services/simulators/tests -q
       - name: "API tests (separate run, service modules share top-level names)"
@@ -30,7 +39,7 @@ jobs:
         run: python scripts/validate_contract.py
       - name: Dependency vulnerability audit (pip-audit)
         run: |
-          pip install pip-audit
+          pip install --require-hashes -r requirements/audit-py312.txt
           pip-audit -r services/api/requirements.txt -r services/simulators/requirements.txt \
             -r services/vision/requirements.txt -r services/engine/requirements.txt -r services/cyber/requirements.txt
 
@@ -38,7 +47,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: {fetch-depth: 0}
       - name: Gitleaks (secret scan)
         run: |
@@ -51,7 +60,7 @@ jobs:
     needs: [lint-test, security]
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Setup (secrets, certs, MQTT users)
         run: ./scripts/setup.sh
       - run: docker compose config -q
