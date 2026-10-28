@@ -1,3 +1,6 @@
-pandas==3.0.6
+# Only for rebuilding the dataset files in data/ (needs Python 3.11 or newer).
+# Exact pins, aligned with the "data" extra in ips/pyproject.toml and with
+# requirements/ips-data-py312.txt.
+pandas==3.1.0
 scikit-learn==1.9.1
-numpy==2.5.3
+numpy==2.5.4
