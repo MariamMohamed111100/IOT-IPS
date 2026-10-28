@@ -47,7 +47,7 @@ The order of the points follows the IPS attack-severity order (port scan, unexpe
 | `device_id` | `device_id` | backend id (section 4) |
 | `duration` (text such as "4 minutes") | `duration` | number of seconds; 0 when missing |
 | `unique_dst_ports`, `unique_dst_ips` | `port_count`, `hosts_probed` | port scan only |
-| IPS level | `severity_hint` | lowercase |
+| Detector confidence | `severity_hint` | lowercase (`low`/`medium`/`high`; the level itself is the engine's) |
 | technical and executive report | `details.reports.technical`, `details.reports.executive` | text, 12 KB each at most |
 
 Extra fields of the reused types: `cyber.port_scan` sends `ports: []` (the IPS counts ports, it does not list them) and `port_count`, `hosts_probed`. `cyber.brute_force` sends `target` (22 is `ssh`, 23 `telnet`, 554 `rtsp`, any other port its number as text), `attempts` = `failed_attempts` and `window_s` = `duration`.
@@ -134,12 +134,18 @@ The function never decreases, and every IPS level lands in the published level o
 | Simulators | none; `plug` and `industrial_sensor` have no simulator | - |
 | Device registration | `scripts/ips/seed_ips_devices.py` reads `config/ips_devices.json` and registers the six devices through `POST /devices` (they then appear in the dashboard) | Person 7 |
 
-## 8. Out of this change
+## 8. Two decision makers (deliberate)
+
+`iot_ips` policy stays **dry-run**. Real `system/block` messages come from the **engine** (zone points 0/31/61/91) and from **cyber autoblock**. `ips_level` on an incident can therefore differ from `incident.level`: that is the documented scale conversion, not a race. Do not wire IPS policy to iptables while the engine also emits `block_ip`, or a house will get two independent firewall opinions.
+
+`services/ips_cyber` is a Compose service. It publishes as MQTT user `cyber` onto `security/alerts/cyber`, then idles after the sample CSV so `restart: unless-stopped` does not replay. For live capture set `IPS_CYBER_SOURCE=live` and `IPS_CYBER_IFACE`.
+
+## 9. Out of this change
 
 - The engine's zone score ignores the IPS score. If the IPS judgement should lift the incident level (for example `max(points, ips_score)`), the engine owner decides that as a separate change.
 - Real firewall enforcement from the IPS (today: dry run).
 
-## 9. Sign-off
+## 10. Sign-off
 
 | Owner | Confirms | Signed |
 |---|---|---|

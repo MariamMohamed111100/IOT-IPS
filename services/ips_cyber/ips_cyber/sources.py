@@ -4,24 +4,47 @@ Every source yields (event_ref, event_dict). event_ref is a stable text that ide
 (file row or flow window), so the alert id is the same every time the same input is replayed.
 """
 import csv
+import logging
 import os
 
 from .flow_engine import FlowEngine
 
+log = logging.getLogger("ips_cyber.sources")
 
-def csv_source(path):
+
+def csv_source(path, max_field_bytes=1_000_000):
     """Replay events from a CSV (Person 2's sample_events.csv): one event per row.
-    Empty cells are dropped; every other column is passed through unchanged (as text)."""
-    with open(path, newline="", encoding="utf-8-sig") as f:
-        for n, row in enumerate(csv.DictReader(f), start=2):      # row 1 is the header
-            event = {}
-            for key, value in row.items():
-                if key is None:                                    # row with more cells than headers
+    Empty cells are dropped; every other column is passed through unchanged (as text).
+
+    A row that breaks the CSV parser (an unterminated quote, an oversized field) is counted and
+    skipped: it must not abort a whole replay, and `csv.Error` is not a `ValueError` so the
+    caller's guard would not have caught it.
+    """
+    previous_limit = csv.field_size_limit(max_field_bytes)
+    try:
+        with open(path, newline="", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            n = 1
+            while True:
+                try:
+                    row = next(reader)
+                except StopIteration:
+                    return
+                except csv.Error as exc:
+                    log.warning("%s: skipping unreadable row %d: %s", path, n + 1, exc)
+                    n += 1
                     continue
-                value = (value or "").strip()
-                if value != "":
-                    event[key.strip()] = value
-            yield "row%d" % n, event
+                n += 1
+                event = {}
+                for key, value in row.items():
+                    if key is None:                                    # more cells than headers
+                        continue
+                    value = (value or "").strip()
+                    if value != "":
+                        event[key.strip()] = value
+                yield "row%d" % n, event
+    finally:
+        csv.field_size_limit(previous_limit)
 
 
 def pcap_source(path, devices, flow_config=None):

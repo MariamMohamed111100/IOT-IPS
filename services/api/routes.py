@@ -23,7 +23,7 @@ from fastapi import (
     WebSocketDisconnect,
     status,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -32,7 +32,7 @@ import audit
 from database import get_db
 from models import AuditLog, Device, Incident, RiskState, Zone
 from models import Event as EventRow
-from security import decode_token, require_token
+from security import decode_token, require_operator, require_token
 from smartsecure_common import topics
 from storage import open_json, open_text
 from websocket_manager import manager
@@ -43,9 +43,9 @@ router = APIRouter(dependencies=[Depends(require_token)])   # every HTTP route n
 ws_router = APIRouter()                                     # WebSocket authenticates itself
 
 Db = Annotated[Session, Depends(get_db)]
-Claims = Annotated[dict, Depends(require_token)]
 Token = r"^[a-z0-9_]+$"
 Severity = Literal["info", "low", "medium", "high", "critical"]
+MAX_STATE_BYTES = 4096          # a device's state is a few flags, not a payload store
 
 
 def _iso(dt: datetime) -> str:
@@ -80,11 +80,24 @@ async def _close_when_token_expires(websocket: WebSocket, expires_at: float) -> 
         logger.debug("socket already closed when its token expired")
 
 
+def _ws_token(websocket: WebSocket) -> tuple[str | None, str | None]:
+    """JWT from ``Sec-WebSocket-Protocol: bearer.<jwt>``.
+
+    Only the subprotocol is accepted: a query-string token leaks through Referer and logs, and a
+    cookie would make the socket reachable from another origin (cross-site WebSocket hijacking,
+    since a cookie is attached by the browser and the server cannot see who opened the socket).
+    """
+    header = websocket.headers.get("sec-websocket-protocol") or ""
+    for item in (p.strip() for p in header.split(",") if p.strip()):
+        if item.startswith("bearer."):
+            return item[7:], item
+    return None, None
+
+
 @ws_router.websocket("/ws/events")
 async def websocket_events(websocket: WebSocket):
-    """Live feed. Authenticate with ``?token=<JWT>`` (browsers cannot set WS headers).
-    The reverse proxy does not access-log /ws/ so the token never lands in a log file."""
-    token = websocket.query_params.get("token")
+    """Live feed. Clients send the JWT as ``Sec-WebSocket-Protocol: bearer.<jwt>``."""
+    token, subprotocol = _ws_token(websocket)
     if not token:
         await websocket.close(code=1008)
         return
@@ -97,7 +110,7 @@ async def websocket_events(websocket: WebSocket):
         await websocket.close(code=1013)       # "try again later"
         return
 
-    await manager.connect(websocket)
+    await manager.connect(websocket, subprotocol=subprotocol)
     # The read loop stays as simple as possible and is never cancelled mid-receive;
     # a separate timer task closes the socket at token expiry, which ends the loop.
     guard = asyncio.create_task(_close_when_token_expires(websocket, int(claims["exp"])))
@@ -132,7 +145,7 @@ def list_zones(db: Db):
 
 
 @router.post("/zones", response_model=ZoneResponse, status_code=201, tags=["zones"])
-def create_zone(body: ZoneCreate, db: Db):
+def create_zone(body: ZoneCreate, db: Db, _op: Annotated[dict, Depends(require_operator)]):
     zone = Zone(name=body.name, is_outdoor=body.is_outdoor)
     db.add(zone)
     try:
@@ -153,6 +166,14 @@ class DeviceCreate(BaseModel):
     zone: str = Field(pattern=Token, max_length=50)
     online: bool = False
     state: dict = Field(default_factory=dict)
+
+    @field_validator("state")
+    @classmethod
+    def _state_is_bounded(cls, value: dict) -> dict:
+        """A device's state is a handful of flags; it is stored and re-serialised on every read."""
+        if len(json.dumps(value)) > MAX_STATE_BYTES:
+            raise ValueError(f"state must be JSON smaller than {MAX_STATE_BYTES} bytes")
+        return value
 
 
 class DeviceResponse(BaseModel):
@@ -198,7 +219,7 @@ def list_devices(db: Db, zone: Annotated[str | None, Query(pattern=Token)] = Non
 
 
 @router.post("/devices", response_model=DeviceResponse, status_code=201, tags=["devices"])
-def create_device(body: DeviceCreate, db: Db):
+def create_device(body: DeviceCreate, db: Db, _op: Annotated[dict, Depends(require_operator)]):
     device = Device(
         device_id=body.device_id, name=body.name, device_type=body.device_type,
         zone=body.zone, online=body.online, state=json.dumps(body.state),
@@ -215,7 +236,8 @@ def create_device(body: DeviceCreate, db: Db):
 
 @router.post("/devices/{device_id}/command", tags=["devices"])
 def send_device_command(
-    device_id: str, body: DeviceCommand, request: Request, claims: Claims, db: Db,
+    device_id: str, body: DeviceCommand, request: Request,
+    claims: Annotated[dict, Depends(require_operator)], db: Db,
 ):
     device = db.scalar(select(Device).where(Device.device_id == device_id))
     if device is None:
@@ -410,6 +432,7 @@ class AuditResponse(BaseModel):
 @router.get("/audit", response_model=list[AuditResponse], tags=["audit"])
 def list_audit(
     db: Db,
+    _op: Annotated[dict, Depends(require_operator)],
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):

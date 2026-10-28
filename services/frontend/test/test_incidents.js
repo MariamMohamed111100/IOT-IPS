@@ -42,13 +42,21 @@ let passed=0;const ok=(c,m)=>{assert.ok(c,m);passed++;console.log('PASS ',m)};
   w.eval("openEntity({kind:'device',id:'cam_001'})");
   ok(d.body.textContent.includes('IPS alerts'),'device panel shows IPS alerts');
   // XSS: hostile text inside the report and event fields must stay text
-  dom=boot(data=>{const evs=data.incident_events[target.id];evs.forEach(e=>{if(e.data&&e.data.details){e.data.details.reports.technical='# '+EVIL+'\n| a | '+EVIL+' |\n- '+EVIL;e.data.details.reports.executive=EVIL;e.data.details.mitre_technique='T1110" onmouseover="window.__pwned=3'}e.data.src_ip=EVIL});});
+  dom=boot(data=>{const evs=data.incident_events[target.id];evs.forEach(e=>{if(e.data&&e.data.details){e.data.details.reports.technical='# '+EVIL+'\n| a | '+EVIL+' |\n- '+EVIL;e.data.details.reports.executive=EVIL;e.data.details.mitre_technique='T1110" onmouseover="window.__pwned=3'}e.data.src_ip=EVIL});
+    data.devices.forEach(x=>{x.name=EVIL});data.zones.forEach(x=>{x.name=EVIL});});
   w=dom.window;d=w.document;await w.eval('loadBackendState()');await wait(100);
   d.querySelector(`[data-incident="${target.id}"]`).click();await wait(150);
   ok(!d.querySelector('#view-incident-detail img, #view-incident-detail script'),'hostile HTML in reports and events is not turned into elements');
   ok(d.getElementById('incReport').textContent.includes('<img'),'hostile text is shown as plain text');
   ok(!d.querySelector('#incMitre a'),'a malformed MITRE id is not turned into a link');
   ok(!w.__pwned,'no injected script ran');
+  // every list the dashboard builds from backend data must render it as text, not markup
+  for(const sel of ['#largeTimeline','#doorStateList','#zoneStateList','#cameraGrid','#feedList','#devicesTbody']){
+    const host=d.querySelector(sel);
+    ok(!host||!host.querySelector('img,script,iframe,svg'),`hostile data in ${sel} stays text`);
+  }
+  ok(d.getElementById('largeTimeline').textContent.includes('<img'),'the incident timeline shows the value as plain text');
+  ok(!d.getElementById('devicesTbody').querySelector('img,script,svg'),'the device table renders a hostile name as text');
   // update: the same incident id re-sent with more events refreshes the open view
   dom=boot();w=dom.window;d=w.document;await w.eval('loadBackendState()');await wait(100);
   d.querySelector(`[data-incident="${target.id}"]`).click();await wait(100);

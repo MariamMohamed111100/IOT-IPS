@@ -22,6 +22,21 @@ KNOWN_ACTIONS = frozenset(
 
 Network = ipaddress.IPv4Network | ipaddress.IPv6Network
 
+# Ranges that are never a legitimate attack source, so the engine must not order a firewall
+# drop for them even if a (trivially spoofable) packet header names them. 203.0.113.0/24 and the
+# other TEST-NET blocks are deliberately NOT here: the test suite uses them as stand-in
+# "external attackers" and blocking a documentation address is harmless.
+_NEVER_BLOCK_NETS: tuple[Network, ...] = tuple(
+    ipaddress.ip_network(net) for net in (
+        "0.0.0.0/8",                # "this network" - only 0.0.0.0 is is_unspecified
+        "100.64.0.0/10",            # carrier-grade NAT / ISP infrastructure
+        "192.0.0.0/24",             # IETF protocol assignments
+        "198.18.0.0/15",            # benchmarking
+        "240.0.0.0/4",              # reserved for future use (class E)
+        "::/128", "64:ff9b::/96", "2002::/16", "fc00::/7", "ff00::/8",
+    )
+)
+
 
 @dataclass(frozen=True)
 class Correlation:
@@ -122,11 +137,21 @@ def load_policy(path: str | Path | None = None) -> Policy:
     return parse_policy(raw, os.getenv("ENGINE_NEVER_BLOCK", ""))
 
 
-def attacker_ip(value: Any, never_block: tuple[Network, ...] = ()) -> str | None:
+def attacker_ip(value: Any, never_block: tuple[Network, ...] = (),
+                protected: frozenset[str] | set[str] = frozenset()) -> str | None:
     """A source address that is safe to hand to the firewall, or None.
 
-    The value comes from an MQTT message, so it is parsed strictly (never passed through as text).
-    LAN addresses are allowed on purpose: a rogue or compromised device is usually inside.
+    The value comes from an MQTT message (packet metadata, so the sender chooses it), which is
+    why everything here is a refusal by default:
+
+    * parsed strictly, never passed through as text;
+    * loopback / multicast / link-local / reserved / special-purpose ranges refused;
+    * ``never_block`` (the operator's infrastructure list) refused;
+    * ``protected`` - our own devices - refused, so a spoofed header can never turn the IPS
+      against the camera or the lock it is supposed to defend.
+
+    LAN addresses are otherwise allowed on purpose: a rogue or compromised device is usually
+    inside the home network.
     """
     if not isinstance(value, str) or "%" in value or len(value) > 45:
         return None
@@ -134,9 +159,18 @@ def attacker_ip(value: Any, never_block: tuple[Network, ...] = ()) -> str | None
         addr = ipaddress.ip_address(value.strip())
     except ValueError:
         return None
+    # ::ffff:192.168.1.50 is the same address as 192.168.1.50: collapse it before every check,
+    # otherwise an IPv4-mapped form would side-step the protected/never-block lists.
+    if addr.version == 6 and addr.ipv4_mapped is not None:
+        addr = addr.ipv4_mapped
     if (addr.is_loopback or addr.is_unspecified or addr.is_multicast or addr.is_link_local
             or addr.is_reserved):
         return None
+    text = str(addr)
+    if text in protected:
+        return None
+    if any(addr in net for net in _NEVER_BLOCK_NETS):
+        return None
     if any(addr in net for net in never_block):
         return None
-    return str(addr)
+    return text

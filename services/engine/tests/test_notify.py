@@ -8,10 +8,12 @@ def test_dry_run_without_config(monkeypatch):
     assert n.send("t", "b", "high") == ["dry-run"]
 
 
-def test_ntfy_needs_https(monkeypatch):
+def test_ntfy_needs_topic_and_server(monkeypatch):
     monkeypatch.setenv("NTFY_TOPIC", "x")
-    monkeypatch.setenv("NTFY_SERVER", "http://insecure")
+    monkeypatch.delenv("NTFY_SERVER", raising=False)
     assert Notifier().channels == []
+    monkeypatch.setenv("NTFY_SERVER", "http://ntfy")
+    assert Notifier().channels == ["ntfy"]
 
 
 def test_token_never_logged(monkeypatch, caplog):

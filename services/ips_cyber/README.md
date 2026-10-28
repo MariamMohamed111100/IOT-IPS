@@ -46,4 +46,6 @@ synthetic PCAPs, so repeat the calibration on lab traffic (Task 8).
 ## Relation to other services
 
 `services/cyber` (Person 5) is the Suricata/iptables service and publishes `cyber.ip_blocked`;
-this one only detects. Not done yet (Task 2): engine hook, `libs/ips`, Docker/compose wiring.
+this one only detects. Compose runs it as `ips_cyber` with the **cyber** MQTT identity
+(`security/alerts/cyber`). Default command replays `ips/data/sample_events.csv` once, then
+`--idle` so the container does not loop. Live capture is `IPS_CYBER_SOURCE=live`.

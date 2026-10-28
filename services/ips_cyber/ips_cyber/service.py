@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import sys
+import time
 
 import yaml
 from iot_ips import detector
@@ -144,6 +145,8 @@ def build_arg_parser():
     p.add_argument("--ml-min-confidence", type=float, default=0.90,
                    help="the model may raise an alert alone only at this confidence (combined mode)")
     p.add_argument("-v", "--verbose", action="store_true")
+    p.add_argument("--idle", action="store_true",
+                   help="keep the process alive after the source is exhausted (Compose restart policy)")
     return p
 
 
@@ -187,6 +190,11 @@ def main(argv=None, publisher_override=None):
         else:
             src = sources.live_source(args.iface, devices, config["flow_engine"])
         stats = service.run(src, sources.source_name(args.file))
+        print(json.dumps(stats), file=sys.stderr)
+        if args.idle:
+            log.info("source exhausted; idling so Compose does not replay")
+            while True:
+                time.sleep(3600)
     except (ConfigError, DetectorConfigError, FlowEngineError, pub.PublishError, ValueError, OSError) as exc:
         log.error("%s", exc)
         return 2
@@ -195,7 +203,6 @@ def main(argv=None, publisher_override=None):
             publisher.close()
         except Exception:
             pass
-    print(json.dumps(stats), file=sys.stderr)
     return 0
 
 

@@ -122,6 +122,20 @@ class IptablesFirewall:
 
 TABLE = "smartsecure_ips"
 
+# `nft delete element` prints one of these when the element simply was not there. Anything else is
+# a real failure and must not be mistaken for "already gone".
+_MISSING_ELEMENT_MARKERS = (
+    "no such file or directory",
+    "does not exist",
+    "no such element",
+    "no such set",
+)
+
+
+def _element_is_missing(output: str) -> bool:
+    low = (output or "").lower()
+    return any(marker in low for marker in _MISSING_ELEMENT_MARKERS)
+
 
 class NftablesFirewall:
     """Drops blocked sources with nftables. Every block is a set element WITH A TIMEOUT, so the kernel removes
@@ -142,10 +156,19 @@ class NftablesFirewall:
 
     @staticmethod
     def _checked(ip: str) -> tuple[int, str]:
+        # Self-defence: the command line is assembled from these tokens, so refuse anything that is
+        # not a plain address. `ipaddress` alone accepts a scope id (fe80::1%eth0), and nft joins
+        # its argv before parsing, so a "%" or ";" could be re-read as nft syntax.
+        if not isinstance(ip, str) or "%" in ip or "/" in ip or len(ip) > 45:
+            raise FirewallError(f"not an IP address: {ip!r}")
         try:
-            addr = ipaddress.ip_address(ip)
+            addr = ipaddress.ip_address(ip.strip())
         except ValueError:
             raise FirewallError(f"not an IP address: {ip!r}") from None
+        if str(addr) != ip.strip():
+            raise FirewallError(f"not a canonical IP address: {ip!r}")
+        if addr.version == 6 and addr.ipv4_mapped is not None:
+            addr = addr.ipv4_mapped                       # same host, one representation
         return addr.version, str(addr)
 
     def _must(self, cmd: list[str]) -> None:
@@ -180,8 +203,14 @@ class NftablesFirewall:
 
     def unblock(self, ip: str) -> None:
         version, addr = self._checked(ip)
-        for prefix in ("src", "iso"):                               # a missing element is not an error
-            self.run(["nft", "delete", "element", "inet", TABLE, prefix + str(version), "{", addr, "}"])
+        for prefix in ("src", "iso"):
+            name = prefix + str(version)
+            rc, out = self.run(["nft", "delete", "element", "inet", TABLE, name, "{", addr, "}"])
+            # Removing an element that is not there has to be a no-op, but every other failure must
+            # surface: the caller drops its own state and "unblocked" it would leave the kernel
+            # still dropping traffic, with no way for an operator to lift it.
+            if rc != 0 and not _element_is_missing(out):
+                raise FirewallError(f"could not remove {addr} from {name}: {out.strip()[:200]}")
 
 
 class ShadowFirewall:

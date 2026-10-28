@@ -55,15 +55,23 @@ class MqttPublisher:
 
     @staticmethod
     def _make_client():
-        import paho.mqtt.client as mqtt
         env = os.environ
+        if env.get("MQTT_CA_FILE"):
+            from smartsecure_common.mqtt import connect
+            return connect(env.get("MQTT_USER", "cyber"))
+        import paho.mqtt.client as mqtt
         for name in ("MQTT_HOST", "MQTT_PASSWORD"):
             if not env.get(name):
                 raise PublishError("set the %s environment variable (and MQTT_USER, MQTT_CA, MQTT_CERT, MQTT_KEY)" % name)
         client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="cyber-%d" % os.getpid())
         client.username_pw_set(env.get("MQTT_USER", "cyber"), env["MQTT_PASSWORD"])
         if env.get("MQTT_CA"):
-            client.tls_set(ca_certs=env["MQTT_CA"], certfile=env.get("MQTT_CERT"), keyfile=env.get("MQTT_KEY"))
+            from smartsecure_common.mqtt import tls_context
+            os.environ.setdefault("MQTT_CA_FILE", env["MQTT_CA"])
+            if env.get("MQTT_CERT") and env.get("MQTT_KEY"):
+                os.environ.setdefault("MQTT_CLIENT_CERT", env["MQTT_CERT"])
+                os.environ.setdefault("MQTT_CLIENT_KEY", env["MQTT_KEY"])
+            client.tls_set_context(tls_context())
         client.reconnect_delay_set(min_delay=1, max_delay=30)
         client.connect(env["MQTT_HOST"], int(env.get("MQTT_PORT", "8883")))
         client.loop_start()

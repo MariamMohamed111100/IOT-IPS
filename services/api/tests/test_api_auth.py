@@ -3,6 +3,8 @@ import main
 import pytest
 from fastapi.routing import APIRoute
 
+from security import hash_password
+
 PUBLIC = {("GET", "/health"), ("POST", "/auth/login")}
 
 
@@ -21,11 +23,13 @@ def test_expired_and_foreign_tokens_are_rejected(client):
 
 
 def test_login(client):
-    for user, password in (("admin", "no"), ("ghost", "x")):
+    for user, password in (("admin", "no"), ("ghost", "x"), ("admin", "x" * 80)):
         r = client.post("/auth/login", json={"username": user, "password": password})
         assert r.status_code == 401
     r = client.post("/auth/login", json={"username": "admin", "password": "correct-horse"})
-    assert r.status_code == 200 and r.json()["token_type"] == "bearer"
+    body = r.json()
+    assert r.status_code == 200 and body["token_type"] == "bearer"
+    assert body["role"] == "admin" and body["username"] == "admin"
 
 
 def test_brute_force_is_rate_limited(client):
@@ -34,8 +38,75 @@ def test_brute_force_is_rate_limited(client):
     assert codes == [401] * 5 + [429] * 2
 
 
+def test_failed_attempts_never_lock_a_correct_password_out(client):
+    """Five wrong tries must throttle guessing, not deny the real user (the API sits behind
+    nginx, so the limiter key degenerates to the username)."""
+    for _ in range(6):
+        r = client.post("/auth/login", json={"username": "admin", "password": "x"})
+        assert r.status_code in (401, 429)
+    ok = client.post("/auth/login", json={"username": "admin", "password": "correct-horse"})
+    assert ok.status_code == 200 and ok.json()["role"] == "admin"
+
+
+def test_an_oversized_request_body_is_refused(client, auth):
+    huge = {"device_id": "d1", "name": "x" * 200, "device_type": "bulb", "zone": "kitchen",
+            "state": {"blob": "y" * (200 * 1024)}}
+    r = client.post("/devices", json=huge, headers=auth)
+    assert r.status_code == 413
+
+
+def test_device_state_is_bounded_far_below_the_body_cap(client, auth):
+    r = client.post("/devices", json={"device_id": "d1", "name": "plug", "device_type": "bulb",
+                                      "zone": "kitchen", "state": {"note": "z" * 6000}},
+                    headers=auth)
+    assert r.status_code == 422
+
+
 def test_me(client, auth):
-    assert client.get("/auth/me", headers=auth).json()["username"] == "admin"
+    body = client.get("/auth/me", headers=auth).json()
+    assert body["username"] == "admin" and body["role"] == "admin"
+
+
+def test_a_user_without_a_role_label_only_reads(client, monkeypatch):
+    """Least privilege: `bob:secret` must not become an operator just because it is not "viewer"."""
+    monkeypatch.setenv("API_USERS", "bob:secret")
+    r = client.post("/auth/login", json={"username": "bob", "password": "secret"})
+    assert r.status_code == 401                            # plaintext secrets never authenticate
+    monkeypatch.setenv("API_USERS", f"bob:{hash_password('secret')}")
+    r = client.post("/auth/login", json={"username": "bob", "password": "secret"})
+    headers = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    assert client.get("/devices", headers=headers).status_code == 200       # reading is allowed
+    new_device = {"device_id": "d1", "name": "x", "device_type": "bulb", "zone": "kitchen"}
+    assert client.post("/devices", json=new_device, headers=headers).status_code == 403
+
+
+def test_scrypt_users_authenticate(client, monkeypatch):
+    from security import hash_password
+
+    monkeypatch.setenv("API_USERS", f"admin:{hash_password('correct-horse')}:admin")
+    bad = client.post("/auth/login", json={"username": "admin", "password": "nope"})
+    assert bad.status_code == 401
+    ok = client.post("/auth/login", json={"username": "admin", "password": "correct-horse"})
+    assert ok.status_code == 200 and ok.json()["role"] == "admin"
+
+
+def test_jwt_without_audience_is_rejected(client):
+    token = jwt.encode(
+        {"sub": "admin", "role": "admin", "exp": 4102444800}, "j" * 48, algorithm="HS256"
+    )
+    assert client.get("/auth/me", headers={"Authorization": f"Bearer {token}"}).status_code == 401
+
+
+def test_viewer_cannot_command_or_audit(client, house):
+    token = client.post("/auth/login", json={"username": "viewer", "password": "other-pass"}).json()
+    headers = {"Authorization": "Bearer " + token["access_token"]}
+    assert token["role"] == "viewer"
+    assert client.get("/devices", headers=headers).status_code == 200
+    assert client.post(
+        "/devices/siren_main/command", json={"action": "on"}, headers=headers
+    ).status_code == 403
+    assert client.post("/zones", json={"name": "lab"}, headers=headers).status_code == 403
+    assert client.get("/audit", headers=headers).status_code == 403
 
 
 def test_health_is_public_and_reports_dependencies(client):

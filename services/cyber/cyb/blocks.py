@@ -153,12 +153,17 @@ class BlockManager:
         expires = now + seconds
         current = self.blocks.get(addr)
         if current is not None:                                   # already blocked: only extend
+            # Renew first, extend the recorded expiry only if the kernel accepted it. The backend
+            # removes the element before re-adding it, so a failure here means the block is GONE:
+            # extending our own state would report a block that no longer exists.
+            try:
+                self.fw.block(addr, expires - now, current.both or both)
+            except FirewallError as exc:
+                log.error("could not renew the block of %s: %s", addr, exc)
+                self._result("cyber.block_refused", addr, action, device_id, "firewall_error")
+                return False
             current.expires_at = max(current.expires_at, expires)
             current.both = current.both or both
-            try:
-                self.fw.block(addr, current.expires_at - now, current.both)    # renews a kernel timeout
-            except FirewallError as exc:
-                log.warning("could not renew the block of %s: %s", addr, exc)
             self._save()
             return True
         if len(self.blocks) >= self.max_blocks:

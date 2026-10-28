@@ -228,7 +228,10 @@ def on_message(client, userdata, message) -> None:
         payload = json.loads(message.payload.decode("utf-8"))
         if not isinstance(payload, dict):
             raise ValueError("payload must be a JSON object")
-    except (UnicodeDecodeError, ValueError) as exc:
+    except (UnicodeDecodeError, ValueError, RecursionError) as exc:
+        # RecursionError: json.loads raises it (not ValueError) for deeply nested input, e.g.
+        # 30_000 levels inside the 64 KB cap - paho calls this callback directly, so an uncaught
+        # error here would tear down the MQTT network loop and silently stop all ingestion.
         _reject(f"message on {topic}", exc)
         return
 

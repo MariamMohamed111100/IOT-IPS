@@ -72,19 +72,44 @@ class Episode:
 
 class Engine:
     def __init__(self, policy: Policy, publish: Publish, notifier: Notifier | None = None,
-                 clock: Callable[[], float] = time.time, ips: IpsEnricher | None = None) -> None:
+                 clock: Callable[[], float] = time.time, ips: IpsEnricher | None = None,
+                 protected_ips: Iterable[str] | None = None) -> None:
         self.policy, self._publish, self.clock = policy, publish, clock
         self.notifier = notifier or Notifier()
         self.scorer = Scorer(policy)
         self.registry = DeviceRegistry()
         self.lock = threading.RLock()
         self.episodes: dict[str, Episode] = {}
-        self.attackers: dict[str, str] = {}                 # ip -> the event type that named it
+        self.attackers: dict[str, tuple[str, str]] = {}     # ip -> (event type, zone that named it)
         self.blocked: set[str] = set()
         self._baseline = False
         self._seen: OrderedDict[str, None] = OrderedDict()
-        self.ips = ips                                       # optional: builds details for IPS alerts
         self._details: OrderedDict[str, dict] = OrderedDict()   # event id -> IPS details
+        # Our own devices. A packet's source address is chosen by the sender, so without this a
+        # spoofed header would make the engine firewall off the very device being attacked.
+        self.protected_ips: set[str] = set()
+        if protected_ips is not None:
+            self.protected_ips |= {str(ip).strip() for ip in protected_ips if isinstance(ip, str)}
+        self.ips = ips          # the setter also merges the IPs of ips.profiles into protected_ips
+
+    @property
+    def ips(self) -> IpsEnricher | None:
+        return self._ips
+
+    @ips.setter
+    def ips(self, value: IpsEnricher | None) -> None:
+        """Setting the enricher also protects the IPs of its device profiles from being blocked."""
+        self._ips = value
+        self.protected_ips |= self._ips_device_ips(value)
+
+    @staticmethod
+    def _ips_device_ips(ips: IpsEnricher | None) -> set[str]:
+        if ips is None:
+            return set()
+        try:
+            return {p["ip"] for p in ips.profiles.values() if isinstance(p.get("ip"), str)}
+        except (AttributeError, TypeError):
+            return set()
 
     # ------------------------------------------------------------------ intake
     def on_message(self, topic: str, payload: bytes | str) -> None:
@@ -140,10 +165,20 @@ class Engine:
             self._remember_details(event)
             contrib = self.scorer.add_event(event.type, event.zone, event.id, now)
             self.scorer.correlate(now)
-            if contrib:
-                ip = attacker_ip(event.data.get("src_ip"), self.policy.never_block)
-                if ip and event.data.get("direction") != "outbound":     # an outbound flow's src_ip is our own device
-                    self.attackers.setdefault(ip, event.type)
+            if contrib and event.zone in NON_PHYSICAL_ZONES:
+                # Only a network-sensor event names an attacker: a physical event (a water leak, a
+                # smoke alarm) also carries a src_ip, but that is the sensor, not a source to drop.
+                # Only an inbound flow's source may be blocked: an outbound flow's source is one of
+                # our own devices. `direction` arrives as data, so normalize it (a raw string
+                # compare let "Outbound" through) and keep the cautious reading: not-outbound.
+                direction = str(event.data.get("direction") or "").strip().lower()
+                src_ip = event.data.get("src_ip")
+                spoofed_to_itself = (isinstance(src_ip, str)
+                                     and src_ip.strip() == str(event.data.get("dst_ip") or "").strip())
+                if direction != "outbound":
+                    ip = attacker_ip(src_ip, self.policy.never_block, self.protected_ips)
+                    if ip and not spoofed_to_itself:            # a flow to itself is not a source
+                        self.attackers.setdefault(ip, (event.type, event.zone))
             physical = event.zone not in NON_PHYSICAL_ZONES
             if physical and event.type in self.policy.life_safety:
                 self.episodes.setdefault(event.zone, Episode(event.zone)).life_safety = True
@@ -159,6 +194,8 @@ class Engine:
                     if contrib and contrib.zone in (zone, "network") \
                             and contrib.event_id not in inc.event_ids:
                         inc.event_ids.append(contrib.event_id)
+                        while len(inc.event_ids) > MAX_INCIDENT_EVENTS:
+                            inc.event_ids.pop(0)          # a long incident must not grow without bound
                     inc.peak = max(inc.peak, score)
                 mine = event if event.zone == zone else None
                 self._respond(ep, level if inc else "low", mine,
@@ -289,7 +326,12 @@ class Engine:
         self._send_to(ep, "unlock_doors", "lock", "unlock", None, reason)
 
     def _do_block_ip(self, ep: Episode, reason: str, scope: str, level: str) -> None:
-        for ip, event_type in self.attackers.items():
+        # Only the sources that belong to THIS incident's zone (or to the shared network zone) may
+        # be dropped: without the filter a kitchen water leak's src_ip got blocked by a later,
+        # unrelated network incident and vice versa.
+        for ip, (event_type, zone) in self.attackers.items():
+            if zone not in (ep.zone, "network"):
+                continue
             if ip not in self.blocked:
                 self.blocked.add(ip)
                 self._publish(topics.BLOCK, {

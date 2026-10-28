@@ -7,29 +7,60 @@ import pytest
 from conftest import make_event
 from starlette.websockets import WebSocketDisconnect
 
+from security import AUDIENCE, ISSUER
+
+
+def _ws(client, token):
+    return client.websocket_connect("/ws/events", subprotocols=["bearer." + token])
+
 
 def _expired():
-    return jwt.encode({"sub": "admin", "exp": 1}, "j" * 48, algorithm="HS256")
+    return jwt.encode(
+        {"sub": "admin", "role": "admin", "exp": 1, "iss": ISSUER, "aud": AUDIENCE},
+        "j" * 48, algorithm="HS256",
+    )
 
 
-@pytest.mark.parametrize("query", ["", "?token=", "?token=junk"])
-def test_websocket_rejects_missing_or_bad_tokens(client, query):
+def test_websocket_rejects_missing_or_query_tokens(client, auth):
     with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect("/ws/events" + query):
+        with client.websocket_connect("/ws/events"):
             pass
+    leaked = auth["Authorization"].split()[1]
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect("/ws/events?token=" + leaked):
+            pass
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect("/ws/events", subprotocols=["bearer.junk"]):
+            pass
+
+
+def test_websocket_does_not_accept_a_cookie(client, auth):
+    """A cookie is attached by the browser, so another origin could open the socket."""
+    token = auth["Authorization"].split()[1]
+    client.cookies.set("access_token", token)
+    try:
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect("/ws/events"):
+                pass
+    finally:
+        client.cookies.clear()
 
 
 def test_websocket_rejects_expired_token(client):
     with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect("/ws/events?token=" + _expired()):
+        with _ws(client, _expired()):
             pass
 
 
 def test_websocket_closes_1008_once_the_token_expires(client):
     from websocket_manager import manager
 
-    short = jwt.encode({"sub": "admin", "exp": int(time.time()) + 2}, "j" * 48, algorithm="HS256")
-    with client.websocket_connect("/ws/events?token=" + short) as ws:
+    short = jwt.encode(
+        {"sub": "admin", "role": "admin", "exp": int(time.time()) + 2,
+         "iss": ISSUER, "aud": AUDIENCE},
+        "j" * 48, algorithm="HS256",
+    )
+    with _ws(client, short) as ws:
         with pytest.raises(WebSocketDisconnect) as exc_info:
             while True:
                 ws.receive_text()
@@ -45,7 +76,7 @@ def _token(auth):
 
 
 def test_live_event_and_status_are_pushed(client, auth, feed):
-    with client.websocket_connect("/ws/events?token=" + _token(auth)) as ws:
+    with _ws(client, _token(auth)) as ws:
         feed("security/alerts/vision", make_event("live-event-01"))
         message = json.loads(ws.receive_text())
         assert message["kind"] == "event" and message["data"]["id"] == "live-event-01"
@@ -55,7 +86,7 @@ def test_live_event_and_status_are_pushed(client, auth, feed):
 
 
 def test_rejected_messages_are_not_broadcast(client, auth, feed):
-    with client.websocket_connect("/ws/events?token=" + _token(auth)) as ws:
+    with _ws(client, _token(auth)) as ws:
         feed("home/garage/pir/x/event", make_event("bad-sev-0001", severity_hint="EXTREME"))
         feed("security/alerts/vision", make_event("live-event-02"))
         assert json.loads(ws.receive_text())["data"]["id"] == "live-event-02"
@@ -64,8 +95,8 @@ def test_rejected_messages_are_not_broadcast(client, auth, feed):
 def test_every_client_gets_the_message_and_disconnects_are_cleaned_up(client, auth, feed):
     from websocket_manager import manager
     token = _token(auth)
-    with client.websocket_connect("/ws/events?token=" + token) as a:
-        with client.websocket_connect("/ws/events?token=" + token) as b:
+    with _ws(client, token) as a:
+        with _ws(client, token) as b:
             feed("security/alerts/cyber", make_event("live-event-03", source="cyber"))
             assert json.loads(a.receive_text())["data"]["id"] == "live-event-03"
             assert json.loads(b.receive_text())["data"]["id"] == "live-event-03"
@@ -77,16 +108,16 @@ def test_token_without_exp_is_never_accepted(client):
     forever = jwt.encode({"sub": "admin"}, "j" * 48, algorithm="HS256")
     assert client.get("/auth/me", headers={"Authorization": f"Bearer {forever}"}).status_code == 401
     with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect("/ws/events?token=" + forever):
+        with _ws(client, forever):
             pass
 
 
 def test_too_many_clients_are_turned_away_politely(client, auth, monkeypatch):
     import routes
     monkeypatch.setattr(routes, "MAX_WS_CLIENTS", 1)
-    with client.websocket_connect("/ws/events?token=" + _token(auth)):
+    with _ws(client, _token(auth)):
         with pytest.raises(WebSocketDisconnect) as exc_info:
-            with client.websocket_connect("/ws/events?token=" + _token(auth)):
+            with _ws(client, _token(auth)):
                 pass
         assert exc_info.value.code == 1013
 
