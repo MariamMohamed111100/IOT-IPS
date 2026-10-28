@@ -1,3 +1,4 @@
-pyyaml>=6.0.3
+# Exact pin (lock: docker/locks/simulators.txt): see the note in services/api/requirements.txt.
+pyyaml==6.0.3
 # Raspberry Pi phase only (HAL_DRIVER=gpio): install on the Pi image, not needed for simulation
-# gpiozero>=2.0
+# gpiozero==2.0.1.post3

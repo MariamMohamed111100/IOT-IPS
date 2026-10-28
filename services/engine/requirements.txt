@@ -1,1 +1,2 @@
-pyyaml>=6.0.3
+# Exact pin (lock: docker/locks/engine.txt): see the note in services/api/requirements.txt.
+pyyaml==6.0.3
