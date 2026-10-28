@@ -72,7 +72,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends nftables
       - name: Real nftables backend in a private network namespace
         working-directory: services/cyber
-        run: sudo -E python -m pytest tests -m privileged -q -ra
+        # `sudo` resets PATH, so point at the toolcache interpreter (which has pytest).
+        run: sudo -E "$pythonLocation/bin/python" -m pytest tests -m privileged -q -ra
 
   security:
     runs-on: ubuntu-24.04
