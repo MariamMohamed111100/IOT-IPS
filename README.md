@@ -1,4 +1,4 @@
-﻿# IoT-IPS — Smart Home Intrusion Prevention System
+# IoT-IPS — Smart Home Intrusion Prevention System
 
 A graduation project that unifies the **SmartSecure Home** backend with a custom **IoT-IPS** detection, risk-scoring, and automated response engine, alongside the **Warden** real-time dashboard.
 
