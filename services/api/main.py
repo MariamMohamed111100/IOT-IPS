@@ -30,6 +30,17 @@ def _prepare_database() -> None:
     for table in Base.metadata.tables.values():
         for index in table.indexes:
             index.create(bind=engine, checkfirst=True)
+    # migrations for columns added after create_all
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(engine)
+        if "incidents" in inspector.get_table_names():
+            cols = {c["name"] for c in inspector.get_columns("incidents")}
+            if "details_encrypted" not in cols:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE incidents ADD COLUMN details_encrypted BYTEA"))
+    except Exception:
+        logger.exception("failed to run migrations")
     seed_zones()
 
 

@@ -129,7 +129,7 @@ The function never decreases, and every IPS level lands in the published level o
 | API | store `details` encrypted (nullable column), return it in `/incidents`, cap each report at 12 KB, keep `integrity_ok` behaviour | Person 2 (API) |
 | Cyber | add the eleven fields to `cyber.port_scan` and `cyber.brute_force`; accept IPS events from the adapter; optionally add `cyber.dos` to `CYBER_AUTOBLOCK` | Person 5 (cyber) |
 | Frontend | show `details` (MITRE tag, IPS level and score, the two reports as plain text, never HTML) | Person 7 (frontend) |
-| IPS pipeline | adapter that builds the events of section 3; `load_devices` must keep `zone`, `backend_id` and `backend_type` (it now drops unknown keys) | IPS Person 6 |
+| IPS pipeline | adapter that builds the events of section 3. **Done** by `services/ips_cyber` (`iot_ips.enrich.build_details` puts `details` in every alert; the engine builds them only for an alert without); `load_devices` must keep `zone`, `backend_id` and `backend_type` (it now drops unknown keys) | IPS Person 6 |
 | IPS reports | provide the technical and executive report as plain text for `details.reports` | IPS Person 7 |
 | Simulators | none; `plug` and `industrial_sensor` have no simulator | - |
 | Device registration | `scripts/ips/seed_ips_devices.py` reads `config/ips_devices.json` and registers the six devices through `POST /devices` (they then appear in the dashboard) | Person 7 |

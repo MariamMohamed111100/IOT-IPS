@@ -25,7 +25,7 @@ import sys
 import time
 
 import yaml
-from iot_ips import detector
+from iot_ips import detector, enrich
 from iot_ips.detector import DetectorConfigError
 
 from . import envelope, sources
@@ -109,6 +109,18 @@ class IpsCyberService:
             self.stats["skipped_bad_input"] += 1
             log.warning("skipped %s: %s", event_ref, exc)
             return None
+        # contract v1.2: the detection carries data.details (MITRE tag, IPS score and level, both reports). Without
+        # them Warden shows nothing for an alert, because it reads them from the stored event.
+        details = enrich.build_details(alert, profile)
+        if details is not None:
+            alert["data"]["details"] = details
+            try:
+                envelope.validate_alert(alert)
+            except envelope.AlertError as exc:
+                del alert["data"]["details"]
+                log.warning("sent %s without details: %s", event_ref, exc)
+        else:
+            log.warning("sent %s without details: the IPS chain gave none", event_ref)
         try:
             self.publisher.publish(self.topic, alert)
         except pub.PublishError as exc:

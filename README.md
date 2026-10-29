@@ -73,7 +73,7 @@ This repository combines four tightly integrated components into one monorepo:
 **Flow Summary:**
 
 1. **Ingress**: Simulated/real devices publish events over MQTT over TLS, or network traffic is captured as PCAP/CSV/live.
-2. **Detection**: `ips_cyber` uses the `iot_ips` package to detect, classify, and score cyber events.
+2. **Detection**: `ips_cyber` uses the `iot_ips` package to detect, classify, and score cyber events, and puts the MITRE tag, the IPS score and both reports in the alert's `data.details` (Warden reads them from the stored event).
 3. **Enrichment & Correlation**: The `engine` correlates alerts, applies zone/criticality rules, maps to MITRE, and computes final risk.
 4. **Response**: Automated actions are triggered (blocking, notifications, smart-home commands) via the `cyber` service and engine actions.
 5. **Visualization**: The Warden dashboard consumes REST/WebSocket streams from the API to display live threats and incidents.
@@ -297,7 +297,14 @@ python scripts/ips/fake_ips_publisher.py --now
 python scripts/ips/ips_e2e_check.py --expect 7
 ```
 
-Successful execution confirms that `ips_cyber` publishes scored `cyber.*` alerts, the engine enriches them with MITRE techniques, IPS scores, and technical/executive reports, and incidents appear correctly in the Warden dashboard.
+This checks the adapter format (`fake_ips_publisher.py` builds `details` itself). The **real** path is the `ips_cyber` service that `make up` starts: it replays `ips/data/sample_events.csv` through the detector and publishes the alerts with their `details`. To check that path alone, run the e2e check without the fake publisher:
+
+```bash
+make up
+python scripts/ips/ips_e2e_check.py --expect 7 --sensor-only
+```
+
+Without Docker, `pytest services/engine/tests/test_live_path.py` runs the same chain (sensor -> engine) and checks that every stored alert carries what Warden reads.
 
 ## Security Notes
 
@@ -323,9 +330,11 @@ Successful execution confirms that `ips_cyber` publishes scored `cyber.*` alerts
 
 ## Status
 
-- **Integration**: Backend, IoT-IPS, IPS-Cyber, Engine, Vision, and Warden Dashboard are fully implemented and integrated.
-- **Enrichment Pipeline**: `services/ips_cyber` publishes scored `cyber.*` alerts; the Engine enriches them with MITRE techniques, IPS scores, and technical/executive reports before creating incidents.
-- **Testing**: All local test suites (Backend, IoT-IPS, IPS Sensor, Engine, and Dashboard) pass with **no failures** and **no skips**.
+- **Integration**: Backend, IoT-IPS, IPS-Cyber, Engine, Vision, and Warden Dashboard are implemented and integrated.
+- **Enrichment Pipeline**: `services/ips_cyber` publishes scored `cyber.*` alerts that already carry `data.details` (MITRE technique, IPS score and level, technical and executive report). The Engine passes them into the incident and builds them itself only for an alert that has none. The API stores an event's `data` as it arrives, and Warden reads the details from the stored events of an incident; the incident's own `details` field is not stored by the API.
+- **ML model**: `services/ml` is trained and tested, and `ips_cyber --detector combined` uses it next to the rules on CSV events. It is **not** used on live traffic yet: the flow engine does not produce the packet-window features the model needs.
+- **Testing**: The local test suites (Backend, IoT-IPS, IPS Sensor, ML, Engine, and Dashboard) pass. Two kinds of tests are not part of a normal run: `-m dataset` (needs the dataset's 27 MB PCAP) and `-m privileged` (needs root and nftables, CI runs it).
+- **Not done / known limits**: no Docker lab with a fake camera and an end-to-end attack test (Task 8); thresholds and risk weights were calibrated on synthetic traffic and still need a lab capture; slow brute force or scans and low-rate outbound floods are missed (`ips/docs/known-limitations.md`); the engine never sends a device isolation yet (`cyber` supports it with `direction: both`).
 - **CI/CD**: GitHub Actions, CodeQL, and security workflows are configured and passing.
 - **Ready for Demo & Evaluation**: Fully reproducible with committed datasets and demo assets.
 

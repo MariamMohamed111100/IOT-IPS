@@ -13,6 +13,8 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser()
     add_transport_args(p)
     p.add_argument("--expect", type=int, default=7, help="minimum number of IPS detections expected")
+    p.add_argument("--sensor-only", action="store_true",
+                   help="count only alerts of the real sensor services/ips_cyber (they carry data.ips_device_id), not the fake publisher")
     p.add_argument("--standalone", action="store_true", help="also check incidents and risk (publisher ran with --standalone)")
     a = p.parse_args(argv)
     t = make_transport(a)
@@ -30,6 +32,12 @@ def main(argv=None) -> int:
     _, events = t.api("GET", "/events", params={"limit": 500, "source": "cyber"})
     dets = [e for e in events or [] if e["type"] in ("cyber.port_scan", "cyber.brute_force", "cyber.dos", "cyber.unexpected_traffic")
             and "details" in (e.get("data") or {})]
+    if a.sensor_only:
+        dets = [e for e in dets if "ips_device_id" in e["data"]]
+    sensor = [e for e in events or [] if "ips_device_id" in (e.get("data") or {}) and e["type"] in (
+        "cyber.port_scan", "cyber.brute_force", "cyber.dos", "cyber.unexpected_traffic")]
+    check(all("details" in e["data"] for e in sensor) and (bool(sensor) or not a.sensor_only),
+          "every alert of the real sensor (ips_cyber) carries data.details (%d alerts)" % len(sensor))
     check(len(dets) >= a.expect, "at least %d IPS detections stored with details (found %d)" % (a.expect, len(dets)))
     for e in dets[:a.expect]:
         d, det = e["data"], e["data"]["details"]

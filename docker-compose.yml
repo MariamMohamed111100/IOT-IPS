@@ -265,8 +265,27 @@ services:
     # The image's ENTRYPOINT is `ntfy` with no default CMD, so on recent tags it
     # prints help and exits unless the subcommand is given explicitly.
     command: ["serve"]
-    ports: ["8090:80"]          # push notifications for risk alerts (P3)
+    ports: ["127.0.0.1:8090:80"]  # push notifications for risk alerts (P3) - localhost only
     restart: unless-stopped
+
+  # ML inference helper (Task 6). Not used on the live flow path yet (flow engine
+  # produces window features differently), but available as a compose service for
+  # offline evaluation, retraining helpers and combined-detector experiments.
+  ml:
+    build:
+      context: .
+      dockerfile: docker/python-service.Dockerfile
+      args:
+        SERVICE: ml
+        WITH_IPS: "1"
+    profiles: ["ml"]
+    working_dir: /app/services/ml
+    command: ["python", "-m", "pytest", "-q"]
+    volumes:
+      - ./services/ml:/app/services/ml:ro
+      - ./ips:/app/ips:ro
+      - ./config:/config:ro
+    restart: "no"
 
 volumes:
   mosquitto_data:
