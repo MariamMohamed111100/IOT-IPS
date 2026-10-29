@@ -75,7 +75,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES}
       API_USERS: ${API_USERS}
-      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-false}   # dev .env sets true; never in production
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-false}   # off unless .env opts in; never on a gateway
       STORAGE_KEY: ${STORAGE_KEY}
       SNAPSHOT_DIR: /data/snapshots
     volumes:

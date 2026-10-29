@@ -27,7 +27,7 @@ if [ ! -f .env ]; then
     echo "API_USERS=admin:${admin_hash}:admin,viewer:${viewer_hash}:viewer"
     echo "API_ADMIN_PASSWORD=${admin_pw}"
     echo "API_VIEWER_PASSWORD=${viewer_pw}"
-    echo "API_DOCS_ENABLED=true   # lab only; NEVER true on a gateway"
+    echo "API_DOCS_ENABLED=false  # set to true only while developing against /docs"
     echo "DASHBOARD_PORT=8080"
     echo "STORAGE_KEY=$(rand)"
     echo "NTFY_SERVER="
