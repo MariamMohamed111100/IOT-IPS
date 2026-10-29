@@ -175,7 +175,7 @@ make smoke
 | Service | URL/Address | Notes |
 |---|---|---|
 | **Warden Dashboard** | [http://localhost:8080](http://localhost:8080) | Main UI with live incidents & digital twin |
-| **API + Swagger UI (Dev)** | [https://localhost:8443/docs](https://localhost:8443/docs) | REST & schema reference (disable in prod via `API_DOCS_ENABLED=false`) |
+| **API + Swagger UI (optional)** | [https://localhost:8443/docs](https://localhost:8443/docs) | REST & schema reference — enable with `API_DOCS_ENABLED=true` |
 | **MQTT over TLS** | `localhost:8883` | Secured broker for all services/devices |
 | **RTSP Demo Camera (demo profile)** | `rtsp://localhost:8554/camera` | Used by vision demos |
 | **ntfy (demo profile)** | [http://localhost:8090](http://localhost:8090) | Real-time push notifications |
@@ -304,10 +304,10 @@ Successful execution confirms that `ips_cyber` publishes scored `cyber.*` alerts
 - **Secrets**: `.env`, `infra/certs/*`, `infra/ca/`, MQTT passwords, and private keys are **never committed**. `make setup` generates all of them locally.
 - **Models & Media**: Vision weights (`*.onnx`, `*.pt`), demo videos, and face photos are ignored by Git. Use `make vision-models` to fetch public models.
 - **Reproducible Artifacts**: The hash-chained demo DB (`ips/examples/demo/`) and the IPS datasets (`ips/data/train.csv`, `ips/data/test.csv`) are intentionally committed to guarantee consistent demos and evaluation.
-- **API Exposure**: Swagger/OpenAPI docs at `/docs` are enabled for development only. In production, set `API_DOCS_ENABLED=false`.
+- **API Exposure**: Swagger/OpenAPI at `/docs` is **off** by default; set `API_DOCS_ENABLED=true` only while developing, and never on a gateway (the API port is reachable).
 - **Network Hardening**: MQTT runs with TLS + per-user ACLs. Suricata is integrated for network inspection with IP blocking capabilities.
 - **Integrity**: Incidents are written to a hash-chained store to detect tampering.
-- **Supply chain**: every GitHub Action is pinned to a commit SHA, every Docker base image to a digest, and every `pip install` runs from a hash-pinned lock (`requirements/*.txt`, `docker/locks/*.txt`) with `--require-hashes`. Regenerate the locks with `scripts/lock-requirements.sh`.
+- **Supply chain**: every GitHub Action is pinned to a commit SHA, the base image of every image *this repo builds* is pinned to a digest (`docker/python-service.Dockerfile`, the frontend/cyber demo Dockerfiles), and every `pip install` runs from a hash-pinned lock (`requirements/*.txt`, `docker/locks/*.txt`) with `--require-hashes`. Regenerate the locks with `scripts/lock-requirements.sh`. The third-party services referenced by `docker-compose.yml` (mosquitto, postgres, suricata, ntfy, mediamtx, ffmpeg) keep their upstream version tags.
 - **Vulnerability reporting**: see [`SECURITY.md`](SECURITY.md).
 
 ## Documentation
