@@ -57,7 +57,7 @@ lock requirements/ml-py312.txt 3.12 --extra dev \
 # ------------------------------------------------------------ Docker locks
 # One per service built from docker/python-service.Dockerfile. Each lock is
 # self-contained: the service requirements plus libs/common's dependencies.
-for service in api simulators vision cyber engine ips_cyber; do
+for service in api simulators vision cyber engine ips_cyber ml; do
   lock "docker/locks/${service}.txt" 3.12 \
     "services/${service}/requirements.txt" \
     libs/common/pyproject.toml

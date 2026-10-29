@@ -73,6 +73,7 @@ class Incident(Base):
     events_encrypted: Mapped[bytes] = mapped_column(nullable=False)
     actions_encrypted: Mapped[bytes] = mapped_column(nullable=False)
     summary_encrypted: Mapped[bytes] = mapped_column(nullable=False)
+    details_encrypted: Mapped[bytes | None] = mapped_column(nullable=True)
 
 
 class RiskState(Base):

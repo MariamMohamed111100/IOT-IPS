@@ -342,6 +342,7 @@ class IncidentResponse(BaseModel):
     events: list[str]
     actions: list[str]
     summary: str
+    details: dict | None = None
     integrity_ok: bool = True
 
 
@@ -349,10 +350,14 @@ def _incident_out(row: Incident) -> IncidentResponse:
     events, ok1 = open_json(row.events_encrypted, row.id, "incident events", [])
     actions, ok2 = open_json(row.actions_encrypted, row.id, "incident actions", [])
     summary, ok3 = open_text(row.summary_encrypted, row.id, "incident summary")
+    details = None
+    ok4 = True
+    if getattr(row, "details_encrypted", None) is not None:
+        details, ok4 = open_json(row.details_encrypted, row.id, "incident details", None)
     return IncidentResponse(
         id=row.id, ts=_iso(row.ts), zone=row.zone, level=row.level, score=row.score,
-        trigger=row.trigger, events=events, actions=actions, summary=summary,
-        integrity_ok=ok1 and ok2 and ok3,
+        trigger=row.trigger, events=events, actions=actions, summary=summary, details=details,
+        integrity_ok=ok1 and ok2 and ok3 and ok4,
     )
 
 

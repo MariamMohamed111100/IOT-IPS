@@ -65,6 +65,7 @@ class IncidentIn(BaseModel):
     events: list[str]
     actions: list[str]
     summary: str = Field(max_length=4000)
+    details: dict | None = None
 
 
 def _parse_ts(value: str) -> datetime:
@@ -197,6 +198,8 @@ def _save_incident(payload: dict) -> None:
         inc = IncidentIn.model_validate(payload)
         if not _small(inc.events) or not _small(inc.actions):
             raise ValueError("events/actions too large")
+        if inc.details is not None and not _small(inc.details):
+            raise ValueError("details too large")
         ts = _parse_ts(inc.ts)
     except (ValidationError, ValueError) as exc:
         _reject("incident", exc)
@@ -212,6 +215,11 @@ def _save_incident(payload: dict) -> None:
             row.events_encrypted = seal_json(inc.events, inc.id)
             row.actions_encrypted = seal_json(inc.actions, inc.id)
             row.summary_encrypted = seal_text(inc.summary, inc.id)
+            if hasattr(row, "details_encrypted"):
+                if inc.details is not None:
+                    row.details_encrypted = seal_json(inc.details, inc.id)
+                else:
+                    row.details_encrypted = None
             db.commit()
     except Exception:
         logger.exception("failed to save incident")

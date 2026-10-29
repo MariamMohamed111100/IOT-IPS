@@ -181,3 +181,44 @@ class MlTests(unittest.TestCase):
         finally:
             builtins.__import__ = real
         self.assertEqual(rc, 2)
+
+
+class DetailsTests(unittest.TestCase):
+    """Warden reads data.details from the STORED EVENT, so the sensor has to put it there (contract v1.2)."""
+
+    def run_sample(self, **kw):
+        memory = Memory()
+        service = svc.IpsCyberService(DEVICES, memory, config=CONFIG, **kw)
+        service.run(sources.csv_source(str(DATA_DIR / "sample_events.csv")), "sample")
+        return [m[1] for m in memory.messages]
+
+    def test_every_alert_carries_valid_details(self):
+        schema = json.loads((CONTRACT / "incident_details.schema.json").read_text())
+        alerts = self.run_sample()
+        self.assertEqual(len(alerts), 7)
+        for a in alerts:
+            jsonschema.validate(a["data"]["details"], schema)
+            self.assertTrue(a["data"]["details"]["reports"]["technical"])
+            self.assertTrue(a["data"]["details"]["reports"]["executive"])
+            self.assertLess(len(json.dumps(a["data"])), 32 * 1024)
+
+    def test_details_follow_the_alert_not_a_fixed_text(self):
+        by_type = {a["type"]: a["data"]["details"] for a in self.run_sample()}
+        self.assertEqual(by_type["cyber.brute_force"]["mitre_technique"], "T1110")
+        self.assertEqual(by_type["cyber.port_scan"]["mitre_technique"], "T1046")
+        self.assertNotEqual(by_type["cyber.brute_force"]["reports"]["technical"],
+                            by_type["cyber.dos"]["reports"]["technical"])
+
+    def test_an_alert_is_still_sent_when_the_ips_chain_fails(self):
+        from unittest import mock
+        with mock.patch("ips_cyber.service.enrich.build_details", return_value=None):
+            alerts = self.run_sample()
+        self.assertEqual(len(alerts), 7)
+        self.assertTrue(all("details" not in a["data"] for a in alerts))
+
+    def test_ml_alerts_carry_details_too(self):
+        pytest.importorskip("ids_ml")
+        from ids_ml.combined import make_detect
+        alerts = self.run_sample(detect_fn=make_detect())
+        self.assertEqual(len(alerts), 9)
+        self.assertTrue(all("details" in a["data"] for a in alerts))
