@@ -73,7 +73,14 @@ class Episode:
 class Engine:
     def __init__(self, policy: Policy, publish: Publish, notifier: Notifier | None = None,
                  clock: Callable[[], float] = time.time, ips: IpsEnricher | None = None,
-                 protected_ips: Iterable[str] | None = None) -> None:
+                 protected_ips: Iterable[str] | None = None, isolation: str = "off") -> None:
+        # isolation: "off" (default) never isolates a device; "shadow" only writes down that it
+        # would have; "on" asks cyber to cut a compromised device off (system/block, direction both).
+        if isolation not in ("off", "shadow", "on"):
+            raise ValueError("isolation must be off, shadow or on")
+        self.isolation = isolation
+        self.compromised: dict[str, tuple[str, str, str]] = {}   # device ip -> (event type, zone, device id)
+        self.isolated: set[str] = set()
         self.policy, self._publish, self.clock = policy, publish, clock
         self.notifier = notifier or Notifier()
         self.scorer = Scorer(policy)
@@ -175,6 +182,13 @@ class Engine:
                 src_ip = event.data.get("src_ip")
                 spoofed_to_itself = (isinstance(src_ip, str)
                                      and src_ip.strip() == str(event.data.get("dst_ip") or "").strip())
+                if direction == "outbound" and event.type.startswith("cyber."):
+                    # An outbound flow from one of OUR devices: the device itself is the problem.
+                    # Only a known device address counts, so a spoofed header cannot name a victim.
+                    own = str(src_ip or "").strip()
+                    if own in self.protected_ips and not spoofed_to_itself:
+                        self.compromised.setdefault(own, (event.type, event.zone,
+                                                          str(event.data.get("device_id") or "unknown")))
                 if direction != "outbound":
                     ip = attacker_ip(src_ip, self.policy.never_block, self.protected_ips)
                     if ip and not spoofed_to_itself:            # a flow to itself is not a source
@@ -339,6 +353,25 @@ class Engine:
                     "reason": event_type, "window_seconds": self.policy.block_window_s}, False)
             if self._once(ep, "block_ip", ip):             # recorded once per zone's incident
                 self._note(ep, "block_ip", f"block_ip -> {ip} ({event_type})")
+        self._do_isolate(ep, level)
+
+    def _do_isolate(self, ep: Episode, level: str) -> None:
+        """Cut a compromised device off the network. Opt-in, Critical only (see `isolation`)."""
+        if self.isolation == "off" or level != "critical":
+            return
+        for ip, (event_type, zone, device_id) in self.compromised.items():
+            if zone not in (ep.zone, "network") or ip in self.isolated:
+                continue
+            if self.isolation == "on":
+                self.isolated.add(ip)
+                self._publish(topics.BLOCK, {
+                    "id": uuid.uuid4().hex, "ts": iso(self.clock()), "ip": ip, "reason": event_type,
+                    "window_seconds": self.policy.block_window_s, "direction": "both",
+                    "device_id": device_id}, False)
+                if self._once(ep, "isolate", ip):
+                    self._note(ep, "block_ip", f"isolate device -> {ip} ({event_type})")
+            elif self._once(ep, "isolate_shadow", ip):          # shadow: say it, do nothing
+                self._note(ep, "block_ip", f"would isolate -> {ip} ({event_type}), shadow mode, nothing sent", record=False)
 
     # ------------------------------------------------------------------ time
     def reset_zones(self, zones: Iterable[str]) -> None:
@@ -378,6 +411,8 @@ class Engine:
         if not self.episodes:
             self.attackers.clear()
             self.blocked.clear()
+            self.compromised.clear()
+            self.isolated.clear()
 
     # ------------------------------------------------------------------ publishing
     def _summary(self, ep: Episode, inc: Incident, level: str) -> str:

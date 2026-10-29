@@ -27,7 +27,8 @@ def build(client) -> Engine:
     def publish(topic: str, payload: dict, retain: bool) -> None:
         client.publish(topic, json.dumps(payload), qos=1, retain=retain)
     return Engine(load_policy(), publish, ips=IpsEnricher.load(),
-                  protected_ips=device_ips())
+                  protected_ips=device_ips(),
+                  isolation=os.getenv("ENGINE_ISOLATION", "off").strip().lower() or "off")
 
 
 def device_ips(path: str | Path | None = None) -> set[str]:
