@@ -11,7 +11,7 @@ x-mqtt: &mqtt
 
 services:
   mosquitto:
-    image: eclipse-mosquitto:2
+    image: eclipse-mosquitto:2@sha256:860aeb5d63ce509508f6dcfb2bc8a1c1dd2bc60555b562b45ce90e52d8dabb0f
     ports: ["8883:8883"]
     # Bind-mounted passwd/acl/certs show up as root:root/0777 on Windows Docker
     # Desktop (host chmod cannot fix that), so copy them in-container to
@@ -48,7 +48,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB: ${POSTGRES_DB}
@@ -212,14 +212,14 @@ services:
   # ---- Demo/profile services (P4/P5). Start with: docker compose --profile demo up
   # They do NOT affect `docker compose up` (CI, everyday dev) - see docs/CONTRACT.md.
   rtsp:
-    image: bluenviron/mediamtx:latest
+    image: bluenviron/mediamtx:latest@sha256:59e43552f3be43695b70c19424dc2a42fcec18075f88d91561a24ac5d70a586c
     profiles: ["demo"]
     ports: ["8554:8554"]        # camera feed for the vision pipeline (P4)
     restart: unless-stopped
 
   # Plays services/vision/media/videos/demo.mp4 on a loop into the RTSP server (a fake IP camera).
   camera:
-    image: linuxserver/ffmpeg:latest
+    image: linuxserver/ffmpeg:latest@sha256:6547359fac23a2747e606d380e10267b2923a38f68485d9cacefd039e74d3aa8
     profiles: ["demo"]
     command: ["-re", "-stream_loop", "-1", "-i", "/media/videos/demo.mp4", "-c", "copy",
               "-f", "rtsp", "-rtsp_transport", "tcp", "rtsp://rtsp:8554/camera"]
@@ -248,7 +248,7 @@ services:
   # Suricata shares the attacker's network namespace, so it sniffs exactly the attack traffic.
   # Only OUR rules are loaded (-S): no internet needed. eve.json lands in the suricata_logs volume.
   suricata:
-    image: jasonish/suricata:7.0.8
+    image: jasonish/suricata:7.0.8@sha256:89b300fb5d00f182359a1305543e828a804ede7f1685e75b05f607f7372428c6
     network_mode: service:attacker
     profiles: ["demo"]
     depends_on: [attacker]
@@ -260,7 +260,7 @@ services:
     restart: unless-stopped
 
   ntfy:
-    image: binwiederhier/ntfy:latest
+    image: binwiederhier/ntfy:latest@sha256:901e14503d3f605f445be0e68f2ac71f0aa73391897ce6ceb599f8c48d8b3792
     profiles: ["demo"]
     # The image's ENTRYPOINT is `ntfy` with no default CMD, so on recent tags it
     # prints help and exits unless the subcommand is given explicitly.
