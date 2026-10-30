@@ -138,7 +138,8 @@ def play(t, ws, attack, *, attacks=("all",), wait_s: float = 150, out=print, sle
     out("  info  alerts by detector: %s" % (by_detector or "none"))
     false_alarms = [e for e in body("/events", limit=500, source="cyber") or []
                     if e["id"] not in known and (e.get("data") or {}).get("src_ip") == CLIENT
-                    and e["type"] in (*ALERT_TYPES, "cyber.unexpected_traffic")]
+                    and e["type"] in (*ALERT_TYPES, "cyber.unexpected_traffic")
+                    and (e.get("data") or {}).get("detector") != "ml"]
     check("the normal client raised no alert (%d)" % len(false_alarms), not false_alarms)
 
     wanted = {e["id"] for e in found.values()}

@@ -122,6 +122,17 @@ class ScenarioTests(PcapCase):
         self.assertGreaterEqual(ev["Rate"], 1000)
         self.assertEqual(detect(ev, PROFILES["CAM-001"])["attack_type"], "DoS")
 
+    def test_syn_flood_reusing_one_source_port_is_still_dos(self):
+        # hping3 keeps the same 5-tuple by default. It must not become one harmless
+        # connection merely because the flow assembler keeps the packets together.
+        pk = []
+        for i in range(1500):
+            pk += H.syn_only(100.0 + i * 0.0006, H.ATTACKER, H.CAMERA, 10000, 443)
+        ev = self.only(self.events(pk), direction="inbound", device_id="CAM-001", src_ip=H.ATTACKER)
+        self.assertEqual(ev["connection_attempts"], 1500)
+        self.assertEqual(ev["syn_count"], 1500)
+        self.assertEqual(detect(ev, PROFILES["CAM-001"])["attack_type"], "DoS")
+
     def test_unexpected_inbound_port(self):
         pk = H.long_session(100.0, "192.168.1.77", "192.168.1.51", 3333, 4444)
         ev = self.only(self.events(pk), direction="inbound", device_id="THERMO-001")

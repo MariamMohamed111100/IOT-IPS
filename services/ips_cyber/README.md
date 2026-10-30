@@ -31,8 +31,9 @@ Exit code 2 means a bad config or input file.
 - **Contract first.** Every alert is checked against `contract/ips_event_data.schema.json`
   (11 data fields). `duration` defaults to 0; a protocol outside TCP/UDP/ICMP/GRE is refused
   and counted, never sent.
-- **DoS floor 500 connections** (was 100). The flow engine counts one connection per session,
-  and 150 normal viewers or one port scan reached 100. At 500 the sample evaluation is unchanged.
+- **DoS floor 500 connections** (was 100). The flow engine counts TCP initiating SYN attempts
+  (or one non-TCP attempt per flow), so a flood that reuses one source port is still visible;
+  150 normal viewers or one port scan did not reach 500. At 500 the sample evaluation is unchanged.
   DoS confidence is the weaker of the flood and connection ratios.
 - **Spread-out floods.** Per-source grouping misses a flood from thousands of spoofed
   addresses, so `tick()` also emits one aggregate inbound event per device (`src_ip` 0.0.0.0)
@@ -43,9 +44,9 @@ Exit code 2 means a bad config or input file.
 ## Known limits
 
 Low-rate outbound floods, slow brute force and slow scans (a few events an hour) are missed.
-ESP and SCTP traffic is seen but cannot be published (contract enum). `syn_count` here equals the number
-of connections, which differs from the dataset's meaning; thresholds were calibrated on
-synthetic PCAPs, so repeat the calibration on lab traffic (Task 8).
+ESP and SCTP traffic is seen but cannot be published (contract enum). `syn_count` and TCP
+`connection_attempts` count initiating SYNs, which differs from the dataset's meaning; thresholds
+must still be calibrated on representative lab traffic.
 
 ## Relation to other services
 

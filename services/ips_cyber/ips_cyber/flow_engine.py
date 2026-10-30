@@ -24,9 +24,10 @@ Approximations (documented limitations):
     "inbound", a flow started by a device is "outbound".
   * Live chunks are assembled separately, so a connection that spans two chunks is
     counted as two flows.
-  * syn_count is the number of connections started (one SYN each). The dataset's syn_count
-    is something else (SYN packets inside a 10-packet window), so the detector thresholds on
-    this field mean "many connections" here: that is why DoS also needs min_connection_attempts.
+  * connection_attempts counts initiating SYNs for TCP (and flows for other protocols). This
+    preserves repeated SYNs on one 5-tuple, which is how hping3 floods a service. The dataset's
+    syn_count is something else (SYN packets inside a 10-packet window), so the detector
+    thresholds on these fields are calibrated against this flow engine, not copied from the dataset.
   * Events are grouped per (direction, device, source). When at least aggregate_min_sources
     different sources hit one device in the same window, one more inbound event sums them up with
     src_ip 0.0.0.0, so a flood spread over many addresses is still seen. Nothing is blocked
@@ -329,7 +330,10 @@ class FlowEngine:
             "dst_port": dst_port,
             "protocol": protocol,
             "direction": direction,
-            "connection_attempts": len(flows),
+            # A TCP flood can reuse one source port, so it remains one 5-tuple/Flow while
+            # carrying thousands of initiating SYNs. Count those attempts rather than only
+            # distinct Flow objects. UDP/ICMP flows still count once each.
+            "connection_attempts": sum(max(1, f.syn) if f.proto == "TCP" else 1 for f in flows),
             "failed_attempts": sum(1 for f in flows if self.is_failed(f)),
             "unique_dst_ports": len({f.dst_port for f in flows if f.dst_port}),
             "unique_dst_ips": len(src_dst_ips),

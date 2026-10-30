@@ -157,6 +157,7 @@ services:
       {<<: *mqtt, MQTT_USER: engine, MQTT_PASSWORD: "${MQTT_PASSWORD_ENGINE}",
        MQTT_CLIENT_CERT: /certs/clients/engine.crt, MQTT_CLIENT_KEY: /run/app-secrets/engine_client_key,
        RISK_SCORES_FILE: /config/risk_scores.yaml, IPS_DEVICES_FILE: /config/ips_devices.json,
+       ENGINE_ISOLATION: "${ENGINE_ISOLATION:-off}",
        NTFY_TOPIC: "${NTFY_TOPIC:-}", NTFY_SERVER: "${NTFY_SERVER:-}",
        TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}", TELEGRAM_CHAT_ID: "${TELEGRAM_CHAT_ID:-}"}
     volumes:
