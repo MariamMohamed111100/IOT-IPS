@@ -10,6 +10,10 @@ The detector is the one in `ips/` (rules in `ips/config/detector_rules.yaml`), s
 service, the evaluation script and the demo always agree. An ML model can replace it through
 the `detect_fn` argument of `IpsCyberService`.
 
+## ML windows (`--ml-windows`)
+
+With `--detector combined --ml-windows` on a `pcap` or `live` source, the packets also feed `ids_ml.live` (10-packet windows with a device and a source address). Window alerts need 3 flagged windows within 30 s and are limited to one per 30 s per (device, source, type); see `services/ml/README.md`. Needs `pip install -e services/ml`; the lab gateway image has it (`lab/gateway/Dockerfile`).
+
 ## Run
 
     pip install -e ips && pip install -r services/ips_cyber/requirements.txt

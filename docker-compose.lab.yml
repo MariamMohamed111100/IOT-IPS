@@ -1,0 +1,78 @@
+# Simulated IPS lab (Task 8): replaces the Raspberry Pi and the camera. Use it on top of the main stack:
+#
+#   ./scripts/setup.sh
+#   docker compose -f docker-compose.yml -f docker-compose.lab.yml up -d --build --wait
+#   python scripts/ips/ips_e2e.py            # attack, then check API + WebSocket
+#   docker compose -f docker-compose.yml -f docker-compose.lab.yml down -v
+#
+# The lab network is `internal`: Docker gives it no route to anything outside it, so the attacker
+# (nmap, hydra, hping3) can only reach our own containers. `attack` also refuses any other target.
+#
+#   lab_camera   10.77.0.10  fake camera, ports 554 (RTSP-like) and 443 (HTTP-like)
+#   lab_client   10.77.0.20  normal client: a few requests a minute
+#   lab_attacker 10.77.0.66  nmap, hydra, hping3
+#   lab_gateway  (camera's network namespace)  ips_cyber on live traffic. On the real Pi this is the
+#                container that sees the home network.
+# The camera is also on the stack's default network, but only so the gateway (which shares its namespace)
+# can reach the MQTT broker; the camera program itself opens no outbound connection.
+networks:
+  lab:
+    internal: true
+    ipam:
+      config: [{subnet: 10.77.0.0/24}]
+
+services:
+  lab_camera:
+    build: ./lab/camera
+    networks:
+      lab: {ipv4_address: 10.77.0.10}
+      default: {}
+    sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+
+  lab_client:
+    build: ./lab/client
+    networks:
+      lab: {ipv4_address: 10.77.0.20}
+    depends_on: [lab_camera]
+    read_only: true
+    cap_drop: [ALL]
+    restart: unless-stopped
+
+  lab_attacker:
+    build: ./lab/attacker
+    networks:
+      lab: {ipv4_address: 10.77.0.66}
+    depends_on: [lab_camera]
+    cap_add: [NET_RAW]            # nmap -sS and hping3 need raw sockets
+    restart: unless-stopped
+
+  lab_gateway:
+    build: {context: ., dockerfile: lab/gateway/Dockerfile}
+    network_mode: service:lab_camera
+    environment:
+      {MQTT_HOST: mosquitto, MQTT_PORT: "8883", MQTT_CA_FILE: /certs/ca.crt, MQTT_USER: cyber, MQTT_PASSWORD: "${MQTT_PASSWORD_CYBER}",
+       MQTT_CLIENT_CERT: /certs/clients/cyber.crt, MQTT_CLIENT_KEY: /run/app-secrets/cyber_client_key,
+       RUN_AS_ROOT: "1"}                     # live capture needs root
+    cap_add: [NET_RAW, NET_ADMIN]
+    volumes:
+      - ./infra/certs/ca.crt:/certs/ca.crt:ro
+      - ./infra/certs/clients/cyber.crt:/certs/clients/cyber.crt:ro
+      - ./config:/config:ro
+      - ./lab:/lab:ro
+    secrets: [cyber_client_key]
+    depends_on: [mosquitto, lab_camera]
+    restart: unless-stopped
+
+  # In the lab the camera is the lab camera, and the CSV replay of 14 sample events stays off.
+  engine:
+    environment:
+      IPS_DEVICES_FILE: /lab/ips_devices.json
+      ENGINE_ISOLATION: shadow                 # the lab shows "would isolate"; nothing is cut off
+    volumes:
+      - ./lab:/lab:ro
+
+  ips_cyber:
+    profiles: ["csv-replay"]

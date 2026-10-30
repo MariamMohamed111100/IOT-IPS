@@ -129,7 +129,7 @@ Events still sent by the Suricata path without the new fields are valid until Pe
 | `connection_attempts` | integer >= 0 | connection attempts seen from the source in the window |
 | `duration` | number >= 0 | seconds covered by the window |
 
-Optional: `details` (same object as in 4.4). `severity_hint` is the detector's confidence band
+Optional: `details` (same object as in 4.4); `detector` (`rules` or `ml`: which detector raised the alert, so the model's contribution can be measured). `severity_hint` is the detector's confidence band
 (`low` to `high`); the IPS sensor does not compute a risk level, so the `low`→`critical` level in
 the incident comes from the engine.
 

@@ -26,7 +26,8 @@ def main(argv=None) -> int:
             bad.append(text)
     _, devices = t.api("GET", "/devices")
     ids = {d["device_id"] for d in devices or []}
-    check({"cam_001", "thermo_001"} <= ids, "IPS devices are registered (%d devices)" % len(ids))
+    need = {"cam_001"} if a.sensor_only else {"cam_001", "thermo_001"}      # the lab registers its own camera
+    check(need <= ids, "IPS devices are registered: %s (%d devices)" % (", ".join(sorted(need)), len(ids)))
     # Filter by source: the live vision feed can add more than the 500-row page limit in a minute,
     # which would push the IPS events off an unfiltered "newest 500" query.
     _, events = t.api("GET", "/events", params={"limit": 500, "source": "cyber"})
@@ -45,7 +46,8 @@ def main(argv=None) -> int:
         check(bool(ok), "%s on %s: MITRE %s, IPS %s (%s), both reports present" % (e["type"], d.get("device_id"),
               det.get("mitre_technique"), det.get("ips_score"), det.get("ips_level")))
     blocks = [e for e in events or [] if e["type"] in ("cyber.block_applied", "cyber.block_refused")]
-    check(any(b["data"].get("dry_run") is True for b in blocks), "dry-run block results are stored (%d)" % len(blocks))
+    check(any(isinstance(b["data"].get("dry_run"), bool) for b in blocks),
+          "block results are stored with their dry_run flag (%d; the base stack blocks for real, a dry run says True)" % len(blocks))
     if a.standalone:
         _, incs = t.api("GET", "/incidents", params={"limit": 100})
         check(len(incs or []) >= a.expect, "standalone incidents exist (%d)" % len(incs or []))

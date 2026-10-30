@@ -1,0 +1,41 @@
+name: lab-e2e
+# The simulated IPS lab (docker-compose.lab.yml): a real attack against a fake camera, then checks through
+# the API and WebSocket. Starts by hand and on pull requests that touch the lab; it is slow (builds images).
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "lab/**"
+      - "docker-compose.lab.yml"
+      - "scripts/ips/ips_e2e.py"
+      - "services/ips_cyber/**"
+      - "services/engine/**"
+permissions:
+  contents: read
+jobs:
+  lab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      COMPOSE_FILES: -f docker-compose.yml -f docker-compose.lab.yml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/ci-py312.txt
+      - name: Install (hash-pinned lock)
+        run: pip install --require-hashes -r requirements/ci-py312.txt
+      - name: Setup (secrets, certs, MQTT users)
+        run: ./scripts/setup.sh
+      - run: docker compose $COMPOSE_FILES config -q
+      - run: docker compose $COMPOSE_FILES build
+      - name: Start the stack and the lab
+        run: docker compose $COMPOSE_FILES up -d --wait --wait-timeout 600
+      - name: Attack the lab camera and check the API and WebSocket
+        run: python scripts/ips/ips_e2e.py
+      - if: failure()
+        run: docker compose $COMPOSE_FILES logs --tail=200
+      - if: always()
+        run: docker compose $COMPOSE_FILES down -v --remove-orphans

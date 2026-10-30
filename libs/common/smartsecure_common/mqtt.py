@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import ssl
 import threading
 import time
+import uuid
 
 import paho.mqtt.client as mqtt
 
@@ -38,7 +40,11 @@ def connect(service: str, timeout: float = 30.0) -> mqtt.Client:
     """
     host = os.getenv("MQTT_HOST", "mosquitto")
     port = int(os.getenv("MQTT_PORT", "8883"))
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"{service}-{os.getpid()}")
+    # client_id must be unique per connection: in Docker the main process is always PID 1, so
+    # two containers running the same service (cyber + the lab gateway's ips_cyber) would
+    # otherwise share an id and take each other's session over.
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
+                         client_id=f"{service}-{os.getpid()}-{socket.gethostname()}-{uuid.uuid4().hex[:8]}")
     client.username_pw_set(os.getenv("MQTT_USER", service), os.environ["MQTT_PASSWORD"])
     client.tls_set_context(tls_context())
     client.reconnect_delay_set(min_delay=1, max_delay=30)

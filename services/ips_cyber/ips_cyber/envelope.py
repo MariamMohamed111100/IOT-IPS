@@ -145,6 +145,9 @@ def build_alert(event, detection, profile, source_name, event_ref, config):
         # "attempts" keeps the field name scripts/ips/ips_to_backend.py already uses
         "attempts": failed if etype == "cyber.brute_force" else conns,
     }
+    detector = clean_text(detection.get("detector") or "rules", 8)    # the rule detector sets none; the ML model sets "ml"
+    if detector in ("rules", "ml"):
+        data["detector"] = detector
     if etype == "cyber.port_scan" and data["dst_port"] is not None:
         data["ports"] = [data["dst_port"]]
     data = {k: v for k, v in data.items() if v is not None}

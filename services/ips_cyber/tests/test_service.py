@@ -64,6 +64,11 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(stats["skipped_bad_input"], 0)
         self.assertEqual(stats["benign"], 7)                   # 4 normal events + 3 missed attacks
 
+    def test_every_alert_says_which_detector_raised_it(self):
+        service, memory = make_service()
+        replay(service)
+        self.assertEqual({m[1]["data"]["detector"] for m in memory.messages}, {"rules"})   # the rules-only service
+
     def test_normal_traffic_publishes_nothing(self):
         service, memory = make_service()
         replay(service)
@@ -172,6 +177,37 @@ class BadInputTests(unittest.TestCase):
         service, memory = make_service(detect_fn=ml)
         self.assertIsNone(service.handle_event("r1", {"device_id": "CAM-001"}, "t"))
         self.assertEqual(service.stats["benign"], 1)
+
+
+class StartDelayTests(unittest.TestCase):
+    """MQTT drops a message nobody is subscribed to yet: the Compose replay waits before it publishes."""
+
+    def run_main(self, *extra):
+        from unittest import mock
+        order = []
+        real_run = cyber_main.IpsCyberService.run
+
+        def run(self_, *a, **k):
+            order.append("run")
+            return real_run(self_, *a, **k)
+        with mock.patch("ips_cyber.service.time.sleep", side_effect=lambda s: order.append(("sleep", s))), \
+                mock.patch.object(cyber_main.IpsCyberService, "run", run):
+            code = cyber_main.main(["--source", "csv", "--file", REPLAY_FILE, "--devices", DEVICES_FILE,
+                                    "--publisher", "stdout", *extra])
+        return code, order
+
+    def test_it_waits_before_the_first_message(self):
+        code, order = self.run_main("--start-delay", "7")
+        self.assertEqual(code, 0)
+        self.assertEqual(order[:2], [("sleep", 7.0), "run"])
+
+    def test_no_delay_by_default(self):
+        _, order = self.run_main()
+        self.assertEqual(order, ["run"])
+
+    def test_a_silly_delay_is_refused(self):
+        code, _ = self.run_main("--start-delay", "100000")
+        self.assertEqual(code, 2)
 
 
 class ConfigTests(unittest.TestCase):

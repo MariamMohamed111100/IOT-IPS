@@ -118,6 +118,15 @@ class DockerTransport:
         import time
         time.sleep(seconds)
 
+    def reset_engine(self) -> None:
+        """Restart the engine so it forgets live events (its scores are in memory)."""
+        result = subprocess.run(["docker", "compose", "restart", "engine"], cwd=ROOT,
+                                capture_output=True, env=self.env)
+        if result.returncode != 0:
+            err = result.stderr.decode(errors="replace")[-600:]
+            sys.exit("docker compose restart engine failed:\n" + err)
+        self.sleep(6)
+
 
 def _iso(moment: datetime) -> str:
     return moment.astimezone(timezone.utc).isoformat(timespec="milliseconds")
@@ -158,11 +167,14 @@ def play(t: Transport, *, speed: float = 1.0, out=print) -> list[str]:
         return events[0]["id"] if events else None
 
     out("== Demo incident: garage intruder (proposal timeline) ==")
-    leftover = [r for r in body("/risk") or [] if r["zone"] == "garage" and r["score"] > 0]
+    # Network events (the sensor's replay, an earlier port scan) count in EVERY physical zone, so
+    # risk in `network` would also push the garage past 85, even when the garage shows no risk yet.
+    leftover = [r for r in body("/risk") or []
+                if r["zone"] in ("garage", "network") and r["score"] > 0]
     if leftover:
-        msg = (f"the engine still holds live garage risk ({leftover[0]['score']}) from earlier "
-               "events, so the demo would not reach exactly 85. Wait ~10 minutes or run: "
-               "docker compose restart engine")
+        msg = (f"the engine still holds live {leftover[0]['zone']} risk ({leftover[0]['score']}) "
+               "from earlier events, so the demo would not reach exactly 85. Wait ~10 minutes or "
+               "run it with --reset-engine (make demo-incident does)")
         out("  FAIL  " + msg)
         return [msg]
     previous = latest_motion_id()
@@ -247,8 +259,13 @@ def main() -> None:
     ap.add_argument("--base", default="https://localhost:8443")
     ap.add_argument("--ca", default=str(ROOT / "infra/certs/ca.crt"))
     ap.add_argument("--speed", type=float, default=1.0, help="2 = twice as fast")
+    ap.add_argument("--reset-engine", action="store_true",
+                    help="restart the engine first, so earlier events do not count")
     args = ap.parse_args()
-    sys.exit(1 if play(DockerTransport(args.base, args.ca), speed=args.speed) else 0)
+    transport = DockerTransport(args.base, args.ca)
+    if args.reset_engine:
+        transport.reset_engine()
+    sys.exit(1 if play(transport, speed=args.speed) else 0)
 
 
 if __name__ == "__main__":

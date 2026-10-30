@@ -43,10 +43,14 @@ The model's attack groups are mapped onto the four event types of the contract (
 Recon -> `cyber.port_scan`, BruteForce -> `cyber.brute_force`, DDoS, DoS, Mirai -> `cyber.dos`,
 Spoofing and Web -> `cyber.unexpected_traffic`. The risk engine already knows all seven names.
 
-**Not wired yet:** the flow engine of `ips_cyber` makes per-source flow events, not the packet-window features the
-model needs, so on a live PCAP the model is not used (the rules judge alone, and the alert says so). Rows from
-`ids_ml.extractor.extract` carry no addresses, so they cannot become alerts either. Joining the two (windows per
-device and source) is the next step, together with the lab capture.
+**On PCAP and live traffic** (`ips_cyber --detector combined --ml-windows`): `ids_ml/live.py` cuts the packets into
+windows of 10, computes the same features as `extractor.py`, and ties each window to the device it talks to and to the
+other end (who spoke first decides inbound or outbound). The service then gates the alerts of windows: **3 flagged
+windows** of the same (device, source, attack type) within 30 s raise ONE alert, then that key is quiet for 30 s.
+Why: on a synthetic capture with ordinary request/response traffic the model flagged 3 of 8 normal windows at 0.90
+(Spoofing, Recon), while a SYN flood gave 30 of 30 DoS windows; one window is not evidence. This is a synthetic test, not
+a measurement: the real false-alarm rate on home traffic is still unknown and needs the lab capture (`docs/LAB.md`).
+The flow events keep running next to the windows, so the rules still see failed logins, ports and connections.
 
 ## Results, honestly
 

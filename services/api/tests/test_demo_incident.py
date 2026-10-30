@@ -164,3 +164,12 @@ def test_the_demo_refuses_to_run_on_top_of_live_garage_risk(transport):
         "zone": "garage", "severity_hint": "high", "data": {}}))
     failures = demo_incident.play(transport, out=lambda _: None)
     assert failures and "live garage risk" in failures[0]
+
+
+def test_the_demo_refuses_to_run_on_top_of_live_network_risk(transport):
+    """Risk in `network` also counts in the garage: the demo got 100 instead of 85."""
+    transport.world.engine.on_message("security/alerts/cyber", json.dumps({
+        "id": "n1", "ts": "2026-01-01T00:00:00+00:00", "source": "cyber", "type": "cyber.port_scan",
+        "zone": "network", "severity_hint": "medium", "data": {}}))
+    failures = demo_incident.play(transport, out=lambda _: None)
+    assert failures and "live network risk" in failures[0]

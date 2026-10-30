@@ -215,12 +215,15 @@ class FlowEngine:
 
     def sniff_chunk(self, iface, seconds):
         """Capture live traffic for `seconds` and return its flows (needs root). Not unit-tested."""
+        return self.flows_from_packets(self.sniff_packets(iface, seconds))
+
+    def sniff_packets(self, iface, seconds):
+        """The raw packets of `seconds` of live capture (needs root). Not unit-tested."""
         try:
             from scapy.sendrecv import sniff
         except ImportError as exc:  # pragma: no cover
             raise FlowEngineError("scapy is required for live capture: %s" % exc) from exc
-        packets = sniff(iface=iface, timeout=seconds, store=True)
-        return self.flows_from_packets(packets)
+        return sniff(iface=iface, timeout=seconds, store=True)
 
     def flows_from_records(self, rows):
         """Adapter for exported flow records (NFStream / CICFlowMeter style dicts).

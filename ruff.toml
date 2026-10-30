@@ -17,6 +17,7 @@ known-first-party = [
 # Real-bug rules (F: unused or undefined names, B: bug-prone patterns) still apply to them.
 "ips/**" = ["E501", "E701", "E702", "E731", "E402", "E741", "E401", "I001", "B904", "B905"]
 "services/ips_cyber/**" = ["E501"]
+"lab/**" = ["E501"]
 "services/engine/**" = ["E501"]
 "services/cyber/**" = ["E501"]
 "services/ml/**" = ["E501", "E731", "E741", "E402"]

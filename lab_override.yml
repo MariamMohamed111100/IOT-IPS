@@ -1,0 +1,8 @@
+﻿services:
+  engine:
+    environment:
+      IPS_DEVICES_FILE: /lab/ips_devices.json
+      ENGINE_ISOLATION: "on"
+  cyber:
+    environment:
+      CYBER_FIREWALL: blocklist

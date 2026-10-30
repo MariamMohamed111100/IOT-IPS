@@ -23,6 +23,7 @@ import logging
 import os
 import sys
 import time
+from datetime import datetime
 
 import yaml
 from iot_ips import detector, enrich
@@ -71,8 +72,16 @@ def load_devices(path):
 
 
 class IpsCyberService:
-    def __init__(self, devices, publisher, config, detect_fn=None, rules_path=detector.DEFAULT_CONFIG):
+    def __init__(self, devices, publisher, config, detect_fn=None, rules_path=detector.DEFAULT_CONFIG,
+                 ml_cooldown_s=30.0, ml_confirm=3):
         self.config = config
+        # Alerts from 10-packet windows ("win:" refs) are gated per (device, source, attack type):
+        #  * a single flagged window is not enough (the model flags ~0.1% of normal windows at 0.90 on the dataset,
+        #    and more on traffic it never saw): ml_confirm flagged windows within ml_cooldown_s raise ONE alert;
+        #  * after an alert the same key stays quiet for ml_cooldown_s (a flood fills hundreds of windows a second).
+        self.ml_cooldown_s, self.ml_confirm = ml_cooldown_s, ml_confirm
+        self._window_hits = {}
+        self._window_alerted = {}
         self.publisher = publisher
         self.topic = config["topic"]
         # detect_fn is the slot the ML model fills later: it only has to look like detect(event, profile)
@@ -109,6 +118,9 @@ class IpsCyberService:
             self.stats["skipped_bad_input"] += 1
             log.warning("skipped %s: %s", event_ref, exc)
             return None
+        if str(event_ref).startswith("win:") and not self._window_gate(alert):
+            self.stats["window_alerts_suppressed"] = self.stats.get("window_alerts_suppressed", 0) + 1
+            return None
         # contract v1.2: the detection carries data.details (MITRE tag, IPS score and level, both reports). Without
         # them Warden shows nothing for an alert, because it reads them from the stored event.
         details = enrich.build_details(alert, profile)
@@ -129,6 +141,27 @@ class IpsCyberService:
             return None
         self.stats["alerts_published"] += 1
         return alert
+
+    def _window_gate(self, alert):
+        """True when this window alert may be sent (see __init__)."""
+        key = (alert["data"].get("device_id"), alert["data"].get("src_ip"), alert["type"])
+        try:
+            now = datetime.fromisoformat(alert["ts"]).timestamp()
+        except ValueError:
+            return True
+        last = self._window_alerted.get(key)
+        if last is not None and 0 <= now - last < self.ml_cooldown_s:
+            return False
+        hits = [t for t in self._window_hits.get(key, []) if 0 <= now - t < self.ml_cooldown_s] + [now]
+        if len(hits) < self.ml_confirm:
+            self._window_hits[key] = hits
+            return False
+        self._window_hits.pop(key, None)
+        self._window_alerted[key] = now
+        for table in (self._window_hits, self._window_alerted):
+            if len(table) > 5000:                          # bounded: forget the oldest
+                table.pop(next(iter(table)))
+        return True
 
     def run(self, source, source_name):
         for event_ref, event in source:
@@ -156,6 +189,11 @@ def build_arg_parser():
                    help="combined = rules plus the ML model of services/ml (needs `pip install -e services/ml`)")
     p.add_argument("--ml-min-confidence", type=float, default=0.90,
                    help="the model may raise an alert alone only at this confidence (combined mode)")
+    p.add_argument("--start-delay", type=float, default=0.0,
+                   help="seconds to wait before reading the source: MQTT drops a message nobody is subscribed to yet, "
+                        "so the one-shot CSV replay of a Compose start waits for the API and the engine to subscribe")
+    p.add_argument("--ml-windows", action="store_true",
+                   help="also feed the ML model with 10-packet windows of pcap/live traffic (needs --detector combined)")
     p.add_argument("-v", "--verbose", action="store_true")
     p.add_argument("--idle", action="store_true",
                    help="keep the process alive after the source is exhausted (Compose restart policy)")
@@ -185,6 +223,8 @@ def main(argv=None, publisher_override=None):
         else:
             publisher = pub.StdoutPublisher()
 
+        if args.ml_windows and (args.detector != "combined" or args.source == "csv"):
+            raise ValueError("--ml-windows needs --detector combined and a pcap or live source")
         detect_fn = None
         if args.detector == "combined":
             try:
@@ -194,13 +234,18 @@ def main(argv=None, publisher_override=None):
             detector.load_config(args.rules)                           # a bad rules file still stops the start
             detect_fn = make_detect(args.ml_min_confidence,
                                     rules=lambda ev, prof=None: detector.detect(ev, prof, config_path=args.rules))
+        if not 0 <= args.start_delay <= 600:
+            raise ValueError("--start-delay must be between 0 and 600 seconds")
         service = IpsCyberService(devices, publisher, config, detect_fn=detect_fn, rules_path=args.rules)
+        if args.start_delay:
+            log.info("waiting %.0f s for the API and the engine to subscribe", args.start_delay)
+            time.sleep(args.start_delay)
         if args.source == "csv":
             src = sources.csv_source(args.file)
         elif args.source == "pcap":
-            src = sources.pcap_source(args.file, devices, config["flow_engine"])
+            src = sources.pcap_source(args.file, devices, config["flow_engine"], ml_windows=args.ml_windows)
         else:
-            src = sources.live_source(args.iface, devices, config["flow_engine"])
+            src = sources.live_source(args.iface, devices, config["flow_engine"], ml_windows=args.ml_windows)
         stats = service.run(src, sources.source_name(args.file))
         print(json.dumps(stats), file=sys.stderr)
         if args.idle:

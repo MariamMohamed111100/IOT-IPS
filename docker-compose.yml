@@ -179,6 +179,8 @@ services:
       - ${IPS_CYBER_SOURCE:-csv}
       - --file
       - ${IPS_CYBER_FILE:-/ips-data/sample_events.csv}
+      - --start-delay
+      - ${IPS_CYBER_START_DELAY:-20}
       - --devices
       - /config/ips_devices.json
       - --publisher

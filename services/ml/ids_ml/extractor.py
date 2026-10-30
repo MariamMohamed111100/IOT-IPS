@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import socket
 import statistics
 from collections import Counter
 from dataclasses import dataclass
@@ -58,6 +59,11 @@ class Packet:
     flags: dict
     layers: dict                   # LAYERS -> 0/1
     piece: int = 0                 # which 10 MB piece of the capture (see --split-mb)
+    # Addresses: NOT features (the model never sees them); they let a live window be tied to a device and a source.
+    src: str | None = None
+    dst: str | None = None
+    sport: int = 0
+    dport: int = 0
 
 
 def parse(ts: float, frame: bytes) -> Packet | None:
@@ -77,20 +83,24 @@ def parse(ts: float, frame: bytes) -> Packet | None:
     layers["IPv"] = layers["LLC"] = 1
     header_len = 0
     seg = ip.data
+    sport = dport = 0
     if isinstance(seg, dpkt.tcp.TCP):
         layers["TCP"] = 1
+        sport, dport = seg.sport, seg.dport
         header_len = seg.__hdr_len__ + len(seg.opts)
         flags = {k: int(bool(seg.flags & bit)) for k, bit in FLAGS.items()}
         for name, port in TCP_PORTS.items():
             layers[name] = int(port in (seg.sport, seg.dport))
     elif isinstance(seg, dpkt.udp.UDP):
         layers["UDP"] = 1
+        sport, dport = seg.sport, seg.dport
         header_len = 8
         layers["DNS"] = int(53 in (seg.sport, seg.dport))
         layers["DHCP"] = int({seg.sport, seg.dport} == {67, 68})
     layers["ICMP"] = int(ip.p == 1)
     layers["IGMP"] = int(ip.p == 2)
-    return Packet(ts, len(frame), ip.p, ip.ttl, header_len, flags, layers)
+    return Packet(ts, len(frame), ip.p, ip.ttl, header_len, flags, layers, 0,
+                  socket.inet_ntoa(ip.src), socket.inet_ntoa(ip.dst), sport, dport)
 
 
 def read_pcap(path: str, split_mb: float | None = None) -> list[Packet]:
