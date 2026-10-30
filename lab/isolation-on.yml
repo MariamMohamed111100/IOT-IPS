@@ -1,0 +1,11 @@
+# Lab only: turns device isolation ON for the lab camera (ENGINE_ISOLATION=on) and uses the recording blocklist firewall.
+# Use it on top of the lab: docker compose -f docker-compose.yml -f docker-compose.lab.yml -f lab/isolation-on.yml up -d
+# Never use it on a real home: it lets the engine cut a device off the network.
+services:
+  engine:
+    environment:
+      IPS_DEVICES_FILE: /lab/ips_devices.json
+      ENGINE_ISOLATION: "on"
+  cyber:
+    environment:
+      CYBER_FIREWALL: blocklist

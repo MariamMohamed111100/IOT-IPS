@@ -30,6 +30,10 @@ make lab-down
 3. one incident in zone `network`, High or Critical, holds those events, and its timeline lists them;
 4. the WebSocket pushed that incident.
 
+Device isolation: the lab runs `ENGINE_ISOLATION=shadow` (the incident says "would isolate"). To see a real isolation inside the lab, add
+`-f lab/isolation-on.yml` to the compose command; it sets `ENGINE_ISOLATION=on` (verified: cyber logs `ISOLATED 10.77.0.10`, `cyber.block_applied`
+with `dry_run=false`). Never use it on a real home network.
+
 CI: `.github/workflows/lab-e2e.yml` (manual, and on pull requests that touch the lab).
 
 ## Status: written, not yet run
