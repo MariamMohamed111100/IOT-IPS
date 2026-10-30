@@ -144,14 +144,3 @@ The function never decreases, and every IPS level lands in the published level o
 
 - The engine's zone score ignores the IPS score. If the IPS judgement should lift the incident level (for example `max(points, ips_score)`), the engine owner decides that as a separate change.
 - Real firewall enforcement from the IPS (today: dry run).
-
-## 10. Sign-off
-
-| Owner | Confirms | Signed |
-|---|---|---|
-| Person 1 (lead) | contract text, decision on the scale, this file | [ ] |
-| Person 2 (API) | `details` storage and size limit | [ ] |
-| Person 5 (cyber) | eleven fields, `cyber.dos` autoblock, adapter identity | [ ] |
-| Person 6 (engine) | points 40 and 30, outbound rule, `details` copy | [ ] |
-| Person 7 (frontend) | `details` display as text | [ ] |
-| IPS owners (detector, risk, policy, pipeline, reports) | mapping tables, score conversion, `devices.json` fields | [ ] |

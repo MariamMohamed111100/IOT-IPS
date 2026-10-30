@@ -1,7 +1,18 @@
-.PHONY: demo-up demo-scan demo-brute demo-rogue demo-attack demo-block demo-unblock demo-incident setup up down logs ps smoke test lint clean sim-list sim watch ws
+.PHONY: lab-up lab-e2e lab-down demo-up demo-scan demo-brute demo-rogue demo-attack demo-block demo-unblock demo-incident setup up down logs ps smoke test lint clean sim-list sim watch ws
 
 setup:        ## Generate .env secrets, TLS certs, MQTT users (safe to re-run)
 	./scripts/setup.sh
+
+LAB = docker compose -f docker-compose.yml -f docker-compose.lab.yml
+lab-up:       ## Start the stack plus the simulated IPS lab (fake camera, client, attacker, gateway)
+	@test -f .env || ./scripts/setup.sh
+	$(LAB) up --build -d --wait
+
+lab-e2e:      ## Attack the lab camera, then check API + WebSocket (needs lab-up and: pip install websockets)
+	python scripts/ips/ips_e2e.py
+
+lab-down:
+	$(LAB) down -v --remove-orphans
 
 up:           ## Build and start everything (includes ips_cyber sample replay, then idle)
 	@test -f .env || ./scripts/setup.sh
@@ -49,7 +60,7 @@ vision-models: ## Download the free vision models (YOLOv8n, face detector/recogn
 	python3 scripts/fetch_vision_models.py
 
 demo-incident: ## Play the proposal's garage-intruder incident end to end (checks the API afterwards)
-	python scripts/demo_incident.py
+	python scripts/demo_incident.py --reset-engine
 
 demo-up:      ## Start everything plus the demo rig (attacker, smartlock victim, Suricata, ntfy)
 	@test -f .env || ./scripts/setup.sh

@@ -74,6 +74,12 @@
     },
     "details": {
       "type": "object"
+    },
+    "detector": {
+      "enum": [
+        "rules",
+        "ml"
+      ]
     }
   }
 }
