@@ -179,6 +179,10 @@ def main(argv=None) -> int:
     p.add_argument("--wait", type=float, default=150, help="seconds to wait for the alerts")
     a = p.parse_args(argv)
     a.mode = "docker"
+    # Start from a clean engine/cyber so repeated runs do not inherit stale risk/incident/firewall state.
+    subprocess.run([*COMPOSE, "exec", "-T", "cyber", "rm", "-f", "/data/blocklist.json"], cwd=ROOT, capture_output=True)
+    subprocess.run([*COMPOSE, "restart", "engine", "cyber"], cwd=ROOT, capture_output=True)
+    time.sleep(4)
     t = make_transport(a)
     t.api("GET", "/devices")                                   # logs in once
     ws = WsListener(a.base.rstrip("/"), a.ca, lambda: t.token)
