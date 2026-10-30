@@ -97,11 +97,16 @@ class DockerTransport:
         request = urllib.request.Request(
             self.base + path, method=method, headers=headers,
             data=json.dumps(body).encode() if body is not None else None)
-        try:
-            with urllib.request.urlopen(request, context=self.ctx, timeout=15) as response:
-                return response.status, json.loads(response.read() or b"null")
-        except urllib.error.HTTPError as exc:
-            return exc.code, None
+        for attempt in range(5):
+            try:
+                with urllib.request.urlopen(request, context=self.ctx, timeout=15) as response:
+                    return response.status, json.loads(response.read() or b"null")
+            except urllib.error.HTTPError as exc:
+                return exc.code, None
+            except (urllib.error.URLError, ConnectionError, TimeoutError):
+                if attempt == 4:
+                    raise
+                self.sleep(1)
 
     def api(self, method, path, body=None, params=None):
         if self.token is None:
