@@ -330,13 +330,25 @@ Without Docker, `pytest services/engine/tests/test_live_path.py` runs the same c
 
 ## Status
 
-- **Integration**: Backend, IoT-IPS, IPS-Cyber, Engine, Vision, and Warden Dashboard are implemented and integrated.
-- **Enrichment Pipeline**: `services/ips_cyber` publishes scored `cyber.*` alerts that already carry `data.details` (MITRE technique, IPS score and level, technical and executive report). The Engine passes them into the incident and builds them itself only for an alert that has none. The API stores an event's `data` as it arrives, and Warden reads the details from the stored events of an incident; the incident's own `details` field is not stored by the API.
-- **ML model**: `services/ml` is trained and tested, and `ips_cyber --detector combined` uses it next to the rules on CSV events. On PCAP and live traffic it is used with `--detector combined --ml-windows`: `ids_ml.live` cuts the packets into 10-packet windows tied to a device and a source address, and an alert needs 3 flagged windows of the same source within 30 s (then one alert, then quiet for 30 s). Only synthetic traffic has been run through it; the lab test with realistic traffic is still to do, and on that synthetic traffic the model flagged some normal windows, which is why the 3-window rule exists.
-- **Testing**: The local test suites (Backend, IoT-IPS, IPS Sensor, ML, Engine, and Dashboard) pass. Two kinds of tests are not part of a normal run: `-m dataset` (needs the dataset's 27 MB PCAP) and `-m privileged` (needs root and nftables, CI runs it).
-- **Not done / known limits**: the Docker lab with a fake camera and the end-to-end attack test (`docker-compose.lab.yml`, `scripts/ips/ips_e2e.py`, [docs/LAB.md](docs/LAB.md)) are written and their logic is tested, but the lab has not been run yet; thresholds and risk weights were calibrated on synthetic traffic and still need a lab capture; slow brute force or scans and low-rate outbound floods are missed (`ips/docs/known-limitations.md`); device isolation is opt-in: `ENGINE_ISOLATION=off` (default) | `shadow` (only writes "would isolate" in the incident summary) | `on` (at Critical, for a known device that sends an attack outbound, the engine asks `cyber` to isolate it with `direction: both`). Try `shadow` in the lab before `on`.
-- **CI/CD**: GitHub Actions, CodeQL, and security workflows are configured and passing.
-- **Ready for Demo & Evaluation**: Fully reproducible with committed datasets and demo assets.
+The project is verified in a **simulated environment**: unit and integration tests, replayed datasets, and a Docker lab with a fake camera and a fake attacker. It has **not** been tried on real IoT devices, a real camera, or real home traffic.
+
+**What is done and checked**
+
+- **Integration**: Backend, IoT-IPS, IPS-Cyber, Engine, Vision, and Warden Dashboard are implemented and connected.
+- **Enrichment**: `services/ips_cyber` publishes scored `cyber.*` alerts with `data.details` (MITRE technique, IPS score and level, technical and executive report). The Engine passes them into the incident (and builds them only for an alert that has none), the API stores the incident `details` encrypted, and Warden reads them.
+- **ML model**: `services/ml` is trained and tested. `ips_cyber --detector combined` uses it next to the rules on CSV events. On PCAP and live traffic it needs `--ml-windows`: packets are cut into 10-packet windows per device and remote address, and an alert needs 3 flagged windows within 30 s (then one alert, then 30 s quiet). The `detector` field on each alert (`rules` or `ml`) shows which one raised it.
+- **Device isolation**: opt-in through `ENGINE_ISOLATION=off` (default) | `shadow` (only writes "would isolate" in the incident summary) | `on` (at Critical, for a known device that sends an attack outbound, the Engine asks `cyber` to isolate it with `direction: both`). It was tried only inside the lab; try `shadow` before `on`.
+- **Docker lab**: `docker-compose.lab.yml`, `scripts/ips/ips_e2e.py` and [docs/LAB.md](docs/LAB.md) run an attack against a fake camera and check the alert, the incident and the block end to end. It was run once on Windows with Docker Desktop, and all checks passed.
+- **Tests and CI**: all suites pass (Backend, IoT-IPS, IPS Sensor, ML, Engine, Dashboard, Simulators). The 12 GitHub Actions checks pass, including CodeQL and the privileged nftables job. `-m dataset` (needs the 27 MB PCAP) and the lab job `lab-e2e` (run by hand from Actions) are not part of a normal run.
+
+**Not done / known limits**
+
+- **No real hardware**: the false-alarm rate on real home traffic is unknown. The only measurement is zero false alarms in 30 minutes of synthetic traffic.
+- **ML on real traffic**: it flagged some normal windows in synthetic traffic, which is why the 3-window rule exists. How much it adds over the rules on a long run is not measured.
+- **Thresholds and risk weights** were calibrated on synthetic traffic and need a capture from a real network.
+- **Missed attacks**: slow brute force or scans and low-rate outbound floods (`ips/docs/known-limitations.md`).
+- **Email alerts** are not implemented. Alerts go through the dashboard and ntfy.
+- **Warden screenshots** in `docs/screenshots/` come from recorded demo data.
 
 ## License
 
