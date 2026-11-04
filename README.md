@@ -1,4 +1,5 @@
 # IoT-IPS — Smart Home Intrusion Prevention System
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16023/badge)](https://www.bestpractices.dev/projects/16023)
 
 A graduation project that unifies the **SmartSecure Home** backend with a custom **IoT-IPS** detection, risk-scoring, and automated response engine, alongside the **Warden** real-time dashboard.
 
@@ -127,7 +128,7 @@ This repository combines four tightly integrated components into one monorepo:
 |---|---|
 | **Orchestration** | Docker, Docker Compose v2 |
 | **Backend/API** | FastAPI, Uvicorn, Pydantic, WebSocket |
-| **Messaging** | Eclipse Mosquitto (MQTT over TLS 1.2/1.3), custom ACLs |
+| **Messaging** | Eclipse Mosquitto (MQTT over TLS 1.3, mutual TLS), custom ACLs |
 | **Database** | PostgreSQL |
 | **Network Security** | Suricata, iptables/blocklist integration |
 | **IPS Core** | Python 3.11, Scapy, Pandas, NumPy, PyYAML, JSONSchema |
