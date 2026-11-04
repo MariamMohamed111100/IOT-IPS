@@ -20,6 +20,7 @@ The system detects, correlates, enriches, and responds to network, physical, and
 - [Security Notes](#security-notes)
 - [Documentation](#documentation)
 - [Status](#status)
+- [Contributing and Feedback](#contributing-and-feedback)
 - [License](#license)
 
 ## Overview
@@ -349,6 +350,14 @@ The project is verified in a **simulated environment**: unit and integration tes
 - **Missed attacks**: slow brute force or scans and low-rate outbound floods (`ips/docs/known-limitations.md`).
 - **Email alerts** are not implemented. Alerts go through the dashboard and ntfy.
 - **Warden screenshots** in `docs/screenshots/` come from recorded demo data.
+
+## Contributing and Feedback
+
+- **Get the software**: clone this repository (see [Quick Start](#quick-start)). There are no packaged releases; `main` is the maintained branch.
+- **Report a bug or ask for an enhancement**: open an [issue](https://github.com/MariamMohamed111100/IOT-IPS/issues) and say which component, which commit, and how to reproduce it.
+- **Report a security problem**: do not open a public issue; follow [SECURITY.md](SECURITY.md).
+- **Contribute code**: read [CONTRIBUTING.md](CONTRIBUTING.md). Work on a branch, open a pull request to `main`, get one approving review, and make the required checks pass (`ruff check .`, tests with 0 failures and 0 skips, Gitleaks, Docker smoke test, CodeQL). Branch and commit conventions are in [docs/BRANCHING.md](docs/BRANCHING.md).
+- **Language**: documentation, issues, pull requests and code comments are in English.
 
 ## License
 
