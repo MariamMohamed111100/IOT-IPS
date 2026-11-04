@@ -13,8 +13,7 @@ This project is a graduation prototype; only the `main` branch is actively maint
 
 If you discover a security issue, please report it **privately** through GitHub's
 [private vulnerability reporting form](https://github.com/MariamMohamed111100/IOT-IPS/security/advisories/new)
-(repository **Security** tab → **Advisories** → **Report a vulnerability**), or by
-emailing the maintainers. Do **not** open a public issue with exploit details.
+(repository **Security** tab → **Advisories** → **Report a vulnerability**). Do **not** open a public issue with exploit details.
 
 Please include:
 
