@@ -131,6 +131,7 @@ class FlowEngine:
         self._flows = []          # flows still inside the window
         self._last_tick = None
         self.ignored_flows = 0    # flows that touch none of our devices
+        self._device_outbound = {}  # (device_ip, remote_ip, remote_port, proto) -> earliest time the device sent to it
 
     # ------------------------------------------------------------------ packets -> flows
     def _parse(self, pkt, IP, TCP, UDP, ICMP):
@@ -165,6 +166,11 @@ class FlowEngine:
             if parsed is None:
                 continue
             t, src, dst, sport, dport, proto, flags, size = parsed
+            # Remember packets the device itself sent, so a later reply can be recognised.
+            if src in self.device_by_ip and dst not in self.device_by_ip:
+                key = (src, dst, dport, proto)
+                if key not in self._device_outbound or t < self._device_outbound[key]:
+                    self._device_outbound[key] = t
             a, b = (src, sport), (dst, dport)
             key = (proto,) + (min(a, b), max(a, b))
             flow = active.get(key)
@@ -258,14 +264,50 @@ class FlowEngine:
         short = f.duration < self.cfg["short_flow_seconds"]
         return short and (f.rst > 0 or f.packets <= self.cfg["short_flow_max_packets"])
 
+    def _is_reply_to_device(self, f):
+        """True when a flow that looks inbound is really the answer to a flow the
+        device initiated earlier in the same capture.
+
+        A TCP SYN without ACK from the remote side is a genuine new inbound connection.
+        Otherwise the flow is only treated as a reply if the device sent a packet to
+        that same remote ip:port earlier (state), so an unsolicited flood from port
+        53/123/443 with no prior outbound packet stays inbound and detectable.
+        """
+        if f.src_ip in self.device_by_ip:
+            return False
+        if f.dst_ip not in self.device_by_ip:
+            return False
+        # TCP: a SYN (without ACK) from the remote side is a genuine new inbound connection.
+        if f.proto == "TCP" and f.syn > 0 and f.pkts_rev == 0:
+            return False
+        device_ip = f.dst_ip
+        remote_ip = f.src_ip
+        service_port = f.src_port
+        key = (device_ip, remote_ip, service_port, f.proto)
+        earliest = self._device_outbound.get(key)
+        if earliest is not None and f.start > earliest:
+            return True
+        return False
+
     def _classify(self, f):
         """Yield (direction, device_id) pairs this flow belongs to."""
         out = []
         if f.dst_ip in self.device_by_ip:
-            out.append(("inbound", self.device_by_ip[f.dst_ip]))
+            if self._is_reply_to_device(f):
+                out.append(("outbound", self.device_by_ip[f.dst_ip]))
+            else:
+                out.append(("inbound", self.device_by_ip[f.dst_ip]))
         if f.src_ip in self.device_by_ip:
             out.append(("outbound", self.device_by_ip[f.src_ip]))
-        return out
+        # de-duplicate identical pairs
+        seen = set()
+        uniq = []
+        for item in out:
+            if item in seen:
+                continue
+            seen.add(item)
+            uniq.append(item)
+        return uniq
 
     # ------------------------------------------------------------------ sliding window
     def add_flows(self, flows):

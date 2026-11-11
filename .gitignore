@@ -125,3 +125,10 @@ $RECYCLE.BIN/
 
 # ML: the dataset's 27 MB capture is only needed to repeat the extractor check
 services/ml/pcap/
+
+# Real captured/UNSW traffic (large, never commit)
+data/real/
+calibration/runs/
+*.pcap
+*.pcapng
+*.tar.gz
