@@ -191,7 +191,7 @@ def build_arg_parser():
     p.add_argument("--rules", default=detector.DEFAULT_CONFIG)
     p.add_argument("--detector", choices=["rules", "combined"], default="rules",
                    help="combined = rules plus the ML model of services/ml (needs `pip install -e services/ml`)")
-    p.add_argument("--ml-min-confidence", type=float, default=0.90,
+    p.add_argument("--ml-min-confidence", type=float, default=0.98,
                    help="the model may raise an alert alone only at this confidence (combined mode)")
     p.add_argument("--ml-confirm", type=int, default=3,
                    help="flagged ML windows needed within the cooldown to raise one alert")
