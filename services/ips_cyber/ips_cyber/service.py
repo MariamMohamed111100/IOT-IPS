@@ -73,13 +73,14 @@ def load_devices(path):
 
 class IpsCyberService:
     def __init__(self, devices, publisher, config, detect_fn=None, rules_path=detector.DEFAULT_CONFIG,
-                 ml_cooldown_s=30.0, ml_confirm=3):
+                 ml_cooldown_s=30.0, ml_confirm=3, ml_gate_per_device=False):
         self.config = config
         # Alerts from 10-packet windows ("win:" refs) are gated per (device, source, attack type):
         #  * a single flagged window is not enough (the model flags ~0.1% of normal windows at 0.90 on the dataset,
         #    and more on traffic it never saw): ml_confirm flagged windows within ml_cooldown_s raise ONE alert;
         #  * after an alert the same key stays quiet for ml_cooldown_s (a flood fills hundreds of windows a second).
         self.ml_cooldown_s, self.ml_confirm = ml_cooldown_s, ml_confirm
+        self.ml_gate_per_device = ml_gate_per_device
         self._window_hits = {}
         self._window_alerted = {}
         self.publisher = publisher
@@ -144,7 +145,10 @@ class IpsCyberService:
 
     def _window_gate(self, alert):
         """True when this window alert may be sent (see __init__)."""
-        key = (alert["data"].get("device_id"), alert["data"].get("src_ip"), alert["type"])
+        if self.ml_gate_per_device:
+            key = (alert["data"].get("device_id"), alert["type"])
+        else:
+            key = (alert["data"].get("device_id"), alert["data"].get("src_ip"), alert["type"])
         try:
             now = datetime.fromisoformat(alert["ts"]).timestamp()
         except ValueError:
@@ -189,6 +193,12 @@ def build_arg_parser():
                    help="combined = rules plus the ML model of services/ml (needs `pip install -e services/ml`)")
     p.add_argument("--ml-min-confidence", type=float, default=0.90,
                    help="the model may raise an alert alone only at this confidence (combined mode)")
+    p.add_argument("--ml-confirm", type=int, default=3,
+                   help="flagged ML windows needed within the cooldown to raise one alert")
+    p.add_argument("--ml-cooldown", type=float, default=30.0,
+                   help="seconds: window gate cooldown and quiet period")
+    p.add_argument("--ml-gate-per-device", action="store_true",
+                   help="aggregate the ML window gate per device instead of per (device, remote)")
     p.add_argument("--start-delay", type=float, default=0.0,
                    help="seconds to wait before reading the source: MQTT drops a message nobody is subscribed to yet, "
                         "so the one-shot CSV replay of a Compose start waits for the API and the engine to subscribe")
@@ -236,7 +246,9 @@ def main(argv=None, publisher_override=None):
                                     rules=lambda ev, prof=None: detector.detect(ev, prof, config_path=args.rules))
         if not 0 <= args.start_delay <= 600:
             raise ValueError("--start-delay must be between 0 and 600 seconds")
-        service = IpsCyberService(devices, publisher, config, detect_fn=detect_fn, rules_path=args.rules)
+        service = IpsCyberService(devices, publisher, config, detect_fn=detect_fn, rules_path=args.rules,
+                                 ml_cooldown_s=args.ml_cooldown, ml_confirm=args.ml_confirm,
+                                 ml_gate_per_device=args.ml_gate_per_device)
         if args.start_delay:
             log.info("waiting %.0f s for the API and the engine to subscribe", args.start_delay)
             time.sleep(args.start_delay)
