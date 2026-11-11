@@ -10,6 +10,6 @@ psycopg[binary]==3.3.6
 pyyaml==6.0.3
 # Transitive dependencies pinned explicitly: scanners resolve "anyio>=4.9.0"
 # (from fastapi) to its minimum, which still has open advisories.
-anyio==4.15.1
+anyio==4.16.0
 h11==0.16.0
 idna==3.20
