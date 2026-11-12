@@ -62,9 +62,21 @@ No risk weights were changed: with the detector fixed there were no false alarms
 - `ruff check .`: passed.
 - `make lab-e2e`: not run successfully. Docker client is installed but the lab stack did not start within the available time (compose up timed out; no containers running). `scripts/ips/ips_e2e.py` could not connect to the API.
 
-## 6. Limits
+## 6. Holdout (16-10-06, frozen settings, no tuning)
+
+| Mode | Alerts | Alerts/h | By type | By detector |
+|---|---|---|---|---|
+| A rules | 1 | 0.0417 | unexpected_traffic 1 | rules 1 |
+| B combined | 1 | 0.0417 | unexpected_traffic 1 | rules 1 |
+| C combined+ml-windows | 11 | 0.4583 | unexpected_traffic 11 | rules 2, ml 9 |
+
+The single rules alert on both A and B is an unsolicited inbound connection from 74.125.23.108 to Samsung on ephemeral port 44749 (confidence 0.6), likely a cloud/NAT reply that was not preceded by an observed outbound packet. The 9 ML alerts are high-confidence (0.98+) "Spoofing" on outbound Dropcam/Netatmo/Samsung traffic to cloud IPs, i.e. ML false alarms that survived the 0.98 threshold. No tuning was applied to this file.
+
+## 7. Limits
 
 - Public dataset from a different network, 2016 devices, not our camera. Numbers apply only to this captured traffic.
-- Benign-only assumption is unverified for this specific day; the page does not label the daily traces "benign" explicitly.
-- After-tuning 0 alerts over 24 h gives a 95% upper bound of ~0.125/h, not a measured rate. A holdout PCAP is required before any final claim.
+- Benign-only assumption is unverified for 16-09-23 and 16-10-06; the traffic-traces page does not label the daily traces "benign" explicitly (attack traces are a separate page). No labels were available to confirm.
+- Only two days (one tune, one holdout). After-tuning 0 alerts over 24 h gives a 95% upper bound of ~0.125/h, not a measured rate.
+- ML confidence trade-off: 0.90 -> 0.98 reduced the 2 h slice from 126 to 2 ML alerts but sample_events combined alerts dropped from 9 to 8 (one attack no longer caught by ML).
+- evaluate.py reports 7/10 attacks on both origin/main and this branch (pre-existing; not changed by this work).
 - Thresholds must be re-calibrated on real captured home traffic before any claim about real homes.
