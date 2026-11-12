@@ -32,14 +32,15 @@
 | B combined | 15 | 0.625 | unexpected_traffic 13, port_scan 2 | rules 15 |
 | C combined+ml-windows | 2693 | 112.21 | unexpected_traffic 2677, port_scan 16 | rules 1544, ml 1149 |
 
-### After tuning (A and B re-run; C not re-run after tuning)
+### After tuning (A, B and C re-run with final settings)
 
 | Mode | Alerts | Alerts/h | 95% upper bound if 0 |
 |---|---|---|---|
 | A rules | 0 | 0.000 | 0.125/h (3/24) |
 | B combined | 0 | 0.000 | 0.125/h (3/24) |
+| C combined+ml-windows | 27 | 1.125 | n/a |
 
-Mode C baseline (before tuning) remains 2693 alerts/h-heavy because of unsolicited reply misclassification in the 10-packet windows; the flow-engine and live.py fixes were applied after that run. A re-run of mode C is pending and will be added when complete.
+Mode C after tuning: 2 rules alerts (unsolicited inbound) + 25 ML alerts (high-confidence model false alarms that survived the 0.98 threshold). Down from 2693 before tuning.
 
 ## 4. Changes (calibration/changes.csv)
 

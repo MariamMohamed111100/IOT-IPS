@@ -4,3 +4,4 @@
 16-09-23, tune, 23.9994, combined+ml-windows, before, 2693, 112.2083, "{""cyber.unexpected_traffic"": 2677, ""cyber.port_scan"": 16}", "{""rules"": 1544, ""ml"": 1149}", 2016-09-23
 16-09-23, tune, 23.9994, rules, after, 0, 0.0000, "{}", "{}", 2016-09-23
 16-09-23, tune, 23.9994, combined, after, 0, 0.0000, "{}", "{}", 2016-09-23
+16-09-23, tune, 23.9994, combined+ml-windows, after, 27, 1.1252, "{""cyber.unexpected_traffic"": 27}", "{""rules"": 2, ""ml"": 25}", 2016-09-23
