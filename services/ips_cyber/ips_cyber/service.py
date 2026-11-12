@@ -73,7 +73,7 @@ def load_devices(path):
 
 class IpsCyberService:
     def __init__(self, devices, publisher, config, detect_fn=None, rules_path=detector.DEFAULT_CONFIG,
-                 ml_cooldown_s=30.0, ml_confirm=3, ml_gate_per_device=False):
+                 ml_cooldown_s=30.0, ml_confirm=3, ml_gate_per_device=False, window_detect_fn=None):
         self.config = config
         # Alerts from 10-packet windows ("win:" refs) are gated per (device, source, attack type):
         #  * a single flagged window is not enough (the model flags ~0.1% of normal windows at 0.90 on the dataset,
@@ -81,12 +81,13 @@ class IpsCyberService:
         #  * after an alert the same key stays quiet for ml_cooldown_s (a flood fills hundreds of windows a second).
         self.ml_cooldown_s, self.ml_confirm = ml_cooldown_s, ml_confirm
         self.ml_gate_per_device = ml_gate_per_device
+        self.detect = detect_fn or (lambda ev, prof: detector.detect(ev, prof, config_path=rules_path))
+        self.window_detect = window_detect_fn or self.detect
         self._window_hits = {}
         self._window_alerted = {}
         self.publisher = publisher
         self.topic = config["topic"]
         # detect_fn is the slot the ML model fills later: it only has to look like detect(event, profile)
-        self.detect = detect_fn or (lambda ev, prof: detector.detect(ev, prof, config_path=rules_path))
         self.profiles = {envelope.token(d["device_id"]): d for d in devices}
         self.profiles_by_ip = {str(d["ip"]): d for d in devices if d.get("ip")}
         self.stats = {"events_read": 0, "alerts_published": 0, "benign": 0,
@@ -109,7 +110,8 @@ class IpsCyberService:
             log.warning("skipped %s: no device_id", event_ref)
             return None
         profile = self.profile_for(event)
-        detection = self.detect(event, profile)    # DetectorConfigError propagates on purpose
+        detect = self.window_detect if str(event_ref).startswith("win:") else self.detect
+        detection = detect(event, profile)    # DetectorConfigError propagates on purpose
         if detection.get("label") != "ATTACK":
             self.stats["benign"] += 1
             return None
@@ -191,8 +193,10 @@ def build_arg_parser():
     p.add_argument("--rules", default=detector.DEFAULT_CONFIG)
     p.add_argument("--detector", choices=["rules", "combined"], default="rules",
                    help="combined = rules plus the ML model of services/ml (needs `pip install -e services/ml`)")
-    p.add_argument("--ml-min-confidence", type=float, default=0.98,
-                   help="the model may raise an alert alone only at this confidence (combined mode)")
+    p.add_argument("--ml-min-confidence", type=float, default=0.90,
+                   help="the model may raise an alert alone only at this confidence (combined mode, flow events)")
+    p.add_argument("--ml-window-min-confidence", type=float, default=0.98,
+                   help="the model may raise an alert alone only at this confidence for 10-packet windows (combined mode)")
     p.add_argument("--ml-confirm", type=int, default=3,
                    help="flagged ML windows needed within the cooldown to raise one alert")
     p.add_argument("--ml-cooldown", type=float, default=30.0,
@@ -236,6 +240,7 @@ def main(argv=None, publisher_override=None):
         if args.ml_windows and (args.detector != "combined" or args.source == "csv"):
             raise ValueError("--ml-windows needs --detector combined and a pcap or live source")
         detect_fn = None
+        window_detect_fn = None
         if args.detector == "combined":
             try:
                 from ids_ml.combined import make_detect
@@ -244,11 +249,14 @@ def main(argv=None, publisher_override=None):
             detector.load_config(args.rules)                           # a bad rules file still stops the start
             detect_fn = make_detect(args.ml_min_confidence,
                                     rules=lambda ev, prof=None: detector.detect(ev, prof, config_path=args.rules))
+            window_detect_fn = make_detect(args.ml_window_min_confidence,
+                                           rules=lambda ev, prof=None: detector.detect(ev, prof, config_path=args.rules))
         if not 0 <= args.start_delay <= 600:
             raise ValueError("--start-delay must be between 0 and 600 seconds")
         service = IpsCyberService(devices, publisher, config, detect_fn=detect_fn, rules_path=args.rules,
                                  ml_cooldown_s=args.ml_cooldown, ml_confirm=args.ml_confirm,
-                                 ml_gate_per_device=args.ml_gate_per_device)
+                                 ml_gate_per_device=args.ml_gate_per_device,
+                                 window_detect_fn=window_detect_fn)
         if args.start_delay:
             log.info("waiting %.0f s for the API and the engine to subscribe", args.start_delay)
             time.sleep(args.start_delay)
