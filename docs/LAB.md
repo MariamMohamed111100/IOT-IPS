@@ -36,12 +36,17 @@ with `dry_run=false`). Never use it on a real home network.
 
 CI: `.github/workflows/lab-e2e.yml` (manual, and on pull requests that touch the lab).
 
-## Status: written, not yet run
+## Status: run and passing (on Windows, Docker Desktop)
 
-The lab files and the e2e script were written where Docker images cannot be downloaded, so **the lab has not been started yet**.
-What was checked: `docker compose config` accepts the files, the e2e logic is tested against a fake API
+The lab was started and `scripts/ips/ips_e2e.py` passed all its checks on a Windows machine with Docker Desktop
+(more than once: after the first fixes, and again after the calibration in `calibration/REPORT.md`).
+It was not yet run on a second machine or on Linux, and the `lab-e2e` workflow is manual, so please run
+`make lab-e2e` on your own machine before relying on it.
+
+What is checked: `docker compose config` accepts the files, the e2e logic is tested against a fake API
 (`ips/tests/test_lab_e2e_logic.py`: passes on a good run, fails on each kind of bad run), and `attack` refuses targets outside the lab.
-Expect to tune on the first real run:
+
+Things that depend on your machine and may need tuning:
 * attack sizes against the thresholds in `ips/config/detector_rules.yaml` (DoS needs 2000 pkt/s and 500 connections; brute force 50 failed attempts on port 554);
-* whether `hydra`'s `rtsp` module reaches the fake camera's 401 answers;
-* the wait times in `ips_e2e.py` (`--wait`, the 10 s capture window).
+* the wait times in `ips_e2e.py` (`--wait`, the 10 s capture window);
+* the lab uses simulated traffic only: it says nothing about false alarms on real home traffic (see `calibration/REPORT.md`).
