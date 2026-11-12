@@ -13,6 +13,8 @@
 
 ## 2. Method
 
+**Note:** `--ml-windows` on PCAP/live is EXPERIMENTAL. ML confidence did not separate benign from attack on UNSW (9 alerts >=0.98 on the holdout). The rules are the primary detector. The 0.98 window threshold was chosen on the tune day only and did not generalize.
+
 - Sensor run from `services/ips_cyber`: `python main.py --source pcap --file ... --devices ... --detector ... --publisher file --out ...`, with a calibration config (`calibration/config_unsw.yaml`) that raises `max_capture_seconds` to 100000 so the full 24 h capture replays (default cap is 6 h).
 - Three modes per PCAP:
   - A: `--detector rules`
@@ -60,7 +62,7 @@ No risk weights were changed: with the detector fixed there were no false alarms
 - `cd ips && python scripts/evaluate.py`: 14/14 events behaved as expected; 7/10 attacks detected; 0 false alarms on 4 benign events; precision 1.00, recall 0.70, F1 0.82. Same result on origin/main (7/10) and on this branch (7/10).
 - `python -m pytest services/ips_cyber ips`: 452 passed, 1 failed. The single failure is `ips/tests/test_lab_e2e_logic.py::test_attack_refuses_targets_outside_the_lab`, which needs `bash` + `nmap` (not available on this Windows host); it is pre-existing and unrelated to these changes. Flow-engine tests: 29 passed. ML window tests: 10 passed.
 - `ruff check .`: passed.
-- `make lab-e2e`: not run successfully. Docker client is installed but the lab stack did not start within the available time (compose up timed out; no containers running). `scripts/ips/ips_e2e.py` could not connect to the API.
+- `make lab-e2e`: passed after starting Docker Desktop. Alerts by detector: rules 2, ml 1. All e2e checks passed (port_scan, brute_force, dos, MITRE/IPS details, normal client no alert, incident, WebSocket).
 
 ## 6. Holdout (16-10-06, frozen settings, no tuning)
 
