@@ -94,6 +94,19 @@ class WindowEventTests(unittest.TestCase):
         e = WindowBuffer(DEVICES).feed(read_pcap(write(pk)))[0]
         self.assertEqual((e["direction"], e["src_ip"], e["dst_ip"]), ("outbound", CAMERA, "10.77.0.99"))
 
+    def test_reply_window_becomes_outbound_with_state(self):
+        pk = [(1_800_000_000.0 + i * 0.001, frame(CAMERA, "10.77.0.99", 40000 + i, 443, dpkt.tcp.TH_SYN)) for i in range(10)]
+        pk += [(1_800_000_000.0 + 10 + i * 0.001, frame("10.77.0.99", CAMERA, 443, 40000 + i, dpkt.tcp.TH_ACK)) for i in range(10)]
+        events = WindowBuffer(DEVICES).feed(read_pcap(write(pk)))
+        self.assertEqual(len(events), 2)
+        self.assertEqual(events[1]["direction"], "outbound")
+
+    def test_unsolicited_inbound_window_stays_inbound(self):
+        pk = [(1_800_000_000.0 + i * 0.001, frame("10.77.0.99", CAMERA, 443, 40000 + i, dpkt.tcp.TH_SYN)) for i in range(10)]
+        events = WindowBuffer(DEVICES).feed(read_pcap(write(pk)))
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["direction"], "inbound")
+
 
 class PipelineTests(unittest.TestCase):
     def test_a_syn_flood_raises_one_dos_alert_with_details(self):

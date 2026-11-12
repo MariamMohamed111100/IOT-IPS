@@ -59,6 +59,58 @@ class FlowAssemblyTests(PcapCase):
         protos = sorted(f.proto for f in self.engine.flows_from_pcap(path))
         self.assertEqual(protos, ["ICMP", "UDP"])
 
+    def test_reply_to_observed_outbound_tcp_is_outbound(self):
+        # device opens a TCP connection, then the server's reply (capture starts mid-flow) is seen
+        pk = H.long_session(100.0, H.CAMERA, H.CLOUD, 50000, 443, seconds=2.0)
+        # append a reply packet from the cloud to the device on the same 5-tuple, after the outbound packets
+        reply = H._pkt(102.5, H.CLOUD, H.CAMERA, 443, 50000, flags="A", payload=b"r")
+        path = H.write(os.path.join(self.tmp.name, "replytcp.pcap"), pk + [reply])
+        evs = self.engine.events_from_pcap(path)
+        self.assertTrue(any(e.get("direction") == "outbound" and e.get("dst_ip") == H.CLOUD for e in evs))
+        self.assertFalse(any(e.get("direction") == "inbound" and e.get("dst_port") == 50000 for e in evs),
+                         "reply to an observed outbound TCP connection must not be inbound")
+
+    def test_midflow_capture_with_earlier_outbound_packet_is_outbound(self):
+        # outbound SYN from the device is present earlier in the capture
+        pk = [H._pkt(100.0, H.CAMERA, H.CLOUD, 50001, 443, flags="S")]
+        # mid-flow reply from the cloud (no SYN from remote)
+        pk += [H._pkt(100.5, H.CLOUD, H.CAMERA, 443, 50001, flags="A", payload=b"r")]
+        path = H.write(os.path.join(self.tmp.name, "midflow.pcap"), pk)
+        evs = self.engine.events_from_pcap(path)
+        self.assertFalse(any(e.get("direction") == "inbound" and e.get("dst_port") == 50001 for e in evs),
+                         "mid-flow reply with an earlier outbound packet must not be inbound")
+
+    def test_unsolicited_udp_53_flood_stays_inbound(self):
+        # no prior outbound packet from the device: a DNS reflection flood stays inbound
+        pk = []
+        for i in range(5):
+            pk.append(H._pkt(100.0 + i * 0.1, H.CLOUD, H.CAMERA, 53, 50002, proto="UDP", payload=b"x" * 100))
+        path = H.write(os.path.join(self.tmp.name, "unsol53.pcap"), pk)
+        evs = self.engine.events_from_pcap(path)
+        self.assertTrue(any(e.get("direction") == "inbound" and e.get("dst_port") == 50002 for e in evs),
+                        "unsolicited UDP/53 flood must stay inbound")
+        # and it must still be detectable as DoS by the detector
+        ev = [e for e in evs if e.get("direction") == "inbound" and e.get("dst_port") == 50002][0]
+        # make it look like a flood
+        ev["connection_attempts"] = 500
+        ev["Rate"] = 3000
+        ev["syn_count"] = 0
+        from iot_ips.detector import detect
+        d = detect(ev, {"device_id": "CAM-001", "expected_ports": [], "expected_protocols": [], "ip": "192.168.1.50", "criticality": "high"})
+        self.assertEqual(d["label"], "ATTACK")
+
+    def test_unsolicited_tcp_443_no_prior_outbound_is_inbound(self):
+        pk = [H._pkt(100.0, H.CLOUD, H.CAMERA, 443, 50003, flags="S")]
+        path = H.write(os.path.join(self.tmp.name, "unsol443.pcap"), pk)
+        evs = self.engine.events_from_pcap(path)
+        self.assertTrue(any(e.get("direction") == "inbound" and e.get("dst_port") == 50003 for e in evs),
+                        "unsolicited TCP from 443 with no prior outbound traffic must be inbound")
+
+    def test_real_inbound_connection_to_closed_port_still_inbound(self):
+        pk = H.refused(100.0, H.ATTACKER, H.CAMERA, 40000, 9999)
+        ev = self.only(self.events(pk), device_id="CAM-001", src_ip=H.ATTACKER)
+        self.assertEqual(ev["direction"], "inbound")
+
     def test_failed_login_heuristic(self):
         path = H.write(os.path.join(self.tmp.name, "e.pcap"),
                        H.failed_login(100.0, H.ATTACKER, H.CAMERA, 1111, 22)

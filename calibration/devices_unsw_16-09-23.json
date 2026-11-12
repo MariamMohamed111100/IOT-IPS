@@ -1,0 +1,48 @@
+﻿{
+  "devices": [
+    {
+      "device_id": "CAM-NETATMO",
+      "device_type": "surveillance_camera",
+      "ip": "192.168.1.241",
+      "criticality": "high",
+      "expected_protocols": ["HTTPS", "DNS", "NTP", "HTTP"],
+      "expected_ports": [0, 53, 67, 80, 123, 443, 500, 4500],
+      "zone": "entrance",
+      "backend_id": "cam_netatmo",
+      "backend_type": "camera"
+    },
+    {
+      "device_id": "CAM-TPLINK",
+      "device_type": "surveillance_camera",
+      "ip": "192.168.1.143",
+      "criticality": "high",
+      "expected_protocols": ["HTTPS", "HTTP", "DNS"],
+      "expected_ports": [0, 53, 67, 80, 5353, 3478, 50443, 8089],
+      "zone": "entrance",
+      "backend_id": "cam_tplink",
+      "backend_type": "camera"
+    },
+    {
+      "device_id": "CAM-SAMSUNG",
+      "device_type": "surveillance_camera",
+      "ip": "192.168.1.249",
+      "criticality": "high",
+      "expected_protocols": ["XMPP", "HTTP", "SMTP", "SSDP", "DNS"],
+      "expected_ports": [0, 53, 80, 465, 1900, 3222, 49152, 5222],
+      "zone": "entrance",
+      "backend_id": "cam_samsung",
+      "backend_type": "camera"
+    },
+    {
+      "device_id": "CAM-DROPCAM",
+      "device_type": "surveillance_camera",
+      "ip": "192.168.1.106",
+      "criticality": "high",
+      "expected_protocols": ["HTTPS", "DHCP"],
+      "expected_ports": [0, 67, 443],
+      "zone": "entrance",
+      "backend_id": "cam_dropcam",
+      "backend_type": "camera"
+    }
+  ]
+}

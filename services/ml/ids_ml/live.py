@@ -27,8 +27,14 @@ def _iso(ts: float) -> str:
     return datetime.fromtimestamp(ts, timezone.utc).isoformat(timespec="milliseconds")
 
 
-def window_event(win: list[Packet], gaps: list[float], by_ip: dict, min_device_packets: int = 6) -> dict | None:
-    """One feature row plus addresses for one full window, or None when the window is not about a device."""
+def window_event(win: list[Packet], gaps: list[float], by_ip: dict, min_device_packets: int = 6,
+                 state: dict | None = None) -> dict | None:
+    """One feature row plus addresses for one full window, or None when the window is not about a device.
+
+    `state` maps (device_ip, remote_ip, remote_service_port, proto) -> earliest timestamp the device
+    sent to that remote port. A window that starts with the remote is only a reply when such a state
+    entry exists and is earlier; otherwise it is an unsolicited inbound window.
+    """
     if len(win) < 2 or win[-1].ts - win[0].ts <= 0:
         return None
     touching = Counter()
@@ -47,9 +53,24 @@ def window_event(win: list[Packet], gaps: list[float], by_ip: dict, min_device_p
     if remote is None or remote == device_ip:
         return None
     first = next(p for p in mine if remote in (p.src, p.dst))
-    inbound = first.src == remote                  # whoever speaks first started the conversation
+    original_inbound = first.src == remote          # whoever speaks first started the conversation
+    inbound = original_inbound
+    # state-based correction: a window that starts with the remote is a reply only if the
+    # device sent to that same remote service port earlier
+    if original_inbound:
+        remote_sent = [p for p in mine if p.src == remote]
+        remote_service_port = Counter(p.sport for p in remote_sent if p.sport).most_common(1)
+        remote_service_port = remote_service_port[0][0] if remote_service_port else 0
+        remote_proto = Counter(p.proto for p in remote_sent).most_common(1)
+        remote_proto = remote_proto[0][0] if remote_proto else 0
+        key = (device_ip, remote, remote_service_port, remote_proto)
+        earliest = (state or {}).get(key)
+        if earliest is not None and win[0].ts > earliest:
+            inbound = False
     src, dst = (remote, device_ip) if inbound else (device_ip, remote)
-    sent = [p for p in mine if p.src == src]
+    # features come from the packets actually present from the original sender
+    feature_src = remote if original_inbound else device_ip
+    sent = [p for p in mine if p.src == feature_src]
     dport = Counter(p.dport for p in sent if p.dport).most_common(1)
     proto = Counter(p.proto for p in sent).most_common(1)[0][0] if sent else 0
     if proto not in PROTOCOLS:
@@ -62,6 +83,16 @@ def window_event(win: list[Packet], gaps: list[float], by_ip: dict, min_device_p
         "direction": "inbound" if inbound else "outbound",
         "event_ref": "win:%d:%s:%s" % (int(ts * 1000), by_ip[device_ip]["device_id"], src),
     })
+    # record state when the device speaks first (an outbound window)
+    if state is not None and not inbound:
+        dev_sent = [p for p in mine if p.src == device_ip]
+        dev_service_port = Counter(p.dport for p in dev_sent if p.dport).most_common(1)
+        dev_service_port = dev_service_port[0][0] if dev_service_port else 0
+        dev_proto = Counter(p.proto for p in dev_sent).most_common(1)
+        dev_proto = dev_proto[0][0] if dev_proto else 0
+        key = (device_ip, remote, dev_service_port, dev_proto)
+        if key not in state or win[0].ts < state[key]:
+            state[key] = win[0].ts
     return event
 
 
@@ -74,6 +105,7 @@ class WindowBuffer:
         self.max_wait = max_wait
         self._rest: list[Packet] = []
         self._last_ts: float | None = None
+        self._state: dict = {}
 
     def feed(self, packets: list[Packet]) -> list[dict]:
         pkts = self._rest + list(packets)
@@ -84,7 +116,7 @@ class WindowBuffer:
             before = self._last_ts if self._last_ts is not None else win[0].ts
             gaps = [win[0].ts - before] + [b.ts - a.ts for a, b in pairwise(win)]
             self._last_ts = win[-1].ts
-            e = window_event(win, gaps, self.by_ip, self.min_device_packets)
+            e = window_event(win, gaps, self.by_ip, self.min_device_packets, self._state)
             if e is not None:
                 events.append(e)
         self._rest = pkts[full:][-self.max_wait:]

@@ -38,7 +38,7 @@ rules:
     attack_type: "Port Scan"
     mitre_technique: "T1046"          # Network Service Discovery
     min_unique_ports: 20              # context: unique_dst_ports
-    min_unique_destinations: 10       # context: unique_dst_ips
+    min_unique_destinations: 15       # context: unique_dst_ips. Raised from 10: a camera legitimately touches ~11 cloud endpoints in 60 s (UNSW 16-09-23)
     base_confidence: 0.75
     max_confidence: 0.97
 
