@@ -44,7 +44,6 @@ class Handler(BaseHTTPRequestHandler):
         parts = path.strip("/").split("/")
         if len(parts) == 4 and parts[:2] == ["api", "incidents"] and parts[3] == "events":
             return self._send(200, FX["incident_events"].get(parts[2], []))
-        print("404", path, flush=True)
         self._send(404, {"detail": "Not Found"})
 
     def do_POST(self):
@@ -54,7 +53,6 @@ class Handler(BaseHTTPRequestHandler):
             if body.get("username") == "admin" and body.get("password") == "admin":
                 return self._send(200, {"access_token": "fixture-token", "token_type": "bearer"})
             return self._send(401, {"detail": "Invalid credentials"})
-        print("404", path, flush=True)
         self._send(404, {"detail": "Not Found"})
 
     def log_message(self, *args):
