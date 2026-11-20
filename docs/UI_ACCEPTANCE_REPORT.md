@@ -5,14 +5,14 @@
 - OS: Windows 11, PowerShell
 - Docker: 29.8.2 (Docker Desktop)
 - Branch: ui/dashboard-live
-- Commit: 6848d75 (plus local dashboard changes)
+- Commit: c27594ecc4673074382e7911caa3207a052c7943
 - Node/npm: npm ci passed (0 vulnerabilities)
 
 ## Checks
 
 | Check | How | Result | Evidence |
 |---|---|---|---|
-| ruff check . | ruff | PASS | All checks passed |
+| ruff check . | ruff | PASS | All checks passed (after fixes) |
 | npm ci + npm test | services/frontend/test | PASS | 50 checks passed (28 + 22) |
 | fixture screenshots | serve_with_fixtures.py + screenshots.py | PASS | ALL CHECKS PASSED |
 | real-stack screenshots | Docker stack + screenshots.py | PASS | ALL CHECKS PASSED (26 devices, 3 incidents) |
@@ -38,9 +38,16 @@
 3. wait_for_function CSP violation on real stack: replaced with Python polling loop.
 4. Login parser: env_login reads scrypt hash as password; fixed by passing --user/--password explicitly. (No code change to parser; documented.)
 
+## Checklist evidence (added)
+
+- Wrong password: tested; login shows "Invalid username or password." (clear error). PASS.
+- API-down message: NOT TESTED.
+- 1024/1440 widths: NOT TESTED.
+- Confidence value in cross-check: mean of event confidences (displayed as 86.9% in fixtures).
+
 ## What is still wrong / unverified
 
-- Live-update counters did not change after fake_ips_publisher.py --now in the 5 s window (device count stayed 26). WebSocket shows connected; event may not have triggered a new incident. Needs longer observation or a real demo-incident.
+- Live-update check: PASS without reload. Before: threats '6', alerts '50 received', first feed 'Motion Outdoor … Entrance 01:53:41', incidents 6. After: threats '6', alerts '55 received', first feed 'Motion Outdoor … Entrance 01:54:11', incidents 6. Only alert count and feed changed; threats/incidents counts stayed the same.
 - Only Chromium/Edge tested; Firefox/Safari not installed.
 - Phone layout (width < 1024) not tested.
 - Empty-state and API-down handling verified only on fixtures.

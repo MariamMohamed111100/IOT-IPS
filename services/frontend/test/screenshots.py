@@ -12,10 +12,11 @@ Screenshots go to services/frontend/test/screenshots/. Exit code 0 = every check
 
 import argparse
 import re
+import subprocess
 import sys
+import time
 from pathlib import Path
 
-from playwright.sync_api import TimeoutError as PWTimeout
 from playwright.sync_api import sync_playwright
 
 HERE = Path(__file__).resolve().parent
@@ -124,6 +125,42 @@ def main(argv=None) -> int:
         for i, name in enumerate(PAGES, 1):
             open_page(name)
             shot("%02d-%s" % (i, name))
+        # live update without reload (real stack only)
+        ws_text = page.inner_text("#socketState").strip() if page.locator("#socketState").count() else ""
+        fixture_mode = "Connected" not in ws_text
+        if fixture_mode:
+            check(True, "live update: SKIPPED (fixture mode, no WebSocket)")
+        else:
+            def _threats():
+                return page.inner_text("#statThreats").strip()
+            def _alerts():
+                return page.inner_text("#alertCount").strip()
+            def _feed():
+                loc = page.locator("#feedList > *")
+                return loc.first.inner_text().strip() if loc.count() else ""
+            def _incs():
+                return page.locator("#incidentList .incident-card").count()
+            before = (_threats(), _alerts(), _feed(), _incs())
+            try:
+                subprocess.run(
+                    [sys.executable, "scripts/ips/fake_ips_publisher.py", "--now"],
+                    cwd=str(ROOT), check=True, capture_output=True, text=True, timeout=120,
+                )
+            except Exception as exc:
+                check(False, "live update: could not run fake_ips_publisher (%s)" % str(exc).splitlines()[0])
+                before = None
+            if before is not None:
+                changed = False
+                after = before
+                deadline = time.time() + 60
+                while time.time() < deadline:
+                    after = (_threats(), _alerts(), _feed(), _incs())
+                    if after != before:
+                        changed = True
+                        break
+                    page.wait_for_timeout(1000)
+                after = (_threats(), _alerts(), _feed(), _incs())
+                check(changed, "live update without reload: %s (before %s -> after %s)" % ("PASS" if changed else "FAIL", before, after))
         # overview counters and feed
         open_page("overview")
         check(
