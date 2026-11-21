@@ -52,7 +52,7 @@
 
 ## What is still wrong / unverified
 
-- Tap targets: 10-11 interactive elements per page are below 40x40 px on phone widths (icons/buttons). Known issue, not fixed.
+- Tap targets: fixed for HTML controls (PR #74): before 10-11 below 40x40 px per page, after 0 at 375 px. The SVG node labels in the network/twin views remain small (not safely fixable with CSS). Not checked on a real phone.
 - Phone layout (375/414/768): no horizontal overflow, but full visual usability was not verified by a person on a real phone.
 - Browsers: only Chromium/Edge tested. Firefox and Safari were not tested (not installed).
 - `demo-incident` was fixed and tested on Windows only. `ws_listen.default_credentials` strips quotes/CR and exits with a clear message if `API_ADMIN_PASSWORD` is a scrypt hash. `.env` is not committed, so a stale `.env` with a hash needs the plaintext password (re-run `./scripts/setup.sh` or edit it).
