@@ -49,7 +49,8 @@
 
 - Live-update check: PASS without reload. Before: threats '6', alerts '50 received', first feed 'Motion Outdoor … Entrance 01:53:41', incidents 6. After: threats '6', alerts '55 received', first feed 'Motion Outdoor … Entrance 01:54:11', incidents 6. Only alert count and feed changed; threats/incidents counts stayed the same.
 - Only Chromium/Edge tested; Firefox/Safari not installed.
-- Phone layout (width < 1024) not tested.
+- Phone layout (width < 1024): no horizontal overflow at 375/414/768 (tested), but full visual usability not verified.
+- Live new-incident appearance: NOT VERIFIED (fake publisher did not create a new incident; make demo-incident fails due to password parsing).
 - Empty-state and API-down handling verified only on fixtures.
 
 ## Honest limits
