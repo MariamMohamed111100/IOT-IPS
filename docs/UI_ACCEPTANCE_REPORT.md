@@ -45,17 +45,20 @@
 - 1024/1440 widths: TESTED. Playwright viewport 1024 and 1440 both had no horizontal overflow (scrollWidth <= clientWidth).
 - Confidence value in cross-check: mean of event confidences (displayed as 86.9% in fixtures).
 
+## Live behaviour (real stack, no page reload)
+
+- Alerts and feed update live: Live Alerts 50 -> 55 received and the first feed item changed after the fake publisher ran. Threats and incident counts did not change in that run (no new incident was created).
+- A new incident appears live: before incidents 8, threats 8, alerts 52 received; after `make demo-incident` incidents 10, threats 10, alerts 234 received. PASS.
+
 ## What is still wrong / unverified
 
-- Live-update check: PASS without reload. Before: threats '6', alerts '50 received', first feed 'Motion Outdoor … Entrance 01:53:41', incidents 6. After: threats '6', alerts '55 received', first feed 'Motion Outdoor … Entrance 01:54:11', incidents 6. Only alert count and feed changed; threats/incidents counts stayed the same.
-- Only Chromium/Edge tested; Firefox/Safari not installed.
-- Phone layout (width < 1024): no horizontal overflow at 375/414/768 (tested), but full visual usability not verified.
-- Live new-incident appearance: VERIFIED. Before: incidents 8, threats 8, alerts 52 received. After demo-incident: incidents 10, threats 10, alerts 234 received. New incident appeared in the list without reload. PASS.
-- Phone layout: no horizontal overflow at 375/414/768 (tested). 10-11 tap targets below 40x40px on every page (icons/buttons) - known issue, not fixed.
-- demo-incident: fixed (API_ADMIN_PASSWORD in .env was a hash, not plaintext; ws_listen.default_credentials now strips quotes/CR and exits with a clear message if the value is a scrypt hash). Tested on Windows only; the `.env` fix is local (`.env` is not committed), so a stale `.env` with a hash needs the plaintext password (re-run `./scripts/setup.sh` or edit it).
-- Empty-state and API-down handling verified only on fixtures.
+- Tap targets: 10-11 interactive elements per page are below 40x40 px on phone widths (icons/buttons). Known issue, not fixed.
+- Phone layout (375/414/768): no horizontal overflow, but full visual usability was not verified by a person on a real phone.
+- Browsers: only Chromium/Edge tested. Firefox and Safari were not tested (not installed).
+- `demo-incident` was fixed and tested on Windows only. `ws_listen.default_credentials` strips quotes/CR and exits with a clear message if `API_ADMIN_PASSWORD` is a scrypt hash. `.env` is not committed, so a stale `.env` with a hash needs the plaintext password (re-run `./scripts/setup.sh` or edit it).
+- Empty state is verified on fixtures only. API-down (502 login error) and wrong password were verified on the real stack.
 
 ## Honest limits
 
-- Simulated/lab data only (6 lab devices, 3 incidents). The dashboard says nothing about real homes.
+- Simulated/lab data only (lab devices and lab incidents). The dashboard says nothing about real homes.
 - Screenshots are from the lab stack, not a real home.
