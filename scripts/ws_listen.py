@@ -38,6 +38,11 @@ def default_credentials() -> tuple[str, str]:
     user = users.split(",")[0].split(":")[0] if users else "admin"
     if not password:
         sys.exit("No credentials: pass --user/--password or set API_ADMIN_PASSWORD in .env")
+    if password.startswith("scrypt."):
+        sys.exit(
+            "API_ADMIN_PASSWORD in .env is a scrypt hash, not the plaintext password. "
+            "Put the plaintext password there (./scripts/setup.sh writes it), or pass --password."
+        )
     return user, password
 
 
