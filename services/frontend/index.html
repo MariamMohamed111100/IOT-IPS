@@ -542,7 +542,7 @@
       <div class="pulse-dot"></div>
       <div class="sidebar-footer-text">
         <b>Detection Engine</b>
-        <span>Online · 96.4% confidence</span>
+        <span id="engineStatus">Waiting for data</span>
       </div>
     </div>
   </aside>
@@ -579,23 +579,23 @@
         <div class="stat-row">
           <div class="stat-card">
             <div class="stat-label">Devices Monitored</div>
-            <div class="stat-value">128</div>
-            <div class="stat-trend">across 5 protocols</div>
+            <div class="stat-value" id="statDevices">0</div>
+            <div class="stat-trend" id="statDevicesTrend">—</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Active Threats</div>
-            <div class="stat-value" style="color:var(--danger)">2</div>
-            <div class="stat-trend up-bad">↑ 1 since last hour</div>
+            <div class="stat-value" id="statThreats" style="color:var(--danger)">0</div>
+            <div class="stat-trend up-bad" id="statThreatsTrend">—</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Blocked · 24h</div>
-            <div class="stat-value" style="color:var(--cyan)">37</div>
-            <div class="stat-trend up-good">auto-contained</div>
+            <div class="stat-value" id="statBlocked" style="color:var(--cyan)">0</div>
+            <div class="stat-trend up-good" id="statBlockedTrend">—</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Detection Confidence</div>
-            <div class="stat-value">96.4<span style="font-size:15px;color:var(--text-tertiary)">%</span></div>
-            <div class="stat-trend">model stable</div>
+            <div class="stat-value" id="statConf">—</div>
+            <div class="stat-trend" id="statConfTrend">—</div>
           </div>
         </div>
 
@@ -632,7 +632,7 @@
               <div class="pipeline-step active"><div class="num">01</div><div class="name">IoT Devices</div><div class="state">telemetry</div></div>
               <div class="pipeline-step active"><div class="num">02</div><div class="name">Network Telemetry</div><div class="state">flow data</div></div>
               <div class="pipeline-step active"><div class="num">03</div><div class="name">Feature Engine</div><div class="state">features ready</div></div>
-              <div class="pipeline-step active"><div class="num">04</div><div class="name">ML Detector</div><div class="state">96.4% stable</div></div>
+              <div class="pipeline-step active"><div class="num">04</div><div class="name">ML Detector</div><div class="state">rules active · ML planned</div></div>
               <div class="pipeline-step active"><div class="num">05</div><div class="name">Risk Engine</div><div class="state">scoring</div></div>
               <div class="pipeline-step active"><div class="num">06</div><div class="name">Policy Engine</div><div class="state">evaluating</div></div>
               <div class="pipeline-step prevent"><div class="num">07</div><div class="name">Prevent / Block</div><div class="state">ready</div></div>
@@ -660,7 +660,7 @@
                 <div class="decision-strip" id="policyDecision"><b>Policy decision:</b> Critical risk + high confidence → simulated <strong>BLOCK_SOURCE</strong> and create incident.</div>
               </div>
             </div>
-            <div class="demo-note">Prototype weighting is illustrative only. The roadmap requires the final weights to be experimentally evaluated and documented.</div>
+            <div class="demo-note" id="riskNote">Waiting for the backend risk engine. Score, factors and actions are shown as the backend publishes them.</div>
           </div>
         </div>
 
@@ -686,8 +686,7 @@
       <!-- ===== DEVICES ===== -->
       <section class="view" id="view-devices">
         <div class="table-toolbar">
-          <span class="hint" style="color:var(--text-tertiary); font-size:12px;">128 devices · showing 10</span>
-          <button class="action-btn">+ Add device</button>
+          <span class="hint" id="devicesHint" style="color:var(--text-tertiary); font-size:12px;">0 devices</span>
         </div>
         <div class="panel">
           <table>
@@ -744,7 +743,7 @@
           </div>
           <div class="copilot-messages" id="copilotMessages"></div>
           <div class="chips">
-            <div class="chip" data-prompt="Why was the Smart TV isolated?">Why was the Smart TV isolated?</div>
+            <div class="chip" data-prompt="Explain the latest incident">Explain the latest incident</div>
             <div class="chip" data-prompt="Which devices are most at risk?">Which devices are most at risk?</div>
             <div class="chip" data-prompt="Summarize the last 24 hours">Summarize the last 24 hours</div>
           </div>
@@ -884,7 +883,7 @@
     Object.entries(factors).forEach(([key,value]) => {
       const row = document.createElement('div'); row.className = 'factor';
       const top = document.createElement('div'); top.className = 'factor-top';
-      const label = document.createElement('b'); label.textContent = riskFactorLabels[key] || key;
+      const label = document.createElement('b'); label.textContent = riskFactorLabels[key] || prettyName(key);
       const num = document.createElement('span'); num.textContent = String(value);
       top.append(label, num);
       const bar = document.createElement('div'); bar.className = 'factor-bar';
@@ -893,7 +892,7 @@
     });
   }
 
-  renderRisk(prototypeRisk, 87, 'Critical');
+  renderRisk({}, 0, 'Idle');
 
   document.getElementById('simulateEvent').addEventListener('click', ()=>{
     const btn = document.getElementById('simulateEvent');
@@ -923,42 +922,79 @@
   });
 
   // ---------- Devices data ----------
-  const devices = [
-    {name:'Smart Camera — Living Room', ip:'192.168.1.14', proto:'MQTT', trust:92, status:'Normal', seen:'12s ago'},
-    {name:'Smart Lock — Front Door', ip:'192.168.1.22', proto:'Zigbee', trust:88, status:'Normal', seen:'1m ago'},
-    {name:'Thermostat — Hallway', ip:'192.168.1.9', proto:'CoAP', trust:95, status:'Normal', seen:'4s ago'},
-    {name:'Baby Monitor', ip:'192.168.1.31', proto:'MQTT', trust:41, status:'Suspicious', seen:'now'},
-    {name:'Smart Plug — Kitchen', ip:'192.168.1.18', proto:'BLE', trust:97, status:'Normal', seen:'22s ago'},
-    {name:'Industrial Sensor Node 3', ip:'10.0.4.12', proto:'LoRaWAN', trust:90, status:'Normal', seen:'3m ago'},
-    {name:'Smart TV', ip:'192.168.1.45', proto:'MQTT', trust:12, status:'Isolated', seen:'2m ago'},
-    {name:'Door Sensor — Garage', ip:'192.168.1.27', proto:'Zigbee', trust:99, status:'Normal', seen:'8s ago'},
-    {name:'Smart Speaker', ip:'192.168.1.33', proto:'MQTT', trust:76, status:'Normal', seen:'40s ago'},
-    {name:'Health Monitor — Ward 3', ip:'10.0.4.55', proto:'CoAP', trust:34, status:'Suspicious', seen:'now'}
-  ];
+  const devices = [];            // filled from the API by renderDevices()
 
   function trustColor(t){ return t < 50 ? 'var(--danger)' : t < 70 ? 'var(--warn)' : 'var(--cyan)'; }
   function statusBadge(s){
     if(s==='Normal') return '<span class="badge badge-resolved"><i class="badge-dot"></i>Normal</span>';
     if(s==='Suspicious') return '<span class="badge badge-warning"><i class="badge-dot"></i>Suspicious</span>';
-    return '<span class="badge badge-critical"><i class="badge-dot"></i>Isolated</span>';
+    return '<span class="badge badge-critical"><i class="badge-dot"></i>' + s + '</span>';
   }
 
-  const tbody = document.getElementById('devicesTbody');
-  tbody.replaceChildren();
-  devices.forEach(d => {
-    const cell = (tag, cls, text) => { const n = document.createElement(tag); if(cls) n.className = cls; if(text != null) n.textContent = text; return n; };
-    const tr = document.createElement('tr');
-    const proto = cell('td'); proto.appendChild(cell('span', 'proto-chip', d.proto));
-    const trustTd = cell('td');
-    const trustCell = cell('div', 'trust-cell');
-    const bar = cell('div', 'trust-bar');
-    const fill = cell('div', 'trust-fill'); fill.style.width = d.trust + '%'; fill.style.background = trustColor(d.trust);
-    bar.appendChild(fill); trustCell.append(bar, cell('span', 'trust-num', String(d.trust))); trustTd.appendChild(trustCell);
-    const statusTd = cell('td'); statusTd.innerHTML = statusBadge(d.status);
-    tr.append(cell('td', 'dev-name', d.name), cell('td', 'dev-ip', d.ip), proto, trustTd, statusTd, cell('td', 'dev-ip', d.seen));
-    tbody.appendChild(tr);
-  });
-
+  // ---------- Live pages: devices, counters, feed, copilot (all filled from the API) ----------
+  function drawDevices(){
+    const tbody = document.getElementById('devicesTbody'); tbody.replaceChildren();
+    devices.forEach(d => {
+      const tr = el('tr'), proto = el('td'); proto.appendChild(el('span', 'proto-chip', d.proto));
+      const trustTd = el('td'), tc = el('div', 'trust-cell'), bar = el('div', 'trust-bar'), fill = el('div', 'trust-fill');
+      fill.style.width = d.trust + '%'; fill.style.background = trustColor(d.trust);
+      bar.appendChild(fill); tc.append(bar, el('span', 'trust-num', String(d.trust))); trustTd.appendChild(tc);
+      const st = el('td'); st.innerHTML = statusBadge(d.status);          // d.status is one of three fixed words
+      tr.append(el('td', 'dev-name', d.name), el('td', 'dev-ip', d.ip), proto, trustTd, st, el('td', 'dev-ip', d.seen));
+      tbody.appendChild(tr);
+    });
+    if(!devices.length){ const tr = el('tr'), td = el('td', null, 'No devices yet. Log in first; IPS devices come from scripts/ips/seed_ips_devices.py.'); td.colSpan = 6; tr.appendChild(td); tbody.appendChild(tr); }
+    const h = document.getElementById('devicesHint'); if(h) h.textContent = devices.length + ' devices';
+  }
+  function lastSeen(id){ const e = RAW_EVENTS.find(x => x.source === id || (x.data && x.data.device_id === id)); return e ? fmtTime(e.ts) : '—'; }
+  function renderDevices(){
+    devices.splice(0, devices.length, ...MOCK_DB.devices.map(d => ({name: d.name, ip: d.ip || (d.state && d.state.ip) || '—', proto: prettyName(d.type),
+      trust: Math.round(Number(d.trust) || 0), status: !d.online ? 'Offline' : (d.trust < 50 ? 'Suspicious' : 'Normal'), seen: lastSeen(d.id)})));
+    drawDevices();
+  }
+  const isDetection = e => /^cyber\./.test(e.type) && !/^cyber\.(block_|ip_)/.test(e.type);
+  function updateStats(){
+    const set = (id, v) => { const n = document.getElementById(id); if(n) n.textContent = v; };
+    const devs = MOCK_DB.devices, open = incidents.filter(i => i.level === 'high' || i.level === 'critical');
+    set('statDevices', String(devs.length)); set('statDevicesTrend', devs.filter(d => d.online).length + ' online');
+    set('statThreats', String(open.length)); set('statThreatsTrend', incidents.length + ' incidents in total');
+    const ref = RAW_EVENTS.reduce((m, e) => Math.max(m, Date.parse(e.ts) || 0), 0);
+    const blocks = RAW_EVENTS.filter(e => /^cyber\.(block_applied|ip_blocked)$/.test(e.type) && ref - Date.parse(e.ts) <= 864e5);
+    set('statBlocked', String(blocks.length)); set('statBlockedTrend', blocks.some(e => e.data && e.data.dry_run) ? 'includes dry-run results' : 'auto-contained');
+    const conf = RAW_EVENTS.filter(e => isDetection(e) && e.data && typeof e.data.confidence === 'number').map(e => e.data.confidence);
+    set('statConf', conf.length ? (100 * conf.reduce((a, b) => a + b, 0) / conf.length).toFixed(1) + '%' : '—');
+    set('statConfTrend', conf.length ? 'mean of ' + conf.length + ' detections' : 'no detections yet');
+    set('engineStatus', conf.length ? 'Online · ' + (100 * conf.reduce((a, b) => a + b, 0) / conf.length).toFixed(1) + '% mean confidence' : (devs.length ? 'Online · no detections yet' : 'Waiting for data'));
+  }
+  function renderFeed(){
+    const list = document.getElementById('feedList'); list.replaceChildren();
+    RAW_EVENTS.slice(0, 12).forEach(e => {
+      const sh = e.severity_hint, d = e.data || {}, row = el('div', 'feed-item');
+      row.append(el('span', 'feed-dot ' + ((sh === 'critical' || sh === 'high') ? 'sev-critical' : sh === 'medium' ? 'sev-warning' : 'sev-info')),
+                 el('span', 'feed-text', prettyName(e.type) + ' · ' + (d.device_id || prettyZone(e.zone)) + (d.src_ip ? ' from ' + d.src_ip : '')),
+                 el('span', 'feed-time', new Date(e.ts).toLocaleTimeString([], {hour12: false})));
+      list.appendChild(row);
+    });
+    if(!list.children.length) list.appendChild(el('div', 'feed-item', 'No events yet.'));
+  }
+  const RISK_BY_ZONE = {};       // latest /api/risk item (or security/risk message) per zone
+  function renderLiveRisk(){
+    const top = Object.values(RISK_BY_ZONE).sort((a, b) => b.score - a.score)[0];
+    if(!top) return;
+    const factors = {};
+    (top.factors || []).forEach(f => { const v = Math.max(0, Math.min(100, Math.round(Number(f && (f.value != null ? f.value : f.weight)) || 0))); factors[String(f && f.type || 'factor')] = v; });
+    renderRisk(factors, top.score, String(top.level).charAt(0).toUpperCase() + String(top.level).slice(1));
+    document.getElementById('riskStatus').textContent = 'zone ' + prettyZone(top.zone) + ' · live';
+    const dec = document.getElementById('policyDecision'); dec.replaceChildren(el('b', null, 'Response: '));
+    dec.appendChild(document.createTextNode((top.actions || []).map(prettyName).join(', ') || 'no action needed'));
+    document.getElementById('riskNote').textContent = 'Score and factors come from the backend risk engine (config/risk_scores.yaml).';
+  }
+  function refreshLive(){
+    renderDevices(); buildTopology(); updateStats(); renderFeed(); renderLiveRisk();
+    const sim = document.getElementById('simulateEvent');                       // the simulator only fakes events: hide it when real data is used
+    if(sim && API_CONFIG.mode === 'api'){ const box = sim.closest('.panel') || sim.parentElement.parentElement; if(box){ box.hidden = true; box.style.display = 'none'; } }
+  }
+  document.addEventListener('DOMContentLoaded', () => refreshLive());
   // ---------- Incidents data ----------
   const incidents = [];            // filled by loadBackendState() from /api/incidents
   const RAW_EVENTS = [];            // raw backend events (newest first), used by the incident and device panels
@@ -1088,27 +1124,11 @@
   renderIncidentList();
 
   // ---------- Live feed ----------
-  const feedEvents = [
-    {sev:'sev-critical', text:'DDoS Traffic Surge detected on Smart TV', time:'14:02:07'},
-    {sev:'sev-warning', text:'Trust score dropped to 41 on Baby Monitor', time:'13:58:12'},
-    {sev:'sev-info', text:'37 packets blocked from unknown IP range', time:'13:51:40'},
-    {sev:'sev-critical', text:'Botnet C2 pattern matched on Health Monitor — Ward 3', time:'13:44:02'},
-    {sev:'sev-info', text:'Baseline retrained on 128 device profiles', time:'13:30:00'},
-    {sev:'sev-warning', text:'Brute-force attempt on Smart Lock — Front Door', time:'13:02:55'},
-    {sev:'sev-info', text:'Firmware fingerprint updated for 6 devices', time:'12:47:19'}
-  ];
-  const feedList = document.getElementById('feedList');
-  feedList.replaceChildren();
-  feedEvents.forEach(e => {
-    const cell = (tag, cls, text) => { const n = document.createElement(tag); if(cls) n.className = cls; if(text != null) n.textContent = text; return n; };
-    const row = cell('div', 'feed-item');
-    row.append(cell('span', 'feed-dot ' + e.sev), cell('span', 'feed-text', e.text), cell('span', 'feed-time', e.time));
-    feedList.appendChild(row);
-  });
+  // the live feed is drawn by renderFeed() from the latest API events
 
   // ---------- Network topology graph ----------
-  (function buildTopology(){
-    const svg = document.getElementById('topologySvg');
+  function buildTopology(){
+    const svg = document.getElementById('topologySvg'); svg.replaceChildren();
     const ns = 'http://www.w3.org/2000/svg';
     const cx = 280, cy = 150, r = 108;
     const colors = devices.map(d => d.trust < 50 ? '#f4436a' : d.trust < 70 ? '#f2a93b' : '#2dd4bf');
@@ -1154,7 +1174,8 @@
       }
       svg.appendChild(node);
     }
-  })();
+  }
+  buildTopology();
 
   // ---------- Copilot chat ----------
   const copilotMessages = document.getElementById('copilotMessages');
@@ -1182,17 +1203,35 @@
   addMsg('ai', "Hi, I'm Warden's Security Copilot. Ask me about any incident, device, or trend — I'll explain what the model saw and why it acted.");
 
   function respond(text){
-    const q = text.toLowerCase();
-    if(q.includes('smart tv') || q.includes('1042') || q.includes('ddos')){
-      return "The Smart TV was isolated because its outbound traffic jumped to 340% above its learned baseline, almost entirely SYN/UDP floods aimed at two IP ranges it had never contacted before. The model scored this 0.94 confidence as a DDoS pattern, so containment triggered automatically. Full reasoning is in INC-1042.";
+    const q = text.toLowerCase(), devs = MOCK_DB.devices, byTrust = [...devs].sort((a, b) => a.trust - b.trust);
+    const dev = devs.find(d => q.includes(String(d.id).toLowerCase()) || q.includes(String(d.id).replace(/_/g, ' ')) || q.includes(String(d.name).toLowerCase()));
+    if(dev){
+      const l = RAW_EVENTS.filter(e => e.data && e.data.device_id === dev.id && isDetection(e));
+      return dev.name + ' (' + prettyZone(dev.zone) + ', ' + dev.type + ') is ' + (dev.online ? 'online' : 'offline') + ' with trust ' + Math.round(dev.trust) + '/100. ' +
+        (l.length ? l.length + ' IPS detection(s); the latest is ' + prettyName(l[0].type) + ' from ' + ((l[0].data && l[0].data.src_ip) || 'an unknown source') + '.' : 'There are no IPS detections for this device.');
     }
-    if(q.includes('risk')){
-      return "Right now the Baby Monitor (trust 41) and the Ward 3 Health Monitor (trust 34) carry the most risk — both are showing traffic patterns outside their normal profile. Neither has been isolated yet since confidence is below the auto-response threshold, so they're flagged for analyst review.";
+    const byId = incidents.find(i => q.includes(String(i.id).toLowerCase()));
+    if(byId || /incident|latest|explain/.test(q)){
+      const i = byId || incidents[0];
+      if(!i) return 'There are no incidents right now.';
+      return (i.title || prettyName(i.trigger)) + ' (' + i.id + '): level ' + i.level + ', score ' + i.score + ', zone ' + prettyZone(i.zone) + ', actions: ' +
+        ((i.actions || []).map(prettyName).join(', ') || 'none') + '. Open the Incidents page for the MITRE tag, risk details and the reports.';
     }
-    if(q.includes('summar')){
-      return "Last 24 hours: 2 active incidents, 37 connections auto-blocked, 1 device isolated (Smart TV), and 2 devices flagged as suspicious. Detection confidence held steady at 96.4% with no false-positive isolations reported.";
+    if(/risk|trust|danger/.test(q)){
+      if(!devs.length) return 'No devices are registered yet.';
+      return 'Lowest trust scores: ' + byTrust.slice(0, 3).map(d => d.name + ' (' + Math.round(d.trust) + ')').join(', ') + '. ' +
+        (MOCK_DB.zones.length ? 'Highest zone risk: ' + [...MOCK_DB.zones].sort((a, b) => b.risk - a.risk).map(z => z.name + ' ' + z.risk).slice(0, 1).join('') + '.' : '');
     }
-    return "I can help explain detections, device trust scores, and recommended remediation. Try asking about a specific device name or an incident ID like INC-1042.";
+    if(/block|contain/.test(q)){
+      const b = RAW_EVENTS.filter(e => /^cyber\.(block_applied|ip_blocked)$/.test(e.type));
+      return b.length + ' block result(s) recorded' + (b.some(e => e.data && e.data.dry_run) ? ' (the IPS ones are dry-run: nothing was really blocked)' : '') + '.';
+    }
+    if(/summar|status|24|overview/.test(q)){
+      const det = RAW_EVENTS.filter(isDetection).length;
+      return devs.length + ' devices (' + devs.filter(d => d.online).length + ' online), ' + incidents.length + ' incidents (' +
+        incidents.filter(i => i.level === 'high' || i.level === 'critical').length + ' high or critical), ' + det + ' recent detections.';
+    }
+    return 'I can answer from the live data: ask about a device name, an incident id, "latest incident", "which devices are at risk", "blocks" or "summarize".';
   }
 
   function handleSend(){
@@ -1280,7 +1319,7 @@
   function scheduleRedraw(flash){
     if(flash)pendingFlash=zoneKey(flash);
     if(redrawQueued)return;redrawQueued=true;
-    requestAnimationFrame(()=>{redrawQueued=false;buildFloorPlan();renderNetworkGraph();renderTwinSide();if(pendingFlash){flashZone(pendingFlash);pendingFlash=null;}});
+    requestAnimationFrame(()=>{redrawQueued=false;buildFloorPlan();renderNetworkGraph();renderTwinSide();refreshLive();if(pendingFlash){flashZone(pendingFlash);pendingFlash=null;}});
   }
   function flashZone(z){const k=zoneKey(z);document.querySelectorAll('#floorPlan .room').forEach(el=>{if(el.getAttribute('data-zone')===k){el.classList.remove('flash');void el.getBoundingClientRect();el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1700);}});}
 
@@ -1351,7 +1390,7 @@
     topologyData.nodes=[{id:'GW',label:'Warden Gateway',trust:100},...MOCK_DB.devices.map(d=>({id:d.id,label:d.name,trust:d.trust,zone:d.zone,status:d.status}))];
     topologyData.edges=MOCK_DB.devices.map(d=>['GW',d.id]);
     incidents.splice(0,incidents.length,...(incs||[]).map(i=>({id:i.id,title:i.summary||i.trigger,level:i.level,score:i.score,zone:i.zone,time:i.ts,status:i.integrity_ok?'active':'integrity warning',trigger:i.trigger,actions:i.actions})));
-    RAW_EVENTS.splice(0,RAW_EVENTS.length,...(events||[]));renderIncidentList();if(currentIncidentId&&document.getElementById('view-incident-detail').classList.contains('active'))openIncident(currentIncidentId);
+    RAW_EVENTS.splice(0,RAW_EVENTS.length,...(events||[]));Object.keys(RISK_BY_ZONE).forEach(k=>delete RISK_BY_ZONE[k]);(risks||[]).forEach(r=>{RISK_BY_ZONE[r.zone]=r;});renderIncidentList();refreshLive();if(currentIncidentId&&document.getElementById('view-incident-detail').classList.contains('active'))openIncident(currentIncidentId);
     if(risks?.length){const top=[...risks].sort((a,b)=>b.score-a.score)[0];setGauge(top.score,top.level);}
     buildFloorPlan();renderNetworkGraph();renderTwinSide();
     replaying=true;try{(events||[]).slice().reverse().forEach(e=>emitSecurityEvent(normalizeBackendFrame({kind:'event',data:e})));}finally{replaying=false;}
@@ -1361,7 +1400,7 @@
   }
   function normalizeBackendFrame(frame){
     const d=frame?.data||{};
-    if(frame?.kind==='risk'){const z=MOCK_DB.zones.find(x=>x.id===d.zone||x.name===d.zone);if(z){z.risk=d.score;z.state=d.level;}const top=MOCK_DB.zones.reduce((m,x)=>x.risk>m.risk?x:m,{risk:-1,state:'low'});if(top.risk>=0)setGauge(top.risk,top.state);else setGauge(d.score,d.level);scheduleRedraw();}
+    if(frame?.kind==='risk'){RISK_BY_ZONE[d.zone]=d;const z=MOCK_DB.zones.find(x=>x.id===d.zone||x.name===d.zone);if(z){z.risk=d.score;z.state=d.level;}const top=MOCK_DB.zones.reduce((m,x)=>x.risk>m.risk?x:m,{risk:-1,state:'low'});if(top.risk>=0)setGauge(top.risk,top.state);else setGauge(d.score,d.level);scheduleRedraw();}
     if(frame?.kind==='event'&&!replaying){scheduleRedraw(d.zone);RAW_EVENTS.unshift(d);if(RAW_EVENTS.length>300)RAW_EVENTS.length=300;}
     if(frame?.kind==='event')return {schema:'person2.event.v1',event_id:d.id,timestamp:d.ts,source:d.source,device_id:d.data?.sensor_id||d.data?.camera_id||d.data?.door_id||d.source,attack_type:d.type,confidence:d.data?.confidence??0,risk_score:({critical:95,high:75,medium:50,low:20,info:5}[d.severity_hint]||0),risk_level:(d.severity_hint||'info').replace(/^./,x=>x.toUpperCase()),source_ip:d.data?.src_ip||'—',action:'RECORDED',status:d.integrity_ok===false?'integrity warning':'observed',zone:d.zone,raw:d};
     if(frame?.kind==='risk')return {schema:'person2.risk.v1',event_id:'risk-'+d.zone+'-'+d.ts,timestamp:d.ts,source:'risk-engine',device_id:d.zone,attack_type:'Risk state updated',confidence:1,risk_score:d.score,risk_level:(d.level||'low').replace(/^./,x=>x.toUpperCase()),action:(d.actions||[]).join(', ')||'MONITOR',status:'updated',zone:d.zone,raw:d};
@@ -1493,15 +1532,7 @@
   setGauge(API_CONFIG.mode==='api'?0:87,API_CONFIG.mode==='api'?'low':'Critical');
 
   // ---------- Incident timeline ----------
-  const timelineEvents=[
-    {time:'14:02:03',title:'Suspicious flow observed',detail:'CAM-002 exceeded normal connection rate by 340%.',kind:'warning',tags:['telemetry','CAM-002']},
-    {time:'14:02:04',title:'Features extracted',detail:'Packet rate, source novelty and protocol anomaly passed to detector.',kind:'warning',tags:['features','flow']},
-    {time:'14:02:05',title:'ML detector classified attack',detail:'DDoS Traffic Surge · confidence 94%.',kind:'critical',tags:['ML','94%']},
-    {time:'14:02:05',title:'Risk engine scored event',detail:'Risk 87/100 · Critical. Device criticality increased impact.',kind:'critical',tags:['RISK','87']},
-    {time:'14:02:06',title:'Policy engine matched rule',detail:'risk ≥ 80 and confidence ≥ 0.90 → BLOCK_SOURCE.',kind:'critical',tags:['POLICY','BLOCK_SOURCE']},
-    {time:'14:02:06',title:'Prevention action queued',detail:'Source isolation requested. Prototype mode prevents real firewall execution.',kind:'critical',tags:['IPS','SAFE MODE']},
-    {time:'14:02:07',title:'Incident created + AI explanation',detail:'INC-1042 stored and summarized for the administrator.',kind:'warning',tags:['INC-1042','AI']}
-  ];
+  const timelineEvents=[];   // the incident timeline is loaded from /api/incidents/{id}/events
   function renderTimeline(list){const host=document.getElementById('largeTimeline');if(!host)return;const rows=list||timelineEvents;host.replaceChildren();if(!rows.length){const empty=el('div','tl-event');empty.appendChild(el('div','tl-detail','No incident recorded yet. Run python scripts/demo_incident.py to generate one.'));host.appendChild(empty);}else rows.forEach(e=>{const item=el('div','tl-event');item.append(el('span','tl-dot '+e.kind),el('div','tl-time',e.time),el('div','tl-title',e.title),el('div','tl-detail',e.detail));const tags=el('div','tl-tags');(e.tags||[]).forEach(t=>tags.appendChild(el('span','tl-tag',t)));item.appendChild(tags);host.appendChild(item);});document.getElementById('timelineCount').textContent=`${rows.length} events`}
   async function loadIncidentTimeline(){
     if(API_CONFIG.mode!=='api')return;

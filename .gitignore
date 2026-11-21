@@ -60,6 +60,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 services/frontend/test/node_modules/
+services/frontend/test/screenshots/
 
 # ==========================================================================
 # Databases, logs and runtime state
