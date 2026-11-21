@@ -41,8 +41,8 @@
 ## Checklist evidence (added)
 
 - Wrong password: tested; login shows "Invalid username or password." (clear error). PASS.
-- API-down message: NOT TESTED.
-- 1024/1440 widths: NOT TESTED.
+- API-down message: TESTED. Stopping the API container made login fail with "Login failed (502)." (clear error).
+- 1024/1440 widths: TESTED. Playwright viewport 1024 and 1440 both had no horizontal overflow (scrollWidth <= clientWidth).
 - Confidence value in cross-check: mean of event confidences (displayed as 86.9% in fixtures).
 
 ## What is still wrong / unverified
