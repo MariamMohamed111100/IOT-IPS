@@ -5,7 +5,7 @@
 - OS: Windows 11, PowerShell
 - Docker: 29.8.2 (Docker Desktop)
 - Branch: ui/dashboard-live
-- Commit: c27594ecc4673074382e7911caa3207a052c7943
+- Commit: a0ac08921a4cfd60d99e47e69c8a3ad086c896dd
 - Node/npm: npm ci passed (0 vulnerabilities)
 
 ## Checks
@@ -50,7 +50,9 @@
 - Live-update check: PASS without reload. Before: threats '6', alerts '50 received', first feed 'Motion Outdoor … Entrance 01:53:41', incidents 6. After: threats '6', alerts '55 received', first feed 'Motion Outdoor … Entrance 01:54:11', incidents 6. Only alert count and feed changed; threats/incidents counts stayed the same.
 - Only Chromium/Edge tested; Firefox/Safari not installed.
 - Phone layout (width < 1024): no horizontal overflow at 375/414/768 (tested), but full visual usability not verified.
-- Live new-incident appearance: NOT VERIFIED (fake publisher did not create a new incident; make demo-incident fails due to password parsing).
+- Live new-incident appearance: VERIFIED. Before: incidents 8, threats 8, alerts 52 received. After demo-incident: incidents 10, threats 10, alerts 234 received. New incident appeared in the list without reload. PASS.
+- Phone layout: no horizontal overflow at 375/414/768 (tested). 10-11 tap targets below 40x40px on every page (icons/buttons) - known issue, not fixed.
+- demo-incident: fixed (API_ADMIN_PASSWORD in .env was a hash, not plaintext; ws_listen.default_credentials now strips quotes/CR). Works on Windows/Linux.
 - Empty-state and API-down handling verified only on fixtures.
 
 ## Honest limits

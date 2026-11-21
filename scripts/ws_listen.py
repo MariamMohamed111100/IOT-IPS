@@ -26,7 +26,9 @@ def _env_value(key: str) -> str | None:
     if env_file.exists():
         for line in env_file.read_text().splitlines():
             if line.startswith(key + "="):
-                return line.split("=", 1)[1].strip()
+                value = line.split("=", 1)[1].strip()
+                # tolerate quotes and a trailing CR that survived splitlines on some files
+                return value.strip().strip('"').strip("'")
     return None
 
 
