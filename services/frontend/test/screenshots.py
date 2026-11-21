@@ -124,6 +124,13 @@ def main(argv=None) -> int:
         page.wait_for_timeout(1500)
         for i, name in enumerate(PAGES, 1):
             open_page(name)
+            page.wait_for_timeout(300)
+            page.set_viewport_size({"width": 375, "height": 812})
+            page.wait_for_timeout(1000)
+            small_interactive = page.evaluate("""() => Array.from(document.querySelectorAll('button,a,input,select,[role="button"],[onclick]')).filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !e.closest('svg') && (r.width < 40 || r.height < 40); }).length""")
+            check(small_interactive == 0, "tap targets >= 40px on %s at 375px (found %d small)" % (name, small_interactive))
+            page.set_viewport_size({"width": 1440, "height": 900})
+            page.wait_for_timeout(300)
             shot("%02d-%s" % (i, name))
         # live update without reload (real stack only)
         ws_text = page.inner_text("#socketState").strip() if page.locator("#socketState").count() else ""
