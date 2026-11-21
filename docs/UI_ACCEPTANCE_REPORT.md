@@ -52,7 +52,7 @@
 - Phone layout (width < 1024): no horizontal overflow at 375/414/768 (tested), but full visual usability not verified.
 - Live new-incident appearance: VERIFIED. Before: incidents 8, threats 8, alerts 52 received. After demo-incident: incidents 10, threats 10, alerts 234 received. New incident appeared in the list without reload. PASS.
 - Phone layout: no horizontal overflow at 375/414/768 (tested). 10-11 tap targets below 40x40px on every page (icons/buttons) - known issue, not fixed.
-- demo-incident: fixed (API_ADMIN_PASSWORD in .env was a hash, not plaintext; ws_listen.default_credentials now strips quotes/CR). Works on Windows/Linux.
+- demo-incident: fixed (API_ADMIN_PASSWORD in .env was a hash, not plaintext; ws_listen.default_credentials now strips quotes/CR and exits with a clear message if the value is a scrypt hash). Tested on Windows only; the `.env` fix is local (`.env` is not committed), so a stale `.env` with a hash needs the plaintext password (re-run `./scripts/setup.sh` or edit it).
 - Empty-state and API-down handling verified only on fixtures.
 
 ## Honest limits
